@@ -382,3 +382,166 @@ export class InvoiceItemEntity {
   @CreateDateColumn()
   createdAt!: Date;
 }
+
+/**
+ * SS-033 — COD Remittance entity.
+ *
+ * One row per remittance advisory we ingest from a courier (Delhivery /
+ * Xpressbees / Ecom Express / etc.) before we match it against our bank
+ * statement. The lifecycle is `BankCodRemittanceStatus`:
+ *
+ *   PENDING → RECEIVED → RECONCILED          (happy path)
+ *                └─→ DISPUTED → (resolved)  (mismatch path)
+ *
+ * `courierRef` is the courier's own reference (e.g. "DRL/2024-04/0042")
+ * and is the primary join key for the bank-statement fuzzy match. It is
+ * nullable because some courier APIs (e.g. legacy Ecom Express) only
+ * include a batch ID; in that case `period` + `amount` are the join keys.
+ *
+ * Tenant scoping: the (tenantId, depositDate) index is what the
+ * reconciliation cron walks; we never let a remittance cross tenants.
+ *
+ * Note: there is an unrelated `CodRemittanceEntity` in
+ * `shipping.entities.ts` (per-order COD amount). The two serve
+ * different aggregates — this one is the bank-reconciliation side
+ * (courier batch, period, deposit date, dispute lifecycle). The
+ * names are deliberately kept distinct to avoid ambiguity in
+ * GraphQL types and database table names.
+ */
+@Entity('bank_cod_remittances')
+@Index('bank_cod_remittances_tenant_deposit_idx', ['tenantId', 'depositDate'])
+@Index('bank_cod_remittances_status_idx', ['status'])
+@Index('bank_cod_remittances_courier_ref_idx', ['courier', 'courierRef'])
+export class BankCodRemittanceEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'int' })
+  @Index('idx_cod_remittances_tenantId')
+  tenantId!: number;
+
+  /** Courier code/name, e.g. "DELHIVERY", "XPRESSBEES", "ECOM_EXPRESS". */
+  @Column({ type: 'varchar', length: 64 })
+  courier!: string;
+
+  /** Remittance batch period, e.g. "2024-04-W1" or "2024-04-15". */
+  @Column({ type: 'varchar', length: 32 })
+  period!: string;
+
+  /** Total amount the courier says it deposited for this period. */
+  @Column({ type: 'double precision' })
+  amount!: number;
+
+  /** When the courier says the deposit was made. */
+  @Column({ type: 'timestamp' })
+  depositDate!: Date;
+
+  /** Optional courier-side reference (used as fuzzy match key). */
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  courierRef?: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['PENDING', 'RECEIVED', 'RECONCILED', 'DISPUTED'],
+    default: 'PENDING',
+  })
+  status!: 'PENDING' | 'RECEIVED' | 'RECONCILED' | 'DISPUTED';
+
+  /** Optional idempotency key — dedupes repeat ingests. */
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  externalId?: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata?: Record<string, any> | null;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+
+  @OneToMany(() => BankCodDisputeEntity, (d) => d.codRemittance)
+  disputes?: BankCodDisputeEntity[];
+}
+
+/**
+ * SS-033 — COD Dispute entity.
+ *
+ * One row per remittance that could not be cleanly reconciled against
+ * the bank statement. Created automatically by the reconciliation
+ * engine when a `CodRemittanceEntity` is unmatched; staff then triage
+ * it through the OPEN → UNDER_REVIEW → RESOLVED flow.
+ *
+ * `reason` is a short machine-readable tag (e.g. "AMOUNT_MISMATCH",
+ * "DATE_OUT_OF_WINDOW", "NO_BANK_MATCH", "DUPLICATE_DEPOSIT"). The
+ * `comments` field is free-form text the agent fills in.
+ *
+ * `evidenceUrl` points to a file in S3 — the bank statement excerpt
+ * or a screenshot from the courier portal that supports the dispute.
+ */
+@Entity('bank_cod_disputes')
+@Index('bank_cod_disputes_status_created_idx', ['status', 'createdAt'])
+@Index('bank_cod_disputes_remittance_idx', ['codRemittanceId'])
+export class BankCodDisputeEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'varchar', length: 64 })
+  codRemittanceId!: string;
+  @ManyToOne(() => BankCodRemittanceEntity, (r) => r.disputes, {
+    onDelete: 'CASCADE',
+  })
+  codRemittance?: BankCodRemittanceEntity;
+
+  @Column({ type: 'int' })
+  @Index('idx_cod_disputes_tenantId')
+  tenantId!: number;
+
+  /** Short reason tag — see entity docstring for the canonical values. */
+  @Column({ type: 'varchar', length: 64 })
+  reason!: string;
+
+  @Column({
+    type: 'enum',
+    enum: ['OPEN', 'UNDER_REVIEW', 'RESOLVED'],
+    default: 'OPEN',
+  })
+  status!: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED';
+
+  /** URL to the supporting evidence file in S3 (or null if not yet uploaded). */
+  @Column({ type: 'text', nullable: true })
+  evidenceUrl?: string | null;
+
+  /** Free-form agent notes. */
+  @Column({ type: 'text', nullable: true })
+  comments?: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata?: Record<string, any> | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resolvedAt?: Date | null;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}
+
+/**
+ * String-literal lifecycle for `BankCodRemittanceEntity.status`.
+ * Kept as a type alias (not an enum) so the value can be passed
+ * straight into the Postgres enum column without a runtime import.
+ */
+export type BankCodRemittanceStatus =
+  | 'PENDING'
+  | 'RECEIVED'
+  | 'RECONCILED'
+  | 'DISPUTED';
+
+/** String-literal lifecycle for `BankCodDisputeEntity.status`. */
+export type BankCodDisputeStatus =
+  | 'OPEN'
+  | 'UNDER_REVIEW'
+  | 'RESOLVED';

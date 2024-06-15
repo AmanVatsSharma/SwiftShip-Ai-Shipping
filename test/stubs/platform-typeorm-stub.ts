@@ -39,3 +39,43 @@ export class NdrCaseEntity {
   lastAttemptAt?: Date | null;
 }
 export class TrackingEventEntity {}
+
+// SS-033 — loose shapes for the cod-remittance / dispute entities.
+// The real decorators + datasource crash in test typecheck, but
+// behaviour tests only need the field shapes.
+export type BankCodRemittanceStatus =
+  | 'PENDING'
+  | 'RECEIVED'
+  | 'RECONCILED'
+  | 'DISPUTED';
+export type BankCodDisputeStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED';
+
+export class BankCodRemittanceEntity {
+  id!: string;
+  tenantId!: number;
+  courier!: string;
+  period!: string;
+  amount!: number;
+  depositDate!: Date;
+  status!: BankCodRemittanceStatus;
+  matchedBankTxnId?: string | null;
+  courierRef?: string | null;
+  bankId?: string | null;
+  notes?: string | null;
+  metadata?: Record<string, any> | null;
+  createdAt!: Date;
+  updatedAt!: Date;
+}
+export class BankCodDisputeEntity {
+  id!: string;
+  tenantId!: number;
+  codRemittanceId!: string;
+  reason!: string;
+  status!: BankCodDisputeStatus;
+  evidenceUrl?: string | null;
+  comments?: string | null;
+  resolvedAt?: Date | null;
+  createdAt!: Date;
+  updatedAt!: Date;
+}
+

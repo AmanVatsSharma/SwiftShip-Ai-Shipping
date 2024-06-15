@@ -6,7 +6,7 @@
  * admin portal mutations come in a follow-up bead).
  *
  * Dependency surface:
- *  - TypeOrmModule.forFeature -> CodRemittanceEntity, CodDisputeEntity
+ *  - TypeOrmModule.forFeature -> BankCodRemittanceEntity, BankCodDisputeEntity
  *  - AuthLibModule (standard)
  *  - TenantModule (needed for TenantContext)
  *
@@ -21,8 +21,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthLibModule } from '@swiftship/platform-auth';
 import { TenantModule } from '@swiftship/domains-tenants';
 import {
-  CodRemittanceEntity,
-  CodDisputeEntity,
+  BankCodRemittanceEntity,
+  BankCodDisputeEntity,
 } from '@swiftship/platform-typeorm';
 import { CodRemittanceService } from './cod-remittance.service';
 import { CodDisputeService } from './cod-dispute.service';
@@ -30,7 +30,7 @@ import { CodRemittanceCronService } from './cron/cod-remittance-cron.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CodRemittanceEntity, CodDisputeEntity]),
+    TypeOrmModule.forFeature([BankCodRemittanceEntity, BankCodDisputeEntity]),
     AuthLibModule,
     TenantModule,
   ],

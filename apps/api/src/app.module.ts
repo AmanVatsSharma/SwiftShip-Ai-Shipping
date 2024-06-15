@@ -28,6 +28,7 @@ import { MetricsController } from '../../libs/observability/src/lib/metrics.cont
 // Lives under the onboarding domain; registered directly so it can
 // inject the TypeORM-platform entities (no PrismaCompat shim).
 import { KycModule } from '../../libs/domains/onboarding/src/lib/kyc/kyc.module';
+import { CodRemittanceModule } from '@swiftship/domains-billing';
 
 // SS-032: GST invoicing + E-way bill (ClearTax sandbox adapter).
 import { GstModule } from '../../libs/domains/billing/src/lib/gst/gst.module';
@@ -132,6 +133,8 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     KycModule,
     // SS-032: GST invoicing + E-way bill generation.
     GstModule,
+    // SS-033: COD remittance + bank reconciliation + dispute queue.
+    CodRemittanceModule,
   ],
   controllers: [AppController, HealthController, MetricsController],
   providers: [

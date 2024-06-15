@@ -8,10 +8,15 @@
  *  - rejecting an invalid transition
  */
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CodDisputeService } from '../cod-dispute.service';
 import { TenantContext } from '@swiftship/domains-tenants';
 import { DISPUTE_REASONS } from '../cod-reconciliation.service';
+import {
+  BankCodDisputeEntity,
+  BankCodRemittanceEntity,
+} from '@swiftship/platform-typeorm';
 
 describe('CodDisputeService (SS-033)', () => {
   let service: CodDisputeService;
@@ -36,16 +41,18 @@ describe('CodDisputeService (SS-033)', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CodDisputeService,
-        { provide: 'CodDisputeRepository', useValue: disputes },
-        { provide: 'CodRemittanceRepository', useValue: remittances },
+        {
+          provide: getRepositoryToken(BankCodDisputeEntity),
+          useValue: disputes,
+        },
+        {
+          provide: getRepositoryToken(BankCodRemittanceEntity),
+          useValue: remittances,
+        },
         { provide: TenantContext, useValue: tenantContext },
       ],
     }).compile();
-    // @ts-ignore — manually inject repos because we used string tokens
-    // to keep this test independent of @nestjs/typeorm's getRepositoryToken.
     service = module.get(CodDisputeService);
-    (service as any).disputes = disputes;
-    (service as any).remittances = remittances;
   });
 
   describe('open', () => {

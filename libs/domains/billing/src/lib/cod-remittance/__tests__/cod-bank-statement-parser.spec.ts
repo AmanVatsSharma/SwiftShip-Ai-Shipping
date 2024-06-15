@@ -20,14 +20,14 @@ import {
   parseAmount,
   parseDate,
   tokenizeCsv,
-  levenshtein,
 } from '../cod-bank-statement-parser';
+import { levenshtein } from '../cod-reconciliation.service';
 
 const HDFC_FIXTURE = [
   'Date,Narration,Chq/Ref,ValueDr,ValueCr,ClosingBalance',
   '01/04/2024,NEFT CR-DELHIVERY-COD REMITTANCE,DRL20240401001,0,12345.00,50000.00',
   '02/04/2024,NEFT CR-XPRESSBEES-COD REMITTANCE,XB20240402002,0,8765.50,58765.50',
-  '03/04/2024,POS PURCHASE AMAZON,0,1500.00,57265.50', // debit, filtered
+  '03/04/2024,POS PURCHASE AMAZON,0,1500.00,0,57265.50', // debit, filtered
   '04/04/2024,IMPS CR-ECOM EXPRESS,ECOM20240404003,0,4321.00,61586.50',
 ].join('\n');
 

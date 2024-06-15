@@ -26,7 +26,7 @@
  *
  * If *none* of the above can be satisfied for a remittance, it goes
  * into `unmatchedRemittances` and the caller (the cron service) is
- * expected to create a `CodDisputeEntity` row for it.
+ * expected to create a `BankCodDisputeEntity` row for it.
  *
  * ## Greedy vs optimal matching
  *
@@ -70,7 +70,7 @@ export interface ReconciliationMatch {
   dateDeltaDays: number;
 }
 
-/** Reason tag persisted on the resulting CodDisputeEntity. */
+/** Reason tag persisted on the resulting BankCodDisputeEntity. */
 export const DISPUTE_REASONS = {
   AMOUNT_MISMATCH: 'AMOUNT_MISMATCH',
   DATE_OUT_OF_WINDOW: 'DATE_OUT_OF_WINDOW',
@@ -172,10 +172,10 @@ export function reconcile(
   for (const r of sortedRem) {
     const candidates = sortedBank.filter(({ i }) => !usedBankIdx.has(i));
     const found = pickMatch(r, candidates, {
-      dateWindow,
-      refFuzz,
-      amountTol,
-      minRefLen,
+      dateWindowDays: dateWindow,
+      refFuzziness: refFuzz,
+      amountTolerance: amountTol,
+      minRefLength: minRefLen,
     });
     if (found) {
       usedBankIdx.add(found.idx);
@@ -184,10 +184,10 @@ export function reconcile(
       unmatchedRemittances.push({
         remittance: r,
         reason: pickFailureReason(r, sortedBank, {
-          dateWindow,
-          refFuzz,
-          amountTol,
-          minRefLen,
+          dateWindowDays: dateWindow,
+          refFuzziness: refFuzz,
+          amountTolerance: amountTol,
+          minRefLength: minRefLen,
         }),
       });
     }
@@ -225,7 +225,7 @@ function pickMatch(
     const aRef = normaliseRef(rem.courierRef);
     const bRef = normaliseRef(b.ref);
     let dist = 0;
-    if (aRef.length >= opts.minRefLen && bRef.length >= opts.minRefLen) {
+    if (aRef.length >= opts.minRefLength && bRef.length >= opts.minRefLength) {
       dist = levenshtein(aRef, bRef);
       if (dist > opts.refFuzziness) continue;
     } else if (aRef === '' && bRef === '') {
@@ -260,23 +260,27 @@ function pickFailureReason(
   candidates: Array<{ b: BankTransaction }>,
   opts: Required<ReconciliationOptions>,
 ): DisputeReason {
+  // No bank transactions at all to compare against.
+  if (candidates.length === 0) return DISPUTE_REASONS.NO_BANK_MATCH;
+  let anyDateInWindow = false;
   let anyAmount = false;
-  let anyDate = false;
   for (const { b } of candidates) {
-    if (Math.abs(b.amount - rem.amount) <= opts.amountTolerance) {
-      anyAmount = true;
-      const dayDelta = Math.abs(
-        (b.date.getTime() - rem.depositDate.getTime()) / MS_PER_DAY,
-      );
-      if (dayDelta <= opts.dateWindowDays) {
-        // amount + date fine — must be a ref mismatch
-        return DISPUTE_REASONS.NO_BANK_MATCH;
-      } else {
-        anyDate = true;
-      }
+    const dayDelta = Math.abs(
+      (b.date.getTime() - rem.depositDate.getTime()) / MS_PER_DAY,
+    );
+    const dateOk = dayDelta <= opts.dateWindowDays;
+    const amountOk = Math.abs(b.amount - rem.amount) <= opts.amountTolerance;
+    if (dateOk) anyDateInWindow = true;
+    if (amountOk) anyAmount = true;
+    // amount + date both fine — must be a ref mismatch
+    if (dateOk && amountOk) {
+      return DISPUTE_REASONS.NO_BANK_MATCH;
     }
   }
-  if (anyDate) return DISPUTE_REASONS.AMOUNT_MISMATCH;
-  if (anyAmount) return DISPUTE_REASONS.DATE_OUT_OF_WINDOW;
+  // No amount match at all — clearest signal.
+  if (!anyAmount) return DISPUTE_REASONS.AMOUNT_MISMATCH;
+  // Amount matches exist but the matching-amount ones are out of window.
+  if (!anyDateInWindow) return DISPUTE_REASONS.DATE_OUT_OF_WINDOW;
+  // Both amount + date exist but never on the same row → ref mismatch.
   return DISPUTE_REASONS.NO_BANK_MATCH;
 }

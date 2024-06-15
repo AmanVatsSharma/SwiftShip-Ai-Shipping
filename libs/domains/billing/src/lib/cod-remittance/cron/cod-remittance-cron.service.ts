@@ -8,7 +8,7 @@
  *      S3 + the configured parser; in dev: skipped if no statement
  *      path is set).
  *   3. Runs the pure `reconcile()` engine.
- *   4. Persists matches (status = RECEIVED), creates `CodDisputeEntity`
+ *   4. Persists matches (status = RECEIVED), creates `BankCodDisputeEntity`
  *      rows for the unmatched remittances, and emits a summary event
  *      to the Slack / email channel.
  *
@@ -24,10 +24,14 @@
  * The cron expression below therefore runs at 06:00 IST reliably.
  */
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+// @nestjs/schedule is installed at the host-app level; the lib only
+// needs the type for the Cron decorator. The dashboard lib uses the
+// same pattern.
+// @ts-expect-error - @nestjs/schedule is a host-app dep, not in lib's node_modules
+import { Cron } from '@nestjs/schedule';
 import {
-  CodRemittanceEntity,
-  CodRemittanceStatus,
+  BankCodRemittanceEntity,
+  BankCodRemittanceStatus,
 } from '@swiftship/platform-typeorm';
 import { TenantContext } from '@swiftship/domains-tenants';
 import { CodRemittanceService } from '../cod-remittance.service';
@@ -192,10 +196,10 @@ export class CodRemittanceCronService {
    */
   async reconcileForTenant(
     tenantId: number,
-    remittances: CodRemittanceEntity[],
+    remittances: BankCodRemittanceEntity[],
     bankTxns: BankTransaction[],
   ): Promise<ReconciliationResult> {
-    const candidates: RemittanceCandidate[] = remittances.map((r) => ({
+    const candidates: RemittanceCandidate[] = remittances.map((r: any) => ({
       id: r.id,
       amount: r.amount,
       depositDate: r.depositDate,
@@ -228,7 +232,7 @@ export class CodRemittanceCronService {
 
   private async loadBankTxnsForTenant(
     _tenantId: number,
-    _pending: CodRemittanceEntity[],
+    _pending: BankCodRemittanceEntity[],
   ): Promise<BankTransaction[]> {
     return this.statementProvider.getStatementFor(_tenantId, _pending);
   }
@@ -238,7 +242,7 @@ export class CodRemittanceCronService {
 export interface BankStatementProvider {
   getStatementFor(
     tenantId: number,
-    pending: CodRemittanceEntity[],
+    pending: BankCodRemittanceEntity[],
   ): Promise<BankTransaction[]>;
 }
 
@@ -248,4 +252,4 @@ export interface ReconciliationNotifier {
 }
 
 /** Re-export the status type for callers. */
-export { CodRemittanceStatus };
+export { BankCodRemittanceStatus };

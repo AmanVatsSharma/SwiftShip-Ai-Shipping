@@ -1,7 +1,7 @@
 /**
  * SS-033 — CodDisputeService.
  *
- * CRUD + lifecycle for `CodDisputeEntity`. The reconciliation engine
+ * CRUD + lifecycle for `BankCodDisputeEntity`. The reconciliation engine
  * (pure function) only *computes* disputes; this service *persists*
  * them and moves them through OPEN → UNDER_REVIEW → RESOLVED.
  */
@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CodDisputeEntity, CodRemittanceEntity } from '@swiftship/platform-typeorm';
+import { BankCodDisputeEntity, BankCodRemittanceEntity } from '@swiftship/platform-typeorm';
 import { TenantContext } from '@swiftship/domains-tenants';
 import type { DisputeReason } from './cod-reconciliation.service';
 
@@ -30,10 +30,10 @@ export class CodDisputeService {
   private readonly logger = new Logger(CodDisputeService.name);
 
   constructor(
-    @InjectRepository(CodDisputeEntity)
-    private readonly disputes: Repository<CodDisputeEntity>,
-    @InjectRepository(CodRemittanceEntity)
-    private readonly remittances: Repository<CodRemittanceEntity>,
+    @InjectRepository(BankCodDisputeEntity)
+    private readonly disputes: Repository<BankCodDisputeEntity>,
+    @InjectRepository(BankCodRemittanceEntity)
+    private readonly remittances: Repository<BankCodRemittanceEntity>,
     private readonly tenantContext: TenantContext,
   ) {}
 
@@ -42,7 +42,7 @@ export class CodDisputeService {
    * UNDER_REVIEW dispute already exists for that remittance we return
    * it instead of creating a duplicate.
    */
-  async open(input: CreateDisputeInput): Promise<CodDisputeEntity> {
+  async open(input: CreateDisputeInput): Promise<BankCodDisputeEntity> {
     const tenantId = this.requireTenantId();
     if (!input.codRemittanceId) {
       throw new BadRequestException('codRemittanceId is required');
@@ -83,7 +83,7 @@ export class CodDisputeService {
   }
 
   /** Move to UNDER_REVIEW. Only valid from OPEN. */
-  async startReview(id: string, tenantId: number): Promise<CodDisputeEntity> {
+  async startReview(id: string, tenantId: number): Promise<BankCodDisputeEntity> {
     const d = await this.findOne(id, tenantId);
     if (d.status === 'RESOLVED') {
       throw new BadRequestException('Cannot review a RESOLVED dispute');
@@ -100,7 +100,7 @@ export class CodDisputeService {
     id: string,
     tenantId: number,
     comments: string,
-  ): Promise<CodDisputeEntity> {
+  ): Promise<BankCodDisputeEntity> {
     if (!comments || !comments.trim()) {
       throw new BadRequestException('resolution comments are required');
     }
@@ -115,7 +115,7 @@ export class CodDisputeService {
   async list(
     tenantId: number,
     opts: { status?: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' } = {},
-  ): Promise<CodDisputeEntity[]> {
+  ): Promise<BankCodDisputeEntity[]> {
     const where: any = { tenantId };
     if (opts.status) where.status = opts.status;
     return this.disputes.find({
@@ -124,7 +124,7 @@ export class CodDisputeService {
     });
   }
 
-  async findOne(id: string, tenantId: number): Promise<CodDisputeEntity> {
+  async findOne(id: string, tenantId: number): Promise<BankCodDisputeEntity> {
     const d = await this.disputes.findOne({ where: { id, tenantId } as any });
     if (!d) throw new NotFoundException(`Dispute ${id} not found`);
     return d;

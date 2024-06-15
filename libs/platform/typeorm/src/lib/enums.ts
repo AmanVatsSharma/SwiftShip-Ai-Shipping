@@ -111,3 +111,31 @@ export enum NdrCaseStatus {
   RTO = 'RTO',
   CANCELLED = 'CANCELLED',
 }
+
+/**
+ * SS-033 — COD remittance status lifecycle.
+ *
+ * PENDING  — remittance record ingested, not yet matched against bank
+ * RECEIVED — matched to a bank transaction, sitting in the queue
+ * RECONCILED — accounting team confirmed the match; books are closed
+ * DISPUTED — mismatch detected; a CodDisputeEntity was created
+ */
+export enum CodRemittanceStatus {
+  PENDING = 'PENDING',
+  RECEIVED = 'RECEIVED',
+  RECONCILED = 'RECONCILED',
+  DISPUTED = 'DISPUTED',
+}
+
+/**
+ * SS-033 — COD dispute status lifecycle.
+ *
+ * OPEN — newly created, awaiting triage
+ * UNDER_REVIEW — an agent is investigating
+ * RESOLVED — outcome recorded (accepted / rejected)
+ */
+export enum CodDisputeStatus {
+  OPEN = 'OPEN',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  RESOLVED = 'RESOLVED',
+}

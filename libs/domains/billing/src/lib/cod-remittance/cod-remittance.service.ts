@@ -1,7 +1,7 @@
 /**
  * SS-033 — CodRemittanceService.
  *
- * Owns the lifecycle of `CodRemittanceEntity` rows: ingestion from
+ * Owns the lifecycle of `BankCodRemittanceEntity` rows: ingestion from
  * courier APIs, idempotency on re-ingest, and the read APIs that the
  * reconciliation engine and the admin portal use.
  *
@@ -12,7 +12,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CodRemittanceEntity } from '@swiftship/platform-typeorm';
+import { BankCodRemittanceEntity } from '@swiftship/platform-typeorm';
 import { TenantContext } from '@swiftship/domains-tenants';
 
 export interface IngestRemittanceInput {
@@ -30,8 +30,8 @@ export class CodRemittanceService {
   private readonly logger = new Logger(CodRemittanceService.name);
 
   constructor(
-    @InjectRepository(CodRemittanceEntity)
-    private readonly remittances: Repository<CodRemittanceEntity>,
+    @InjectRepository(BankCodRemittanceEntity)
+    private readonly remittances: Repository<BankCodRemittanceEntity>,
     private readonly tenantContext: TenantContext,
   ) {}
 
@@ -44,7 +44,7 @@ export class CodRemittanceService {
    */
   async ingest(
     input: IngestRemittanceInput,
-  ): Promise<{ remittance: CodRemittanceEntity; created: boolean }> {
+  ): Promise<{ remittance: BankCodRemittanceEntity; created: boolean }> {
     const tenantId = this.requireTenantId();
     if (!input.courier) throw new BadRequestException('courier is required');
     if (!input.period) throw new BadRequestException('period is required');
@@ -57,14 +57,14 @@ export class CodRemittanceService {
 
     if (input.externalId) {
       const existing = await this.remittances.findOne({
-        where: { tenantId, externalId: input.externalId },
+        where: { tenantId, externalId: input.externalId } as any,
       });
       if (existing) {
         return { remittance: existing, created: false };
       }
     }
 
-    const created = this.remittances.create({
+    const saved = await this.remittances.save({
       tenantId,
       courier: input.courier,
       period: input.period,
@@ -72,21 +72,20 @@ export class CodRemittanceService {
       depositDate: input.depositDate,
       courierRef: input.courierRef ?? null,
       externalId: input.externalId ?? null,
-      status: 'PENDING',
+      status: 'PENDING' as any,
       metadata: input.metadata ?? null,
     });
-    const saved = await this.remittances.save(created);
-    return { remittance: saved, created: true };
+    return { remittance: saved as any, created: true };
   }
 
   /** All PENDING / RECEIVED rows for this tenant. Used by the cron. */
-  async listPending(tenantId: number): Promise<CodRemittanceEntity[]> {
+  async listPending(tenantId: number): Promise<BankCodRemittanceEntity[]> {
     return this.remittances.find({
       where: [
         { tenantId, status: 'PENDING' },
         { tenantId, status: 'RECEIVED' },
-      ],
-      order: { depositDate: 'ASC' },
+      ] as any,
+      order: { depositDate: 'ASC' } as any,
     });
   }
 
@@ -121,7 +120,7 @@ export class CodRemittanceService {
   }
 
   /** Find by id within tenant scope. */
-  async findById(id: string, tenantId: number): Promise<CodRemittanceEntity | null> {
+  async findById(id: string, tenantId: number): Promise<BankCodRemittanceEntity | null> {
     return this.remittances.findOne({ where: { id, tenantId } as any });
   }
 
