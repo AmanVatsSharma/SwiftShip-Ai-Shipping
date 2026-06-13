@@ -1,0 +1,111 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import * as Joi from 'joi';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { join } from 'path';
+
+// Platform libs (TypeORM, auth, queues, carriers, graphql, config)
+import { TypeormModule } from '../../libs/platform/typeorm/src/lib/typeorm.module';
+import { AuthLibModule } from '../../libs/platform/auth/src/lib/auth.module';
+import { QueuesModule } from '../../libs/platform/queues/src/lib/queues.module';
+import { CarriersLibModule } from '../../libs/platform/carriers/src/lib/carriers.module';
+import { GraphqlLibModule } from '../../libs/platform/graphql/src/lib/graphql.module';
+import { ConfigLibModule } from '../../libs/platform/config/src/lib/config.module';
+
+// Domain libs — every feature is now an importable Nx lib.
+import { OrdersLibModule } from '../../libs/domains/orders/src/lib/orders.module';
+import { ShipmentsLibModule } from '../../libs/domains/shipments/src/lib/shipments.module';
+import { WarehousesLibModule } from '../../libs/domains/warehouses/src/lib/warehouses.module';
+import { BillingLibModule } from '../../libs/domains/billing/src/lib/billing.module';
+import { UsersLibModule, RolesLibModule } from '../../libs/domains/users/src/lib/roles.module';
+import { CodLibModule, NdrLibModule, ManifestsLibModule, PickupsLibModule } from '../../libs/domains/..';
+
+// App-level glue
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AppResolver } from './app.resolver';
+import { HealthController } from './health.controller';
+
+@Module({
+  imports: [
+    // Platform
+    TypeormModule.forRoot(),
+    ConfigLibModule.forRoot({
+      schema: Joi.object({
+        NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
+        PORT: Joi.number().default(3000),
+        DATABASE_URL: Joi.string().uri().required(),
+        CORS_ORIGIN: Joi.string().optional(),
+        SHOPIFY_API_KEY: Joi.string().optional(),
+        SHOPIFY_API_SECRET: Joi.string().optional(),
+        SHOPIFY_APP_URL: Joi.string().uri().optional(),
+        SHOPIFY_SCOPES: Joi.string().optional(),
+        JWT_SECRET: Joi.string().default('dev-secret'),
+        JWT_EXPIRES_IN: Joi.string().default('15m'),
+        DELHIVERY_TOKEN: Joi.string().optional(),
+        REDIS_URL: Joi.string().uri().optional(),
+        XPRESSBEES_TOKEN: Joi.string().optional(),
+        STRIPE_SECRET_KEY: Joi.string().optional(),
+        STRIPE_WEBHOOK_SECRET: Joi.string().optional(),
+        RAZORPAY_KEY_ID: Joi.string().optional(),
+        RAZORPAY_KEY_SECRET: Joi.string().optional(),
+        RAZORPAY_WEBHOOK_SECRET: Joi.string().optional(),
+        PAYMENT_DEFAULT_GATEWAY: Joi.string().valid('STRIPE', 'RAZORPAY').optional(),
+        SENDGRID_API_KEY: Joi.string().optional(),
+        SMTP_HOST: Joi.string().optional(),
+        SMTP_PORT: Joi.number().optional(),
+        SMTP_USER: Joi.string().optional(),
+        SMTP_PASSWORD: Joi.string().optional(),
+        EMAIL_FROM: Joi.string().email().optional(),
+        EMAIL_FROM_NAME: Joi.string().optional(),
+        APP_URL: Joi.string().uri().optional(),
+        GSTN_API_URL: Joi.string().uri().optional(),
+        GSTN_API_KEY: Joi.string().optional(),
+        GSTN_CLIENT_ID: Joi.string().optional(),
+        GSTN_CLIENT_SECRET: Joi.string().optional(),
+        GSTN_SIGNATURE_SECRET: Joi.string().optional(),
+        GSTN_RETRY_ATTEMPTS: Joi.number().optional(),
+        STORAGE_DRIVER: Joi.string().valid('s3', 'stub').optional(),
+        S3_BUCKET: Joi.string().optional(),
+        S3_REGION: Joi.string().optional(),
+        S3_ENDPOINT: Joi.string().optional(),
+        S3_ACCESS_KEY_ID: Joi.string().optional(),
+        S3_SECRET_ACCESS_KEY: Joi.string().optional(),
+        S3_FORCE_PATH_STYLE: Joi.string().optional(),
+      }),
+    }),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 120 }],
+    }),
+    GraphqlLibModule.forRoot({
+      autoSchemaFile: join(process.cwd(), 'apps/api/src/schema.graphql'),
+      playground: process.env.NODE_ENV !== 'production',
+      context: ({ req }: any) => ({ req }),
+    }),
+
+    // Domain
+    OrdersLibModule,
+    ShipmentsLibModule,
+    WarehousesLibModule,
+    BillingLibModule,
+    UsersLibModule,
+    RolesLibModule,
+    CodLibModule,
+    NdrLibModule,
+    ManifestsLibModule,
+    PickupsLibModule,
+    AuthLibModule,
+    QueuesModule,
+    CarriersLibModule,
+  ],
+  controllers: [AppController, HealthController],
+  providers: [
+    AppService,
+    AppResolver,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
+})
+export class AppModule {}
