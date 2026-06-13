@@ -1,0 +1,24 @@
+{
+  "name": "notifications",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/notifications/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:notifications", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/notifications",
+        "tsConfig": "libs/domains/notifications/tsconfig.lib.json",
+        "packageJson": "libs/domains/notifications/package.json",
+        "main": "libs/domains/notifications/src/index.ts",
+        "assets": [
+          "libs/domains/notifications/*.md"
+        ]
+      }
+    }
+  }
+}

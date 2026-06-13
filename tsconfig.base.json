@@ -36,11 +36,41 @@
       "@swiftship/platform/*": [
         "libs/platform/*"
       ],
+      "@swiftship/platform-typeorm": [
+        "libs/platform/typeorm/src/index.ts"
+      ],
+      "@swiftship/platform-auth": [
+        "libs/platform/auth/src/index.ts"
+      ],
+      "@swiftship/platform-queues": [
+        "libs/platform/queues/src/index.ts"
+      ],
+      "@swiftship/platform-carriers": [
+        "libs/platform/carriers/src/index.ts"
+      ],
+      "@swiftship/platform-graphql": [
+        "libs/platform/graphql/src/index.ts"
+      ],
+      "@swiftship/platform-config": [
+        "libs/platform/config/src/index.ts"
+      ],
+      "@swiftship/domains-*": [
+        "libs/domains/*"
+      ],
+      "@swiftship/domains-warehouses": [
+        "libs/domains/warehouses/src/index.ts"
+      ],
+      "@swiftship/domains-notifications": [
+        "libs/domains/notifications/src/index.ts"
+      ],
+      "@swiftship/domains-serviceability": [
+        "libs/domains/serviceability/src/index.ts"
+      ],
+      "@swiftship/shared-*": [
+        "libs/shared/*"
+      ],
       "config": [
         "./libs/platform/config/src/index.ts"
-      ],
-      "prisma": [
-        "./libs/platform/prisma/src/index.ts"
       ],
       "auth": [
         "./libs/platform/auth/src/index.ts"
