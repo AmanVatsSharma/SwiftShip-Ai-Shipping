@@ -1,5 +1,5 @@
 {
-  "name": "auth",
+  "name": "@swiftship/platform-auth",
   "version": "0.0.1",
   "private": true,
   "type": "commonjs",
@@ -7,5 +7,16 @@
   "types": "./src/index.d.ts",
   "dependencies": {
     "tslib": "^2.3.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/passport": "^11.0.0",
+    "@nestjs/typeorm": "^11.0.0",
+    "@swiftship/platform-typeorm": "*",
+    "bcrypt": "^6.0.0",
+    "passport-jwt": "^4.0.1",
+    "typeorm": "^0.3.20"
   }
 }
