@@ -1,5 +1,5 @@
 {
-  "name": "graphql",
+  "name": "@swiftship/platform-graphql",
   "version": "0.0.1",
   "private": true,
   "type": "commonjs",
