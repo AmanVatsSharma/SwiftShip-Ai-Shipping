@@ -1,0 +1,14 @@
+{
+  "name": "@swiftship/app-api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch --config nest-cli.json",
+    "build": "nest build",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "test:e2e": "jest --config ./test/jest-e2e.json"
+  }
+}
