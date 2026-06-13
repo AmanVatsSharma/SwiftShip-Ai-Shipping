@@ -60,6 +60,72 @@
       "@swiftship/domains-warehouses": [
         "libs/domains/warehouses/src/index.ts"
       ],
+      "@swiftship/domains-orders": [
+        "libs/domains/orders/src/index.ts"
+      ],
+      "@swiftship/domains-shipments": [
+        "libs/domains/shipments/src/index.ts"
+      ],
+      "@swiftship/domains-shipping-rates": [
+        "libs/domains/shipping-rates/src/index.ts"
+      ],
+      "@swiftship/domains-carriers": [
+        "libs/domains/carriers/src/index.ts"
+      ],
+      "@swiftship/domains-returns": [
+        "libs/domains/returns/src/index.ts"
+      ],
+      "@swiftship/domains-users": [
+        "libs/domains/users/src/index.ts"
+      ],
+      "@swiftship/domains-roles": [
+        "libs/domains/roles/src/index.ts"
+      ],
+      "@swiftship/domains-billing": [
+        "libs/domains/billing/src/index.ts"
+      ],
+      "@swiftship/domains-payments": [
+        "libs/domains/payments/src/index.ts"
+      ],
+      "@swiftship/domains-cod": [
+        "libs/domains/cod/src/index.ts"
+      ],
+      "@swiftship/domains-ndr": [
+        "libs/domains/ndr/src/index.ts"
+      ],
+      "@swiftship/domains-manifests": [
+        "libs/domains/manifests/src/index.ts"
+      ],
+      "@swiftship/domains-pickups": [
+        "libs/domains/pickups/src/index.ts"
+      ],
+      "@swiftship/domains-webhooks": [
+        "libs/domains/webhooks/src/index.ts"
+      ],
+      "@swiftship/domains-rate-shop": [
+        "libs/domains/rate-shop/src/index.ts"
+      ],
+      "@swiftship/domains-surcharges": [
+        "libs/domains/surcharges/src/index.ts"
+      ],
+      "@swiftship/domains-bulk-operations": [
+        "libs/domains/bulk-operations/src/index.ts"
+      ],
+      "@swiftship/domains-dashboard": [
+        "libs/domains/dashboard/src/index.ts"
+      ],
+      "@swiftship/domains-storage": [
+        "libs/domains/storage/src/index.ts"
+      ],
+      "@swiftship/domains-metrics": [
+        "libs/domains/metrics/src/index.ts"
+      ],
+      "@swiftship/domains-onboarding": [
+        "libs/domains/onboarding/src/index.ts"
+      ],
+      "@swiftship/domains-plugins": [
+        "libs/domains/plugins/src/index.ts"
+      ],
       "@swiftship/domains-notifications": [
         "libs/domains/notifications/src/index.ts"
       ],
