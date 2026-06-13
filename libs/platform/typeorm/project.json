@@ -3,7 +3,13 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/platform/typeorm/src",
   "projectType": "library",
-  "tags": ["layer:platform", "scope:shared", "team:platform", "maturity:stable", "type:infrastructure"],
+  "tags": [
+    "layer:platform",
+    "scope:shared",
+    "team:platform",
+    "maturity:stable",
+    "type:infrastructure"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
@@ -19,6 +25,22 @@
           "libs/platform/typeorm/*.md"
         ]
       }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/typeorm",
+        "tsConfig": "libs/platform/typeorm/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
     }
   }
 }

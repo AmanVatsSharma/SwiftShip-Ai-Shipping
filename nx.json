@@ -1,48 +1,53 @@
 {
+  "name": "swiftship-ai",
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
-  "npmScope": "swiftship",
-  "affected": {
-    "defaultBase": "main"
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      "sharedGlobals"
+    ],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/.eslintrc.json"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/tsconfig.base.json"
+    ]
+  },
+  "targetDefaults": {
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["default", "{workspaceRoot}/eslint.config.mjs"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": ["default", "^production"]
+    },
+    "typecheck": {
+      "cache": true,
+      "inputs": ["production", "^production"]
+    },
+    "e2e": {
+      "cache": false
+    }
   },
   "tasksRunnerOptions": {
     "default": {
       "runner": "nx/tasks-runners/default",
       "options": {
-        "cacheableOperations": [
-          "build",
-          "test",
-          "lint"
-        ],
-        "parallel": 4
+        "cacheableOperations": ["build", "lint", "test", "typecheck"],
+        "parallel": 3,
+        "cacheDirectory": "{workspaceRoot}/.nx/cache"
       }
     }
   },
-  "targetDefaults": {
-    "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "cache": true
-    },
-    "test": {
-      "cache": true
-    },
-    "lint": {
-      "cache": true
-    },
-    "@nx/js:tsc": {
-      "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "default",
-        "^default"
-      ]
-    }
-  },
-  "workspaceLayout": {
-    "apps": "apps",
-    "libs": "libs"
-  }
+  "defaultBase": "master"
 }

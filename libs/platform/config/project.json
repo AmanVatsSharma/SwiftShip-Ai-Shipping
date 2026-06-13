@@ -3,7 +3,30 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/platform/config/src",
   "projectType": "library",
-  "tags": ["layer:platform", "scope:api", "team:platform", "maturity:stable", "type:feature"],
+  "tags": [
+    "layer:platform",
+    "scope:api",
+    "team:platform",
+    "maturity:stable",
+    "type:feature"
+  ],
   "// targets": "to see all targets run: nx show project config --web",
-  "targets": {}
+  "targets": {
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/config",
+        "tsConfig": "libs/platform/config/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
+    }
+  }
 }

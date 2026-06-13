@@ -3,7 +3,13 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/domains/dashboard/src",
   "projectType": "library",
-  "tags": ["layer:domain", "scope:dashboard", "team:logistics", "maturity:stable", "type:domain"],
+  "tags": [
+    "layer:domain",
+    "scope:dashboard",
+    "team:logistics",
+    "maturity:stable",
+    "type:domain"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
@@ -19,6 +25,22 @@
           "libs/domains/dashboard/*.md"
         ]
       }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/dashboard",
+        "tsConfig": "libs/domains/dashboard/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
     }
   }
 }

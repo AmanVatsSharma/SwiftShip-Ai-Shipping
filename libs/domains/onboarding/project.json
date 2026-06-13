@@ -3,7 +3,13 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/domains/onboarding/src",
   "projectType": "library",
-  "tags": ["layer:domain", "scope:onboarding", "team:logistics", "maturity:stable", "type:domain"],
+  "tags": [
+    "layer:domain",
+    "scope:onboarding",
+    "team:logistics",
+    "maturity:stable",
+    "type:domain"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
@@ -19,6 +25,22 @@
           "libs/domains/onboarding/*.md"
         ]
       }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/onboarding",
+        "tsConfig": "libs/domains/onboarding/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
     }
   }
 }

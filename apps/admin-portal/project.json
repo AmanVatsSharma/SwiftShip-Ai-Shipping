@@ -35,6 +35,14 @@
       "options": {
         "jestConfig": "apps/admin-portal/jest.config.ts"
       }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/admin-portal",
+        "tsConfig": "apps/admin-portal/tsconfig.app.json"
+      }
     }
   }
 }

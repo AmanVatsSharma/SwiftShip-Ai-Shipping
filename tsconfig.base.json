@@ -132,6 +132,9 @@
       "@swiftship/observability": [
         "libs/observability/src/index.ts"
       ],
+      "@swiftship/shared-ui": [
+        "libs/shared-ui/src/index.ts"
+      ],
       "@swiftship/domains-serviceability": [
         "libs/domains/serviceability/src/index.ts"
       ],

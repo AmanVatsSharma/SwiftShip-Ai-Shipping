@@ -3,7 +3,13 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/platform/auth/src",
   "projectType": "library",
-  "tags": ["layer:platform", "scope:shared", "team:platform", "maturity:stable", "type:infrastructure"],
+  "tags": [
+    "layer:platform",
+    "scope:shared",
+    "team:platform",
+    "maturity:stable",
+    "type:infrastructure"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
@@ -19,6 +25,22 @@
           "libs/platform/auth/*.md"
         ]
       }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/auth",
+        "tsConfig": "libs/platform/auth/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
     }
   }
 }

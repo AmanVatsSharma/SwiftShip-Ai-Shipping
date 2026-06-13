@@ -3,7 +3,13 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/domains/rate-shop/src",
   "projectType": "library",
-  "tags": ["layer:domain", "scope:rate-shop", "team:logistics", "maturity:stable", "type:domain"],
+  "tags": [
+    "layer:domain",
+    "scope:rate-shop",
+    "team:logistics",
+    "maturity:stable",
+    "type:domain"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
@@ -19,6 +25,22 @@
           "libs/domains/rate-shop/*.md"
         ]
       }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/rate-shop",
+        "tsConfig": "libs/domains/rate-shop/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
     }
   }
 }
