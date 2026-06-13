@@ -1,3 +1,3 @@
-// Placeholder barrel for @swiftship/domains-bulk-operations.
-// Implemented in Plan 3.
-export const BULK_OPERATIONS_LIB_VERSION = '0.0.1-pilot';
+export { BulkOperationsModule, BulkOperationsModule as BulkOperationsLibModule } from '../../../../src/bulk-operations/bulk-operations.module';
+export { BulkOperationsResolver, BulkOperationsResolver as BulkOperationsLibResolver } from '../../../../src/bulk-operations/bulk-operations.resolver';
+export { BulkOperationResult, BulkLabelResult } from '../../../../src/bulk-operations/bulk-operations.model';

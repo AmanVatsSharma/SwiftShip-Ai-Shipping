@@ -1,3 +1,3 @@
-// Placeholder barrel for @swiftship/domains-metrics.
-// Implemented in Plan 3.
-export const METRICS_LIB_VERSION = '0.0.1-pilot';
+export { MetricsModule, MetricsModule as MetricsLibModule } from '../../../../src/metrics/metrics.module';
+export { MetricsService, MetricsService as MetricsLibService } from '../../../../src/metrics/metrics.service';
+export { MetricsController, MetricsController as MetricsLibController } from '../../../../src/metrics/metrics.controller';

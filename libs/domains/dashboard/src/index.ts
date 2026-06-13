@@ -1,3 +1,4 @@
-// Placeholder barrel for @swiftship/domains-dashboard.
-// Implemented in Plan 3.
-export const DASHBOARD_LIB_VERSION = '0.0.1-pilot';
+export { DashboardModule, DashboardModule as DashboardLibModule } from '../../../../src/dashboard/dashboard.module';
+export { DashboardService, DashboardService as DashboardLibService } from '../../../../src/dashboard/dashboard.service';
+export { DashboardResolver, DashboardResolver as DashboardLibResolver } from '../../../../src/dashboard/dashboard.resolver';
+export * from '../../../../src/dashboard/dashboard.model';
