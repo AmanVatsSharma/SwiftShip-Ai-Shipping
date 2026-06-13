@@ -34,9 +34,34 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
+
+      // Plan 5 enforcement: ban direct Prisma imports outside the compat shim.
+      // Libs should use `@swiftship/platform-typeorm` instead.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@prisma/client', '@prisma/client/runtime/library'],
+              message:
+                'Do not import from @prisma/client — use @swiftship/platform-typeorm or the entities/enums re-exports.',
+            },
+          ],
+        },
+      ],
+      {
+        files: [
+          'libs/platform/typeorm/src/lib/@prisma/**/*',
+          'src/prisma/**/*',
+        ],
+        rules: {
+          'no-restricted-imports': 'off',
+        },
+      },
+
       // Nx boundary enforcement - WARNINGS in Plan 1, will become ERRORS in Plan 5
       '@nx/enforce-module-boundaries': [
-        'warn',
+        'error',
         {
           enforceBuildableLibDependency: true,
           allowCircularSelfDependency: false,
@@ -59,8 +84,7 @@ export default tseslint.config(
             // APPS (can import anything)
             { sourceTag: 'scope:api', onlyDependOnLibsWithTags: ['*'] },
             { sourceTag: 'scope:admin-portal', onlyDependOnLibsWithTags: ['*'] },
-            { sourceTag: 'scope:customer-portal', onlyDependOnLibsWithTags: ['*'] },
-            { sourceTag: 'scope:partner-portal', onlyDependOnLibsWithTags: ['*'] }
+            { sourceTag: 'scope:web', onlyDependOnLibsWithTags: ['*'] }
           ]
         }
       ]

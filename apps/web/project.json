@@ -1,0 +1,31 @@
+{
+  "name": "web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/web",
+  "projectType": "application",
+  "tags": ["scope:web", "type:app", "type:nextjs"],
+  "targets": {
+    "build": {
+      "executor": "@nx/next:build",
+      "outputs": ["{options.outputPath}"],
+      "options": { "outputPath": "dist/apps/web" }
+    },
+    "serve": {
+      "executor": "@nx/next:server",
+      "options": { "buildTarget": "web:build", "dev": true }
+    },
+    "export": {
+      "executor": "@nx/next:export",
+      "options": { "buildTarget": "web:build" }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/apps/web"],
+      "options": { "jestConfig": "apps/web/jest.config.ts" }
+    }
+  }
+}
