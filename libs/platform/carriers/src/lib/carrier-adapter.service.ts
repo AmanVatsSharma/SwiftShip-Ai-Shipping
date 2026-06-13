@@ -10,6 +10,10 @@ import { EcomExpressAdapter } from './adapters/ecom-express.adapter';
 import { ShadowfaxAdapter } from './adapters/shadowfax.adapter';
 import { FedExIndiaAdapter } from './adapters/fedex-india.adapter';
 import { GatiAdapter } from './adapters/gati.adapter';
+import { DhlAdapter } from './adapters/dhl.adapter';
+import { AramexAdapter } from './adapters/aramex.adapter';
+import { IndiaPostAdapter } from './adapters/india-post.adapter';
+import { ProfessionalCouriersAdapter } from './adapters/professional-couriers.adapter';
 
 /**
  * Carrier Adapter Service
@@ -31,6 +35,10 @@ import { GatiAdapter } from './adapters/gati.adapter';
  * - SHADOWFAX: Shadowfax Logistics
  * - FEDEX_INDIA: FedEx India
  * - GATI: Gati Limited
+ * - DHL: DHL Express India
+ * - ARAMEX: Aramex India
+ * - INDIAPOST: India Post Business
+ * - PCA: Professional Couriers
  * 
  * Configuration:
  * Each carrier requires specific environment variables for authentication.
@@ -177,6 +185,77 @@ export class CarrierAdapterService {
       }
     } else {
       console.warn('[CarrierAdapterService] GATI_CLIENT_ID or GATI_API_KEY not configured, skipping Gati adapter');
+    }
+
+    // DHL Express India adapter
+    const dhlClientId = this.config.get<string>('DHL_CLIENT_ID');
+    const dhlClientSecret = this.config.get<string>('DHL_CLIENT_SECRET');
+    const dhlAccountNumber = this.config.get<string>('DHL_ACCOUNT_NUMBER');
+    if (dhlClientId && dhlClientSecret && dhlAccountNumber) {
+      try {
+        const dhl = new DhlAdapter(this.config);
+        this.adapters.set(dhl.code, dhl);
+        console.log('[CarrierAdapterService] Registered DHL adapter');
+      } catch (error) {
+        console.error('[CarrierAdapterService] Failed to initialize DHL adapter', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    } else {
+      console.warn('[CarrierAdapterService] DHL_CLIENT_ID, DHL_CLIENT_SECRET, or DHL_ACCOUNT_NUMBER not configured, skipping DHL adapter');
+    }
+
+    // Aramex India adapter
+    const aramexAccountNumber = this.config.get<string>('ARAMEX_ACCOUNT_NUMBER');
+    const aramexUsername = this.config.get<string>('ARAMEX_USERNAME');
+    const aramexPassword = this.config.get<string>('ARAMEX_PASSWORD');
+    const aramexPin = this.config.get<string>('ARAMEX_PIN');
+    if (aramexAccountNumber && aramexUsername && aramexPassword && aramexPin) {
+      try {
+        const aramex = new AramexAdapter(this.config);
+        this.adapters.set(aramex.code, aramex);
+        console.log('[CarrierAdapterService] Registered ARAMEX adapter');
+      } catch (error) {
+        console.error('[CarrierAdapterService] Failed to initialize Aramex adapter', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    } else {
+      console.warn('[CarrierAdapterService] ARAMEX_ACCOUNT_NUMBER, ARAMEX_USERNAME, ARAMEX_PASSWORD, or ARAMEX_PIN not configured, skipping Aramex adapter');
+    }
+
+    // India Post Business adapter
+    const indiapostApiKey = this.config.get<string>('INDIAPOST_API_KEY');
+    const indiapostCustomerId = this.config.get<string>('INDIAPOST_CUSTOMER_ID');
+    if (indiapostApiKey && indiapostCustomerId) {
+      try {
+        const indiapost = new IndiaPostAdapter(this.config);
+        this.adapters.set(indiapost.code, indiapost);
+        console.log('[CarrierAdapterService] Registered INDIAPOST adapter');
+      } catch (error) {
+        console.error('[CarrierAdapterService] Failed to initialize India Post adapter', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    } else {
+      console.warn('[CarrierAdapterService] INDIAPOST_API_KEY or INDIAPOST_CUSTOMER_ID not configured, skipping India Post adapter');
+    }
+
+    // Professional Couriers adapter
+    const pcaApiKey = this.config.get<string>('PCA_API_KEY');
+    const pcaUsername = this.config.get<string>('PCA_USERNAME');
+    if (pcaApiKey && pcaUsername) {
+      try {
+        const pca = new ProfessionalCouriersAdapter(this.config);
+        this.adapters.set(pca.code, pca);
+        console.log('[CarrierAdapterService] Registered PCA adapter');
+      } catch (error) {
+        console.error('[CarrierAdapterService] Failed to initialize Professional Couriers adapter', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    } else {
+      console.warn('[CarrierAdapterService] PCA_API_KEY or PCA_USERNAME not configured, skipping Professional Couriers adapter');
     }
 
     console.log(`[CarrierAdapterService] Initialization complete. Registered ${this.adapters.size} carrier adapter(s)`, {
