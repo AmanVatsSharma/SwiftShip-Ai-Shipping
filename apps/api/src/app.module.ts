@@ -15,6 +15,10 @@ import { CarriersLibModule } from '../../libs/platform/carriers/src/lib/carriers
 import { GraphqlLibModule } from '../../libs/platform/graphql/src/lib/graphql.module';
 import { ConfigLibModule } from '../../libs/platform/config/src/lib/config.module';
 
+// Observability lib
+import { ObservabilityModule } from '../../libs/observability/src/lib/observability.module';
+import { MetricsController } from '../../libs/observability/src/lib/metrics.controller';
+
 // Domain libs — every feature is now an importable Nx lib.
 import { OrdersLibModule } from '../../libs/domains/orders/src/lib/orders.module';
 import { ShipmentsLibModule } from '../../libs/domains/shipments/src/lib/shipments.module';
