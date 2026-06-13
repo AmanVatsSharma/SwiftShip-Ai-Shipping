@@ -17,9 +17,21 @@ env:
   REDIS_URL: redis://localhost:6379
 
 jobs:
+  graph:
+    name: Nx graph guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: 'npm' }
+      - run: npm ci
+      - run: node scripts/check-nx-graph.mjs
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    needs: [graph]
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }

@@ -1,0 +1,38 @@
+{
+  "name": "channels",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/channels/src",
+  "projectType": "library",
+  "tags": [
+    "layer:domain",
+    "scope:channels",
+    "team:integrations",
+    "type:feature",
+    "maturity:stable"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/domains/channels",
+        "tsConfig": "libs/domains/channels/tsconfig.lib.json",
+        "packageJson": "libs/domains/channels/package.json",
+        "main": "libs/domains/channels/src/index.ts",
+        "assets": ["libs/domains/channels/*.md"]
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/domains/channels",
+        "tsConfig": "libs/domains/channels/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    }
+  }
+}
