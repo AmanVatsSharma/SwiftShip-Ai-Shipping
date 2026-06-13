@@ -1,0 +1,46 @@
+{
+  "name": "tenants",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/tenants/src",
+  "projectType": "library",
+  "tags": [
+    "layer:domain",
+    "scope:shared",
+    "team:platform",
+    "type:feature",
+    "maturity:stable"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/tenants",
+        "tsConfig": "libs/domains/tenants/tsconfig.lib.json",
+        "packageJson": "libs/domains/tenants/package.json",
+        "main": "libs/domains/tenants/src/index.ts",
+        "assets": [
+          "libs/domains/tenants/*.md"
+        ]
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/tenants",
+        "tsConfig": "libs/domains/tenants/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
+    }
+  }
+}
