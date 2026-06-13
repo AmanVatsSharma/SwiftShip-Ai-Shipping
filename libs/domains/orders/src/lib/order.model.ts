@@ -5,12 +5,17 @@ import {
   Float,
   registerEnumType,
 } from '@nestjs/graphql';
-import { OrderStatus } from '@prisma/client';
-import { Warehouse } from '../warehouses/warehouse.model';
+import { OrderStatus, PaymentStatus } from '@swiftship/platform-typeorm';
+import { Warehouse } from '@swiftship/domains-warehouses';
 
-// Reuse Prisma enum to avoid TS incompatibilities between layers
+// OrderStatus enum (re-exported from the platform-typeorm lib so we own the
+// canonical enum definition; previously this came from @prisma/client).
 registerEnumType(OrderStatus, {
   name: 'OrderStatus',
+});
+
+registerEnumType(PaymentStatus, {
+  name: 'PaymentStatus',
 });
 
 @ObjectType()
@@ -26,6 +31,9 @@ export class Order {
 
   @Field(() => OrderStatus)
   status: OrderStatus;
+
+  @Field(() => PaymentStatus)
+  paymentStatus: PaymentStatus;
 
   @Field()
   createdAt: Date;
@@ -82,4 +90,4 @@ export class Order {
   packageHeightCm?: number | null;
 }
 
-export { OrderStatus };
+export { OrderStatus, PaymentStatus };

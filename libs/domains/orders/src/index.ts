@@ -1,3 +1,7 @@
-// Placeholder barrel for @swiftship/domains-orders.
-// Implemented in Plan 3.
-export const ORDERS_LIB_VERSION = '0.0.1-pilot';
+export * from './lib/orders.module';
+export * from './lib/orders.service';
+export * from './lib/orders.resolver';
+export * from './lib/order.model';
+export * from './lib/dto/create-order.input';
+export * from './lib/dto/update-order.input';
+export * from './lib/dto/orders-filter.input';
