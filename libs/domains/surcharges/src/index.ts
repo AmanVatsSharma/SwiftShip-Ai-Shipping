@@ -1,3 +1,5 @@
-// Placeholder barrel for @swiftship/domains-surcharges.
-// Implemented in Plan 3.
-export const SURCHARGES_LIB_VERSION = '0.0.1-pilot';
+export { SurchargesModule, SurchargesModule as SurchargesLibModule } from '../../../../src/surcharges/surcharges.module';
+export { SurchargesResolver, SurchargesResolver as SurchargesLibResolver } from '../../../../src/surcharges/surcharges.resolver';
+export { RateSurchargeModel } from '../../../../src/surcharges/rate-surcharge.model';
+export { CreateRateSurchargeInput } from '../../../../src/surcharges/create-rate-surcharge.input';
+export { UpdateRateSurchargeInput } from '../../../../src/surcharges/update-rate-surcharge.input';

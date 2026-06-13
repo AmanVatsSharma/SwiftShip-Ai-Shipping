@@ -1,3 +1,2 @@
-// Placeholder barrel for @swiftship/domains-storage.
-// Implemented in Plan 3.
-export const STORAGE_LIB_VERSION = '0.0.1-pilot';
+export { StorageModule, StorageModule as StorageLibModule } from '../../../../src/storage/storage.module';
+export { StorageService, StorageService as StorageLibService } from '../../../../src/storage/storage.service';
