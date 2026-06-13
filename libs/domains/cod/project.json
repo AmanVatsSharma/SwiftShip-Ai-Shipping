@@ -1,0 +1,24 @@
+{
+  "name": "cod",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/cod/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:cod", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/cod",
+        "tsConfig": "libs/domains/cod/tsconfig.lib.json",
+        "packageJson": "libs/domains/cod/package.json",
+        "main": "libs/domains/cod/src/index.ts",
+        "assets": [
+          "libs/domains/cod/*.md"
+        ]
+      }
+    }
+  }
+}

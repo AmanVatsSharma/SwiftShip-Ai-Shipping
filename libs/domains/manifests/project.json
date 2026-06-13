@@ -1,0 +1,24 @@
+{
+  "name": "manifests",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/manifests/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:manifests", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/manifests",
+        "tsConfig": "libs/domains/manifests/tsconfig.lib.json",
+        "packageJson": "libs/domains/manifests/package.json",
+        "main": "libs/domains/manifests/src/index.ts",
+        "assets": [
+          "libs/domains/manifests/*.md"
+        ]
+      }
+    }
+  }
+}

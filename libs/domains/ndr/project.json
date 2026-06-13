@@ -1,0 +1,24 @@
+{
+  "name": "ndr",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/ndr/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:ndr", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/ndr",
+        "tsConfig": "libs/domains/ndr/tsconfig.lib.json",
+        "packageJson": "libs/domains/ndr/package.json",
+        "main": "libs/domains/ndr/src/index.ts",
+        "assets": [
+          "libs/domains/ndr/*.md"
+        ]
+      }
+    }
+  }
+}
