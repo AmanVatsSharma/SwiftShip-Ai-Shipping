@@ -19,6 +19,7 @@ import { StructuredLogger } from '../../libs/observability/src/lib/logger.servic
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  app.useLogger(new StructuredLogger());
   const config = app.get(ConfigService);
 
   // security

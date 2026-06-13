@@ -129,6 +129,9 @@
       "@swiftship/domains-notifications": [
         "libs/domains/notifications/src/index.ts"
       ],
+      "@swiftship/observability": [
+        "libs/observability/src/index.ts"
+      ],
       "@swiftship/domains-serviceability": [
         "libs/domains/serviceability/src/index.ts"
       ],
