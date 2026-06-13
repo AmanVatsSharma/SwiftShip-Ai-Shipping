@@ -41,6 +41,18 @@
       ],
       "prisma": [
         "./libs/platform/prisma/src/index.ts"
+      ],
+      "auth": [
+        "./libs/platform/auth/src/index.ts"
+      ],
+      "queues": [
+        "./libs/platform/queues/src/index.ts"
+      ],
+      "carriers": [
+        "./libs/platform/carriers/src/index.ts"
+      ],
+      "graphql": [
+        "./libs/platform/graphql/src/index.ts"
       ]
     }
   },
