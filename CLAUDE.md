@@ -135,3 +135,23 @@ Implement `CarrierAdapter` from `libs/platform/carriers/src/lib/adapter.interfac
 - **E-commerce** — Shopify is the primary platform. `apps/api/src/main.ts` registers a raw-body parser on `/shopify/webhook` for HMAC verification. WooCommerce and the rest live under `libs/domains/ecommerce-integrations/`.
 - **Storage** — `STORAGE_DRIVER` is `s3` (default; uses `@aws-sdk/client-s3` + presigner) or `stub` (dev).
 - **Old `src/` directory** — the legacy single-package source still exists at `src/`. It is what the domain libs re-export through their barrels. It is on the way out; do not add new features to `src/`. Add them to a `libs/domains/<name>/` lib instead, and update the barrel.
+
+## Architectural guard (Nx graph check)
+
+`scripts/check-nx-graph.mjs` is a static guard that runs as the `graph` job in CI before `lint`. It reads the workspace dependency graph via `npx nx graph --json` (with a `project.json` + `tsconfig.base.json` fallback when the Nx CLI is unavailable) and asserts:
+
+1. No cycles in the lib dependency graph (DFS with white/grey/black colouring).
+2. No `layer:platform` / `layer:shared` / `layer:observability` / `layer:ui` lib depends on a `layer:domain` / `layer:api` / `layer:data-access` lib.
+3. No `layer:types` / `layer:utils` lib depends on anything above it.
+4. Every project has a `project.json` + `tsconfig.json`; libs additionally need `tsconfig.lib.json` + `src/index.ts`; apps need a `src/` directory.
+
+Run locally:
+```bash
+node scripts/check-nx-graph.mjs
+```
+
+When adding a new project to the workspace:
+- **New lib**: `libs/<layer>/<name>/project.json` with tags from the layer taxonomy (mirrors `eslint.config.mjs` `depConstraints`), plus `tsconfig.json`, `tsconfig.lib.json`, `package.json`, and `src/index.ts` exporting the public API.
+- **New app**: `apps/<name>/project.json` with a `scope:<app>` tag, plus `tsconfig.json` and a `src/` directory.
+- Add a path mapping in `tsconfig.base.json` if the lib should be importable as `@swiftship/<...>`.
+- Add the lib to the `depConstraints` array in `eslint.config.mjs` if it introduces a new layer tag.
