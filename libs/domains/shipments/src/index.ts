@@ -1,3 +1,10 @@
-// Placeholder barrel for @swiftship/domains-shipments.
-// Implemented in Plan 3.
-export const SHIPMENTS_LIB_VERSION = '0.0.1-pilot';
+export * from './lib/shipments.module';
+export * from './lib/shipments.service';
+export * from './lib/shipments.resolver';
+export * from './lib/shipment.model';
+export * from './lib/shipments.gateway';
+export * from './lib/dto/create-shipment.input';
+export * from './lib/dto/update-shipment.input';
+export * from './lib/dto/create-label.input';
+export * from './lib/dto/ingest-tracking.input';
+export * from './lib/dto/shipments-filter.input';
