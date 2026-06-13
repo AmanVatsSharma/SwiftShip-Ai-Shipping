@@ -1,0 +1,24 @@
+{
+  "name": "warehouses",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/warehouses/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:warehouses", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/warehouses",
+        "tsConfig": "libs/domains/warehouses/tsconfig.lib.json",
+        "packageJson": "libs/domains/warehouses/package.json",
+        "main": "libs/domains/warehouses/src/index.ts",
+        "assets": [
+          "libs/domains/warehouses/*.md"
+        ]
+      }
+    }
+  }
+}
