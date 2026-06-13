@@ -11,3 +11,4 @@ export * from './shipping.entities';
 export * from './warehouse.entities';
 export * from './billing.entities';
 export * from './ecom.entities';
+export * from './dashboard.entities';
