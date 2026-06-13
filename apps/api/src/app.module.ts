@@ -104,8 +104,9 @@ import { HealthController } from './health.controller';
     AuthLibModule,
     QueuesModule,
     CarriersLibModule,
+    ObservabilityModule,
   ],
-  controllers: [AppController, HealthController],
+  controllers: [AppController, HealthController, MetricsController],
   providers: [
     AppService,
     AppResolver,
