@@ -1,43 +1,32 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { InvoiceService } from './services/invoice.service';
-import { EwayBillService } from './services/eway-bill.service';
-import { GstService } from './services/gst.service';
-import { PdfService } from './services/pdf.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthLibModule } from '@swiftship/platform-auth';
+import {
+  InvoiceEntity,
+  InvoiceItemEntity,
+  InvoiceSequenceEntity,
+  SubscriptionEntity,
+  PaymentEntity,
+  UserEntity,
+  WarehouseEntity,
+} from '@swiftship/platform-typeorm';
+import { BillingService } from './typeorm-billing.service';
 import { BillingResolver } from './billing.resolver';
-import { QueuesModule } from '../queues/queues.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { InvoiceEmailWorker } from './services/invoice-email.worker';
 
-/**
- * Billing Module
- * 
- * Handles all billing-related functionality including:
- * - Invoice generation and management
- * - PDF generation for invoices
- * - GST calculation and compliance
- * - E-way bill generation and tracking
- * 
- * Dependencies:
- * - PrismaService: Database access
- * - ConfigService: Configuration management
- * 
- * Exports:
- * - InvoiceService: For use in other modules
- * - EwayBillService: For use in other modules
- * - GstService: For use in other modules
- */
 @Module({
-  imports: [QueuesModule, NotificationsModule],
-  providers: [
-    PrismaService,
-    InvoiceService,
-    EwayBillService,
-    GstService,
-    PdfService,
-    BillingResolver,
-    InvoiceEmailWorker,
+  imports: [
+    TypeOrmModule.forFeature([
+      InvoiceEntity,
+      InvoiceItemEntity,
+      InvoiceSequenceEntity,
+      SubscriptionEntity,
+      PaymentEntity,
+      UserEntity,
+      WarehouseEntity,
+    ]),
+    AuthLibModule,
   ],
-  exports: [InvoiceService, EwayBillService, GstService],
+  providers: [BillingService, BillingResolver],
+  exports: [BillingService],
 })
-export class BillingModule {}
+export class BillingLibModule {}

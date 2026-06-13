@@ -1,3 +1,6 @@
-// Placeholder barrel for @swiftship/domains-billing.
-// Implemented in Plan 3.
-export const BILLING_LIB_VERSION = '0.0.1-pilot';
+export * from './lib/billing.module';
+export * from './lib/typeorm-billing.service';
+export * from './lib/billing.model';
+export * from './lib/billing.resolver';
+export * from './lib/dto/create-invoice.input';
+export * from './lib/dto/generate-eway-bill.input';
