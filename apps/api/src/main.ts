@@ -6,6 +6,7 @@ import * as morgan from 'morgan';
 import * as bodyParser from 'body-parser';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { StructuredLogger } from '../../libs/observability/src/lib/logger.service';
 
 /**
  * SwiftShip AI — API bootstrap.
