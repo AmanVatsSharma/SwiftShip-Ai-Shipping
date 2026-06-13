@@ -1,0 +1,34 @@
+{
+  "name": "observability",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/observability/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "layer:observability", "type:feature"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/observability",
+        "tsConfig": "libs/observability/tsconfig.lib.json",
+        "packageJson": "libs/observability/package.json",
+        "main": "libs/observability/src/index.ts",
+        "assets": [
+          "libs/observability/*.md"
+        ]
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/observability",
+        "tsConfig": "libs/observability/tsconfig.lib.json"
+      }
+    }
+  }
+}
