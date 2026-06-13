@@ -38,6 +38,9 @@
       ],
       "config": [
         "./libs/platform/config/src/index.ts"
+      ],
+      "prisma": [
+        "./libs/platform/prisma/src/index.ts"
       ]
     }
   },
