@@ -8,6 +8,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import { AppResolver } from './app.resolver';
+import { TypeormModule } from '../libs/platform/typeorm/src/lib/typeorm.module';
 import { PrismaService } from './prisma/prisma.service';
 import { OrdersModule } from './orders/orders.module';
 import { CarriersModule } from './carriers/carriers.module';
@@ -39,6 +40,7 @@ import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
+    TypeormModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
