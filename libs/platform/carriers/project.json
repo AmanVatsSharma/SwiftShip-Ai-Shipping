@@ -3,7 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/platform/carriers/src",
   "projectType": "library",
-  "tags": [],
+  "tags": ["layer:platform", "scope:shared", "team:platform", "maturity:stable", "type:infrastructure"],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
