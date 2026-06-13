@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swiftship
+  labels:
+    app.kubernetes.io/part-of: swiftship
+    app.kubernetes.io/name: swiftship
