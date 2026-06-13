@@ -1,0 +1,24 @@
+{
+  "name": "bulk-operations",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/bulk-operations/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:bulk-operations", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/bulk-operations",
+        "tsConfig": "libs/domains/bulk-operations/tsconfig.lib.json",
+        "packageJson": "libs/domains/bulk-operations/package.json",
+        "main": "libs/domains/bulk-operations/src/index.ts",
+        "assets": [
+          "libs/domains/bulk-operations/*.md"
+        ]
+      }
+    }
+  }
+}

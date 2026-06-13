@@ -1,0 +1,24 @@
+{
+  "name": "plugins",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/plugins/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:plugins", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/plugins",
+        "tsConfig": "libs/domains/plugins/tsconfig.lib.json",
+        "packageJson": "libs/domains/plugins/package.json",
+        "main": "libs/domains/plugins/src/index.ts",
+        "assets": [
+          "libs/domains/plugins/*.md"
+        ]
+      }
+    }
+  }
+}

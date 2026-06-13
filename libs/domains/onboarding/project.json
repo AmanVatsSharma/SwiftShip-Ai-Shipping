@@ -1,0 +1,24 @@
+{
+  "name": "onboarding",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/onboarding/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:onboarding", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/onboarding",
+        "tsConfig": "libs/domains/onboarding/tsconfig.lib.json",
+        "packageJson": "libs/domains/onboarding/package.json",
+        "main": "libs/domains/onboarding/src/index.ts",
+        "assets": [
+          "libs/domains/onboarding/*.md"
+        ]
+      }
+    }
+  }
+}

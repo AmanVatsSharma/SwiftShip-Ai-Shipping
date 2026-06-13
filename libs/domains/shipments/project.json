@@ -1,0 +1,24 @@
+{
+  "name": "shipments",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/shipments/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:shipments", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/shipments",
+        "tsConfig": "libs/domains/shipments/tsconfig.lib.json",
+        "packageJson": "libs/domains/shipments/package.json",
+        "main": "libs/domains/shipments/src/index.ts",
+        "assets": [
+          "libs/domains/shipments/*.md"
+        ]
+      }
+    }
+  }
+}

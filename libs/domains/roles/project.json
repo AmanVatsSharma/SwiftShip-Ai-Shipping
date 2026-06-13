@@ -1,0 +1,24 @@
+{
+  "name": "roles",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/roles/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:roles", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/roles",
+        "tsConfig": "libs/domains/roles/tsconfig.lib.json",
+        "packageJson": "libs/domains/roles/package.json",
+        "main": "libs/domains/roles/src/index.ts",
+        "assets": [
+          "libs/domains/roles/*.md"
+        ]
+      }
+    }
+  }
+}

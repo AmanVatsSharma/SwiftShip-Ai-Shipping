@@ -1,0 +1,24 @@
+{
+  "name": "storage",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/storage/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:storage", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/storage",
+        "tsConfig": "libs/domains/storage/tsconfig.lib.json",
+        "packageJson": "libs/domains/storage/package.json",
+        "main": "libs/domains/storage/src/index.ts",
+        "assets": [
+          "libs/domains/storage/*.md"
+        ]
+      }
+    }
+  }
+}

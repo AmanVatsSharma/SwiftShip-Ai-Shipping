@@ -1,0 +1,24 @@
+{
+  "name": "pickups",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/pickups/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:pickups", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/pickups",
+        "tsConfig": "libs/domains/pickups/tsconfig.lib.json",
+        "packageJson": "libs/domains/pickups/package.json",
+        "main": "libs/domains/pickups/src/index.ts",
+        "assets": [
+          "libs/domains/pickups/*.md"
+        ]
+      }
+    }
+  }
+}

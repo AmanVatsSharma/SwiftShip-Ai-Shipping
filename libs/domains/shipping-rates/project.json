@@ -1,0 +1,24 @@
+{
+  "name": "shipping-rates",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/shipping-rates/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:shipping-rates", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/shipping-rates",
+        "tsConfig": "libs/domains/shipping-rates/tsconfig.lib.json",
+        "packageJson": "libs/domains/shipping-rates/package.json",
+        "main": "libs/domains/shipping-rates/src/index.ts",
+        "assets": [
+          "libs/domains/shipping-rates/*.md"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "returns",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/returns/src",
+  "projectType": "library",
+  "tags": ["layer:domain", "scope:returns", "team:logistics", "maturity:stable", "type:domain"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/returns",
+        "tsConfig": "libs/domains/returns/tsconfig.lib.json",
+        "packageJson": "libs/domains/returns/package.json",
+        "main": "libs/domains/returns/src/index.ts",
+        "assets": [
+          "libs/domains/returns/*.md"
+        ]
+      }
+    }
+  }
+}
