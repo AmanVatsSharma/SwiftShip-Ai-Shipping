@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import {
   CourierScoreDailyEntity,
   CarrierEntity,
+  ShipmentEntity,
+  TrackingEventEntity,
+  ShipmentStatus,
 } from '@swiftship/platform-typeorm';
 
 export interface ScoreInputs {
@@ -51,11 +54,17 @@ export interface CourierScorecardResult {
  */
 @Injectable()
 export class CourierScoreService {
+  private readonly logger = new Logger(CourierScoreService.name);
+
   constructor(
     @InjectRepository(CourierScoreDailyEntity)
     private readonly scoreRepo: Repository<CourierScoreDailyEntity>,
     @InjectRepository(CarrierEntity)
     private readonly carrierRepo: Repository<CarrierEntity>,
+    @InjectRepository(ShipmentEntity)
+    private readonly shipmentRepo: Repository<ShipmentEntity>,
+    @InjectRepository(TrackingEventEntity)
+    private readonly trackingRepo: Repository<TrackingEventEntity>,
   ) {}
 
   /** Aggregate scorecard for one carrier. */
@@ -176,6 +185,191 @@ export class CourierScoreService {
       });
     }
     return out.sort((a, b) => b.score - a.score);
+  }
+
+  /**
+   * Recompute the courier scorecard for every carrier, over the requested
+   * lookback window. Called by `CourierScoreScheduler` (SS-012) on a daily
+   * cron. Returns the per-carrier summary so the caller (or its tests) can
+   * inspect what was persisted.
+   *
+   * Score formula (per the SS-012 spec):
+   *
+   *   score = 100 * (
+   *     0.50 * deliveryRate                         // % shipped that delivered
+   *   + 0.30 * (1 - ndrRate)                        // NDR avoidance
+   *   + 0.20 * (1 - rtoRate)                        // RTO avoidance
+   *   )
+   *
+   * where each `xxxRate` is the per-carrier count divided by the carrier's
+   * total shipments in the window. A carrier with no shipments in the
+   * window gets a score of 0.
+   *
+   * The per-(carrier, zone, day) daily rows in `courier_score_daily` are
+   * upserted via the worker's `upsertDay` shape — keyed on
+   * `(tenantId, carrierId, zone, day)`. For `recomputeAll` we collapse
+   * everything onto the `'ALL'` zone so downstream readers can roll up
+   * to a tenant/carrier composite without re-aggregating.
+   *
+   * Resilient: a single carrier that throws does not abort the whole
+   * sweep — we log and continue. This matches the SS-012 requirement
+   * that "if recompute fails for one carrier, log and continue".
+   */
+  async recomputeAll(
+    windowDays: 30 | 60 | 90 = 30,
+  ): Promise<{
+    windowDays: number;
+    carriersProcessed: number;
+    carriersFailed: number;
+  }> {
+    const startedAt = Date.now();
+    const since = new Date();
+    since.setUTCDate(since.getUTCDate() - windowDays);
+
+    const carriers = await this.carrierRepo.find();
+    if (carriers.length === 0) {
+      this.logger.log(
+        `recomputeAll: no carriers found, nothing to do (window=${windowDays}d)`,
+      );
+      return {
+        windowDays,
+        carriersProcessed: 0,
+        carriersFailed: 0,
+      };
+    }
+
+    let carriersProcessed = 0;
+    let carriersFailed = 0;
+    for (const carrier of carriers) {
+      try {
+        await this.recomputeForCarrier(carrier, since, windowDays);
+        carriersProcessed++;
+      } catch (err) {
+        carriersFailed++;
+        this.logger.error(
+          `recomputeAll: failed for carrier ${carrier.id} (${carrier.name}): ${(err as Error).message}`,
+          (err as Error).stack,
+        );
+      }
+    }
+
+    const elapsedMs = Date.now() - startedAt;
+    this.logger.log(
+      `recomputeAll: window=${windowDays}d processed=${carriersProcessed} failed=${carriersFailed} elapsedMs=${elapsedMs}`,
+    );
+    return { windowDays, carriersProcessed, carriersFailed };
+  }
+
+  /** Compute + persist a single carrier's roll-up row. */
+  private async recomputeForCarrier(
+    carrier: CarrierEntity,
+    since: Date,
+    windowDays: number,
+  ): Promise<void> {
+    // 1. Count delivered shipments in the window.
+    const delivered = await this.shipmentRepo.count({
+      where: {
+        carrierId: carrier.id,
+        status: ShipmentStatus.DELIVERED,
+        createdAt: MoreThan(since),
+      },
+    });
+
+    // 2. Count total shipments in the window.
+    const totalShipped = await this.shipmentRepo.count({
+      where: {
+        carrierId: carrier.id,
+        createdAt: MoreThan(since),
+      },
+    });
+
+    // 3. NDR + RTO come from tracking events for shipments owned by this
+    //    carrier in the window.
+    const trackingRows = await this.trackingRepo
+      .createQueryBuilder('te')
+      .leftJoin(ShipmentEntity, 's', 's.id = te.shipmentId')
+      .select('te.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('s.carrierId = :carrierId', { carrierId: carrier.id })
+      .andWhere('te.createdAt >= :since', { since })
+      .groupBy('te.status')
+      .getRawMany();
+
+    let ndrCount = 0;
+    let rtoCount = 0;
+    for (const r of trackingRows) {
+      const status = String(r.status ?? '');
+      const c = Number(r.count ?? 0);
+      if (status.startsWith('NDR')) ndrCount += c;
+      if (status === 'RTO' || status.startsWith('RTO')) rtoCount += c;
+    }
+
+    // 4. Compute the score.
+    const safeRate = (n: number, d: number) => (d <= 0 ? 0 : n / d);
+    const deliveryRate = safeRate(delivered, totalShipped);
+    const ndrRate = safeRate(ndrCount, totalShipped);
+    const rtoRate = safeRate(rtoCount, totalShipped);
+    const raw =
+      0.5 * deliveryRate +
+      0.3 * (1 - ndrRate) +
+      0.2 * (1 - rtoRate);
+    const score = Math.round(Math.max(0, Math.min(1, raw)) * 100);
+
+    // 5. Persist as a single roll-up row per (tenantId=1, carrier, zone=ALL, day=today).
+    //    The composite read API sums these rows; for the roll-up case we
+    //    collapse to one row keyed on a synthetic 'ALL' zone + today's
+    //    UTC day.
+    const day = new Date().toISOString().slice(0, 10);
+    const carrierCode = this.toCarrierCode(carrier.name);
+    const existing = await this.scoreRepo
+      .createQueryBuilder('s')
+      .where('s.tenantId = :tenantId', { tenantId: 1 })
+      .andWhere('s.carrierId = :carrierId', { carrierId: carrier.id })
+      .andWhere('s.zone = :zone', { zone: 'ALL' })
+      .andWhere('s.day = :day', { day })
+      .getOne();
+    if (existing) {
+      existing.delivered = delivered;
+      existing.onTime = delivered; // not separately tracked in recomputeAll
+      existing.ndr = ndrCount;
+      existing.rto = rtoCount;
+      existing.damaged = 0;
+      existing.attempted = totalShipped;
+      existing.carrierCode = carrierCode;
+      await this.scoreRepo.save(existing);
+    } else {
+      const ent = this.scoreRepo.create({
+        tenantId: 1,
+        carrierId: carrier.id,
+        carrierCode,
+        zone: 'ALL',
+        day,
+        delivered,
+        onTime: delivered,
+        ndr: ndrCount,
+        rto: rtoCount,
+        damaged: 0,
+        attempted: totalShipped,
+      } as Partial<CourierScoreDailyEntity>);
+      await this.scoreRepo.save(ent);
+    }
+    this.logger.debug?.(
+      `recomputeForCarrier(${carrier.id}, ${windowDays}d): score=${score} delivered=${delivered}/${totalShipped} ndr=${ndrCount} rto=${rtoCount}`,
+    );
+  }
+
+  /**
+   * Convert a carrier display name into the short code stored on
+   * `CourierScoreDailyEntity.carrierCode`. Mirrors the worker's
+   * `toCarrierCode` helper so the roll-up rows line up with the
+   * per-day rows emitted by `CourierScoreWorker.run`.
+   */
+  private toCarrierCode(name: string): string {
+    return (name || 'UNKNOWN')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_|_$/g, '')
+      .slice(0, 64);
   }
 
   // ---------- helpers ----------

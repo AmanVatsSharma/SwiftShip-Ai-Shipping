@@ -11,6 +11,7 @@ import {
 } from '@swiftship/platform-typeorm';
 import { CourierScoreWorker } from './courier-score.worker';
 import { CourierScoreService } from './courier-score.service';
+import { CourierScoreScheduler } from './courier-score.scheduler';
 
 /**
  * CourierScoreModule
@@ -21,7 +22,11 @@ import { CourierScoreService } from './courier-score.service';
  *    `ShipmentEntity` rows, aggregates by (carrier, zone, day), and upserts
  *    `CourierScoreDailyEntity` rows.
  *  - `CourierScoreService` — read API returning the composite scorecard for
- *    a tenant (one per carrier, or per-zone for a single carrier).
+ *    a tenant (one per carrier, or per-zone for a single carrier). Also
+ *    owns `recomputeAll(windowDays)` which recomputes the roll-up rows
+ *    `RateRankingService` actually reads.
+ *  - `CourierScoreScheduler` — `@Cron('0 20 * * *')` (20:00 UTC daily)
+ *    that calls `recomputeAll(30)` so the ranker never sees stale data.
  *
  * Imports:
  *  - `TypeOrmModule.forFeature([...])` registers repositories for the
@@ -45,7 +50,11 @@ import { CourierScoreService } from './courier-score.service';
     QueuesModule,
     ObservabilityModule,
   ],
-  providers: [CourierScoreWorker, CourierScoreService],
+  providers: [
+    CourierScoreWorker,
+    CourierScoreService,
+    CourierScoreScheduler,
+  ],
   exports: [CourierScoreService],
 })
 export class CourierScoreModule {}

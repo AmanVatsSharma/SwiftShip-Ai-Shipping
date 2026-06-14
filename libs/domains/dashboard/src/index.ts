@@ -8,6 +8,7 @@ export * from '../../../../src/dashboard/dashboard.model';
 export * from './lib/courier-score.module';
 export * from './lib/courier-score.service';
 export * from './lib/courier-score.worker';
+export * from './lib/courier-score.scheduler';
 
 // Export specific types
 export { CourierScorecardResult } from './lib/courier-score.service';
