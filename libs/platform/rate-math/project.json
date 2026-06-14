@@ -1,0 +1,46 @@
+{
+  "name": "@swiftship/platform-rate-math",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/platform/rate-math/src",
+  "projectType": "library",
+  "tags": [
+    "layer:platform",
+    "scope:rate-math",
+    "team:platform",
+    "type:infrastructure",
+    "maturity:stable"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/rate-math",
+        "tsConfig": "libs/platform/rate-math/tsconfig.lib.json",
+        "packageJson": "libs/platform/rate-math/package.json",
+        "main": "libs/platform/rate-math/src/index.ts",
+        "assets": [
+          "libs/platform/rate-math/*.md"
+        ]
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/rate-math",
+        "tsConfig": "libs/platform/rate-math/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
+    }
+  }
+}
