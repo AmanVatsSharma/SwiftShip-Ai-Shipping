@@ -4,13 +4,11 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import type { GqlExecutionContext } from '@nestjs/graphql';
 import type { TenantService } from './tenant.service';
 
 export interface RequestWithTenant {
   tenantId?: number;
   user?: { tenantId?: number };
-  headers: Record<string, string | string[] | undefined>;
 }
 
 @Injectable()
@@ -18,15 +16,13 @@ export class TenantGuard implements CanActivate {
   constructor(private readonly tenants: TenantService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const gqlCtx = context.getArgByIndex
-      ? null
-      : null;
-    void gqlCtx;
-
-    const req =
-      (context.switchToHttp?.().getRequest?.() as RequestWithTenant | undefined) ??
-      (context.getArgByIndex(2)?.req as RequestWithTenant | undefined) ??
-      (context.getArgByIndex(0) as RequestWithTenant | undefined);
+    const httpReq = context.switchToHttp?.().getRequest?.() as
+      | RequestWithTenant
+      | undefined;
+    const gqlReq = context.getArgByIndex?.(0) as
+      | { req?: RequestWithTenant }
+      | undefined;
+    const req = httpReq ?? gqlReq?.req;
 
     if (!req) {
       throw new ForbiddenException('No request context');

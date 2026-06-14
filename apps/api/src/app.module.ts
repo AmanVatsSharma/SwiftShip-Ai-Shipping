@@ -26,6 +26,7 @@ import { WarehousesLibModule } from '../../libs/domains/warehouses/src/lib/wareh
 import { BillingLibModule } from '../../libs/domains/billing/src/lib/billing.module';
 import { UsersLibModule, RolesLibModule } from '../../libs/domains/users/src/lib/roles.module';
 import { CodLibModule, NdrLibModule, ManifestsLibModule, PickupsLibModule } from '../../libs/domains/..';
+import { TenantModule } from '@swiftship/domains-tenants';
 
 // App-level glue
 import { AppController } from './app.controller';
