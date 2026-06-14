@@ -8,6 +8,7 @@ import {
 } from '@swiftship/platform-typeorm';
 import { TenantContext } from '@swiftship/domains-tenants';
 import { NdrStateMachine } from './ndr-state-machine.service';
+import { RtoSettlementService } from './rto-settlement.service';
 
 /**
  * NdrService — the only DB-touching layer for NDR cases.
@@ -26,6 +27,7 @@ export class NdrService {
     private readonly shipments: Repository<ShipmentEntity>,
     private readonly sm: NdrStateMachine,
     private readonly tenantContext: TenantContext,
+    private readonly rtoSettlement: RtoSettlementService,
   ) {}
 
   // ------------------------------------------------------------------
@@ -151,6 +153,16 @@ export class NdrService {
   /**
    * Shortcut — escalate to RTO after max attempts exhausted.
    * Also flips the parent shipment to RTO.
+   *
+   * SS-019 — after the shipment row is updated, we fire the RTO
+   * settlement cascade. The cascade is:
+   *   1. credit the merchant's wallet for the shipping cost
+   *   2. refund the customer if PREPAID
+   *   3. email a discount code to COD customers
+   *   4. open a dispute record
+   *
+   * The cascade is short and synchronous; the dispute record is the
+   * idempotency anchor, so re-firing `initiateRto` is safe.
    */
   async initiateRto(id: number): Promise<NdrCaseEntity> {
     const ndr = await this.transitionNdr(
@@ -164,6 +176,9 @@ export class NdrService {
       { id: ndr.shipmentId, tenantId: tid },
       { status: 'RTO' } as any,
     );
+    // Fire-and-await the settlement cascade. The settlement is itself
+    // idempotent (the dispute row is the gate), so a re-fire is a no-op.
+    await this.rtoSettlement.onShipmentRto(ndr.shipmentId);
     return ndr;
   }
 

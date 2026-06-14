@@ -59,6 +59,22 @@ export default tseslint.config(
         },
       },
 
+      // SS-035: k6 scenarios are JS executed by the k6 binary. They
+      // deliberately use CommonJS (`require`, `module.exports`) and
+      // depend on k6 built-ins that don't have type definitions —
+      // eslint's type-checked rules trip on every import. Disable
+      // the type-aware rules for these files; the regular JS rules
+      // still apply.
+      {
+        files: ['loadtest/**/*.js', 'loadtest/**/*.mjs'],
+        rules: {
+          '@typescript-eslint/no-require-imports': 'off',
+          '@typescript-eslint/no-var-requires': 'off',
+          '@typescript-eslint/no-unused-vars': 'off',
+          '@typescript-eslint/no-unused-expressions': 'off',
+        },
+      },
+
       // Nx boundary enforcement - WARNINGS in Plan 1, will become ERRORS in Plan 5
       '@nx/enforce-module-boundaries': [
         'error',
@@ -88,7 +104,12 @@ export default tseslint.config(
             { sourceTag: 'scope:api', onlyDependOnLibsWithTags: ['*'] },
             { sourceTag: 'scope:admin-portal', onlyDependOnLibsWithTags: ['*'] },
             { sourceTag: 'scope:web', onlyDependOnLibsWithTags: ['*'] },
-            { sourceTag: 'scope:tenants', onlyDependOnLibsWithTags: ['layer:platform','layer:domain','layer:shared','type:types'] }
+            { sourceTag: 'scope:tenants', onlyDependOnLibsWithTags: ['layer:platform','layer:domain','layer:shared','type:types'] },
+            // TOOLS LAYER (loadtest scripts, generators, executors) — leaf,
+            // no domain/platform dependencies. The k6 scenarios only talk
+            // to the staging API over HTTP; they must not import domain
+            // or platform code.
+            { sourceTag: 'layer:tools', onlyDependOnLibsWithTags: [] }
           ]
         }
       ]

@@ -13,6 +13,10 @@ import { NdrStateMachine } from './ndr-state-machine.service';
  *  - idempotent create
  *  - transition integration with the state machine
  *  - RTO updates the parent shipment
+ *
+ * SS-019 — NdrService.initiateRto now also fires the RTO settlement
+ * cascade. The settlement is stubbed in this spec — the cascade is
+ * tested in `rto-settlement.service.spec.ts`.
  */
 describe('NdrService', () => {
   let service: NdrService;
@@ -28,6 +32,7 @@ describe('NdrService', () => {
     update: jest.Mock;
   };
   let tenantContext: { getTenantId: jest.Mock };
+  let rtoSettlement: { onShipmentRto: jest.Mock };
 
   const TENANT_ID = 7;
 
@@ -76,11 +81,15 @@ describe('NdrService', () => {
     tenantContext = {
       getTenantId: jest.fn(() => TENANT_ID),
     };
+    rtoSettlement = {
+      onShipmentRto: jest.fn().mockResolvedValue(undefined),
+    };
     service = new NdrService(
       ndrs as any,
       shipments as any,
       new NdrStateMachine(),
       tenantContext as any,
+      rtoSettlement as any,
     );
   });
 
@@ -180,7 +189,7 @@ describe('NdrService', () => {
   // initiateRto
   // ----------------------------------------------------------------
 
-  it('initiateRto transitions to RTO_INITIATED and flips the shipment status to RTO', async () => {
+  it('initiateRto transitions to RTO_INITIATED, flips the shipment status to RTO, and fires the settlement cascade', async () => {
     const ndr = makeNdr({ status: NdrCaseStatus.RESCHEDULED });
     ndrs.findOne.mockResolvedValue(ndr);
     const updated = await service.initiateRto(1);
@@ -189,5 +198,6 @@ describe('NdrService', () => {
       { id: 101, tenantId: TENANT_ID },
       { status: 'RTO' },
     );
+    expect(rtoSettlement.onShipmentRto).toHaveBeenCalledWith(101);
   });
 });

@@ -24,6 +24,11 @@ import {
 import { ObservabilityModule } from '../../libs/observability/src/lib/observability.module';
 import { MetricsController } from '../../libs/observability/src/lib/metrics.controller';
 
+// SS-031: KYC module (PAN + GSTIN + bank with BullMQ async verify).
+// Lives under the onboarding domain; registered directly so it can
+// inject the TypeORM-platform entities (no PrismaCompat shim).
+import { KycModule } from '../../libs/domains/onboarding/src/lib/kyc/kyc.module';
+
 // Domain libs — every feature is now an importable Nx lib.
 import { OrdersLibModule } from '../../libs/domains/orders/src/lib/orders.module';
 import { ShipmentsLibModule } from '../../libs/domains/shipments/src/lib/shipments.module';
@@ -120,6 +125,8 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     ObservabilityModule,
     TenantModule,
     RateShopPublicModule,
+    // SS-031: KYC (PAN + GSTIN + bank) with BullMQ async verify.
+    KycModule,
   ],
   controllers: [AppController, HealthController, MetricsController],
   providers: [

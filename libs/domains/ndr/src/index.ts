@@ -12,3 +12,13 @@ export {
   type TrackingToNdrAction,
 } from './lib/tracking-ingestion.processor';
 export { NdrCase, NdrCaseList } from './lib/ndr.model';
+export {
+  RtoSettlementService,
+  type RefundServiceLike,
+  type NotifierLike,
+} from './lib/rto-settlement.service';
+export {
+  RtoDisputeResolver,
+  RtoDisputeResolver as RtoDisputeLibResolver,
+} from './lib/rto-dispute.resolver';
+export { RtoDispute, RtoDisputeStatus } from './lib/rto-dispute.model';

@@ -153,6 +153,9 @@
       "@swiftship/domains-serviceability": [
         "libs/domains/serviceability/src/index.ts"
       ],
+      "@swiftship/loadtest": [
+        "loadtest/src/index.ts"
+      ],
       "@swiftship/shared-*": [
         "libs/shared/*"
       ],
