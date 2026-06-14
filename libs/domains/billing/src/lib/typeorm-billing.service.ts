@@ -20,6 +20,7 @@ import {
   InvoiceStatus,
   BillingCycle,
 } from '@swiftship/platform-typeorm';
+import { TenantContext } from '@swiftship/domains-tenants';
 
 @Injectable()
 export class BillingService {
@@ -41,11 +42,26 @@ export class BillingService {
     @InjectRepository(WarehouseEntity)
     private readonly warehouses: Repository<WarehouseEntity>,
     private readonly dataSource: DataSource,
+    private readonly tenantContext: TenantContext,
   ) {}
+
+  /**
+   * SS-002c: helper to extract the current tenantId and refuse the call
+   * if no tenant is bound. Centralised so the rest of the service is
+   * easier to audit.
+   */
+  private requireTenantId(): number {
+    const tid = this.tenantContext.getTenantId();
+    if (tid === null || tid === undefined) {
+      throw new BadRequestException('Tenant context required for billing operation');
+    }
+    return Number(tid);
+  }
 
   // ---- list / find
   async listInvoices(filter?: { userId?: number; status?: InvoiceStatus; warehouseId?: number }) {
-    const where: any = {};
+    const tenantId = this.requireTenantId();
+    const where: any = { tenantId };
     if (filter?.userId) where.userId = filter.userId;
     if (filter?.status) where.status = filter.status;
     if (filter?.warehouseId) where.warehouseId = filter.warehouseId;
@@ -57,8 +73,9 @@ export class BillingService {
   }
 
   async getInvoice(id: number) {
+    const tenantId = this.requireTenantId();
     const inv = await this.invoices.findOne({
-      where: { id },
+      where: { id, tenantId },
       relations: ['invoiceItems', 'payments', 'subscription', 'warehouse'],
     });
     if (!inv) throw new NotFoundException(`Invoice ${id} not found`);
@@ -73,10 +90,11 @@ export class BillingService {
     subscriptionId?: number;
     billingCycle?: BillingCycle;
   }) {
+    const tenantId = this.requireTenantId();
     const user = await this.users.findOne({ where: { id: input.userId } });
     if (!user) throw new BadRequestException(`User ${input.userId} not found`);
 
-    const wh = await this.warehouses.findOne({ where: { id: input.warehouseId } });
+    const wh = await this.warehouses.findOne({ where: { id: input.warehouseId, tenantId } });
     if (!wh) throw new BadRequestException(`Warehouse ${input.warehouseId} not found`);
 
     // Calculate totals
@@ -110,6 +128,7 @@ export class BillingService {
         userId: input.userId,
         warehouseId: input.warehouseId,
         subscriptionId: input.subscriptionId,
+        tenantId,
         status: InvoiceStatus.DRAFT,
         subtotal,
         totalTax,
@@ -130,7 +149,8 @@ export class BillingService {
 
   // ---- mark paid
   async markInvoicePaid(invoiceId: number, paymentId: number) {
-    await this.invoices.update(invoiceId, {
+    const tenantId = this.requireTenantId();
+    await this.invoices.update({ id: invoiceId, tenantId } as any, {
       status: InvoiceStatus.PAID,
       paidAt: new Date(),
     });
@@ -138,7 +158,11 @@ export class BillingService {
   }
 
   async voidInvoice(invoiceId: number) {
-    await this.invoices.update(invoiceId, { status: InvoiceStatus.VOID });
+    const tenantId = this.requireTenantId();
+    await this.invoices.update(
+      { id: invoiceId, tenantId } as any,
+      { status: InvoiceStatus.VOID },
+    );
     return this.getInvoice(invoiceId);
   }
 

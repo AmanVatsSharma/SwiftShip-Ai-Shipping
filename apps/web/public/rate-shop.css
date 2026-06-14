@@ -1,0 +1,118 @@
+/* SwiftShip Rate-Shop Widget — minimal scoped styles.
+   All class names are prefixed .swiftship-rate-shop__* to avoid
+   collisions with the host page. */
+
+.swiftship-rate-shop {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 360px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.swiftship-rate-shop[data-theme='dark'] {
+  background: #111827;
+  color: #f9fafb;
+  border-color: #374151;
+}
+
+.swiftship-rate-shop__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.swiftship-rate-shop__field {
+  margin-bottom: 10px;
+}
+
+.swiftship-rate-shop__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.swiftship-rate-shop__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+}
+
+.swiftship-rate-shop__btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #2563eb;
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.swiftship-rate-shop__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.swiftship-rate-shop__results {
+  margin-top: 12px;
+}
+
+.swiftship-rate-shop__quote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.swiftship-rate-shop__quote--best {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.swiftship-rate-shop__carrier {
+  font-weight: 600;
+  flex: 1;
+}
+
+.swiftship-rate-shop__rate {
+  font-weight: 600;
+}
+
+.swiftship-rate-shop__eta {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.swiftship-rate-shop__badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.swiftship-rate-shop__empty,
+.swiftship-rate-shop__error {
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.swiftship-rate-shop__error {
+  color: #dc2626;
+}
