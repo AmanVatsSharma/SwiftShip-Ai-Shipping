@@ -112,14 +112,23 @@ export class NdrService {
 
   /**
    * Generic transition — validates via the state machine, saves.
+   * Optionally accepts extra metadata to merge into the NDR's `metadata`
+   * column before persisting.
    */
   async transitionNdr(
     id: number,
     to: NdrCaseStatus,
     reason?: string,
+    extraMetadata?: Record<string, any>,
   ): Promise<NdrCaseEntity> {
     const ndr = await this.getNdr(id);
     this.sm.transition(ndr, to, reason);
+    if (extraMetadata) {
+      ndr.metadata = {
+        ...(ndr.metadata ?? {}),
+        ...extraMetadata,
+      };
+    }
     // Set resolvedAt when reaching a terminal state
     if (this.sm.isTerminal(to)) {
       ndr.resolvedAt = new Date();

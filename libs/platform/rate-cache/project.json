@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/platform/rate-cache/src",
+  "projectType": "library",
+  "tags": [
+    "layer:platform",
+    "scope:rate-cache",
+    "team:platform",
+    "maturity:stable",
+    "type:infrastructure"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/rate-cache",
+        "tsConfig": "libs/platform/rate-cache/tsconfig.lib.json",
+        "packageJson": "libs/platform/rate-cache/package.json",
+        "main": "libs/platform/rate-cache/src/index.ts",
+        "assets": [
+          "libs/platform/rate-cache/*.md"
+        ]
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/rate-cache",
+        "tsConfig": "libs/platform/rate-cache/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
+    }
+  }
+}
