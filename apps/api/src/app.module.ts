@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -8,9 +8,11 @@ import { join } from 'path';
 
 // Platform libs (TypeORM, auth, queues, carriers, graphql, config, throttler)
 import { TypeormModule } from '../../libs/platform/typeorm/src/lib/typeorm.module';
+import { configurePrismaCompat } from '@swiftship/platform-typeorm';
 import { AuthLibModule } from '../../libs/platform/auth/src/lib/auth.module';
 import { QueuesModule } from '../../libs/platform/queues/src/lib/queues.module';
 import { CarriersLibModule } from '../../libs/platform/carriers/src/lib/carriers.module';
+import { RateCacheModule } from '../../libs/platform/rate-cache/src/lib/rate-cache.module';
 import { GraphqlLibModule } from '../../libs/platform/graphql/src/lib/graphql.module';
 import { ConfigLibModule } from '../../libs/platform/config/src/lib/config.module';
 import {
@@ -36,6 +38,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppResolver } from './app.resolver';
 import { HealthController } from './health.controller';
+import { TenantContextMiddleware } from './tenant-context.middleware';
+import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
 
 @Module({
   imports: [
@@ -112,8 +116,10 @@ import { HealthController } from './health.controller';
     AuthLibModule,
     QueuesModule,
     CarriersLibModule,
+    RateCacheModule,
     ObservabilityModule,
     TenantModule,
+    RateShopPublicModule,
   ],
   controllers: [AppController, HealthController, MetricsController],
   providers: [
@@ -126,4 +132,32 @@ import { HealthController } from './health.controller';
     { provide: APP_GUARD, useClass: TenantThrottlerGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule, OnModuleInit {
+  /**
+   * SS-002c: bind the shim's per-request tenantId to whatever the
+   * TenantMiddleware (already wired in `TenantModule#configure`) puts on
+   * the request. The TenantContextMiddleware runs *after* it.
+   */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(TenantContextMiddleware).forRoutes('*');
+  }
+
+  /**
+   * SS-002c: tell the shim how to read a tenantId from the active request
+   * when the ALS slot isn't already populated. This is the fallback used
+   * by worker / cron contexts that never had a request to bind to.
+   */
+  onModuleInit(): void {
+    configurePrismaCompat({
+      getTenantId: () => {
+        // The shim's request middleware populates `als` directly. This
+        // callback is the safety-net for code paths outside of HTTP
+        // (e.g. a worker that uses PrismaCompat for a single read). In
+        // those contexts there is no `req` to read from — returning
+        // undefined forces the shim to either use withSystemContext or
+        // throw a clear "no tenant context" error.
+        return undefined;
+      },
+    });
+  }
+}

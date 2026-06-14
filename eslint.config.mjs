@@ -78,6 +78,9 @@ export default tseslint.config(
             // UI LAYER (types, utils, other UI within scope)
             { sourceTag: 'layer:ui', onlyDependOnLibsWithTags: ['layer:types', 'layer:utils', 'layer:ui'] },
 
+            // DOMAIN LAYER (can depend on other domain, platform, types)
+            { sourceTag: 'layer:domain', onlyDependOnLibsWithTags: ['layer:domain', 'layer:platform', 'layer:types', 'type:types'] },
+
             // PLATFORM LAYER (can use other platform, types)
             { sourceTag: 'layer:platform', onlyDependOnLibsWithTags: ['layer:platform', 'layer:types', 'type:types'] },
 

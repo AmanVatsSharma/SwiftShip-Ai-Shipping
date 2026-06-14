@@ -48,6 +48,9 @@
       "@swiftship/platform-carriers": [
         "libs/platform/carriers/src/index.ts"
       ],
+      "@swiftship/platform-rate-cache": [
+        "libs/platform/rate-cache/src/index.ts"
+      ],
       "@swiftship/platform-graphql": [
         "libs/platform/graphql/src/index.ts"
       ],
@@ -56,6 +59,9 @@
       ],
       "@swiftship/platform-throttler": [
         "libs/platform/throttler/src/index.ts"
+      ],
+      "@swiftship/platform-rate-math": [
+        "libs/platform/rate-math/src/index.ts"
       ],
       "@swiftship/domains-*": [
         "libs/domains/*"
