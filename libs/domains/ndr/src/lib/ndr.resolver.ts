@@ -1,26 +1,87 @@
-import { Args, Int, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { BadRequestException } from '@nestjs/common';
+import { NdrCaseStatus } from '@swiftship/platform-typeorm';
 import { NdrService } from './ndr.service';
-import { Query } from '@nestjs/graphql';
+import { NdrCase } from './ndr.model';
 
-@Resolver()
+/**
+ * GraphQL surface for the NDR domain.
+ *
+ * Mutations are intentionally low-level (transitionNdr / markDelivered /
+ * initiateRto) — the higher-level flows (call attempt → WhatsApp → RTO)
+ * are orchestrated by the SS-018 / SS-019 services which call into
+ * NdrService directly.
+ */
+@Resolver(() => NdrCase)
 export class NdrResolver {
-  constructor(private readonly ndr: NdrService) {}
+  constructor(private readonly ndrService: NdrService) {}
 
-  @Mutation(() => String)
-  async openNdrCase(@Args('shipmentId', { type: () => Int }) shipmentId: number, @Args('reason') reason: string) {
-    const c = await this.ndr.openCase(shipmentId, reason);
-    return JSON.stringify(c);
+  // ------------------------------------------------------------------
+  // Queries
+  // ------------------------------------------------------------------
+
+  @Query(() => [NdrCase], { description: 'All NDR cases for the current tenant.' })
+  ndrCases(): Promise<NdrCase[]> {
+    return this.ndrService.getNdrs();
   }
 
-  @Mutation(() => String)
-  async closeNdrCase(@Args('shipmentId', { type: () => Int }) shipmentId: number, @Args('actionNotes', { nullable: true }) actionNotes?: string) {
-    const c = await this.ndr.closeCase(shipmentId, actionNotes);
-    return JSON.stringify(c);
+  @Query(() => NdrCase, {
+    nullable: true,
+    description: 'Look up a single NDR case by id.',
+  })
+  ndrCase(@Args('id', { type: () => Int }) id: number) {
+    return this.ndrService.getNdr(id);
   }
 
-  @Query(() => String, { description: 'NDR analytics summary as JSON' })
-  async ndrAnalytics() {
-    const a = await this.ndr.analytics();
-    return JSON.stringify(a);
+  @Query(() => [NdrCase], {
+    description: 'NDR cases for a single shipment, newest first.',
+  })
+  ndrCasesByShipment(
+    @Args('shipmentId', { type: () => Int }) shipmentId: number,
+  ) {
+    return this.ndrService.getNdrsByShipment(shipmentId);
+  }
+
+  @Query(() => [NdrCase], {
+    description: 'NDR cases filtered by status (e.g. PENDING, RTO_INITIATED).',
+  })
+  ndrCasesByStatus(@Args('status', { type: () => NdrCaseStatus }) status: NdrCaseStatus) {
+    return this.ndrService.getNdrsByStatus(status);
+  }
+
+  // ------------------------------------------------------------------
+  // Mutations
+  // ------------------------------------------------------------------
+
+  @Mutation(() => NdrCase, {
+    description: 'Transition an NDR case to a new state. Throws if illegal.',
+  })
+  async transitionNdr(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('to', { type: () => NdrCaseStatus }) to: NdrCaseStatus,
+    @Args('reason', { nullable: true }) reason?: string,
+  ) {
+    try {
+      return await this.ndrService.transitionNdr(id, to, reason);
+    } catch (e) {
+      if (e instanceof Error) {
+        throw new BadRequestException(e.message);
+      }
+      throw e;
+    }
+  }
+
+  @Mutation(() => NdrCase, {
+    description: 'Mark an NDR case as DELIVERED (customer successfully re-attempted).',
+  })
+  markDelivered(@Args('id', { type: () => Int }) id: number) {
+    return this.ndrService.resolveDelivered(id);
+  }
+
+  @Mutation(() => NdrCase, {
+    description: 'Escalate an NDR case to RTO_INITIATED (max attempts exhausted).',
+  })
+  initiateRto(@Args('id', { type: () => Int }) id: number) {
+    return this.ndrService.initiateRto(id);
   }
 }

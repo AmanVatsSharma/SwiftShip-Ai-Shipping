@@ -1,6 +1,8 @@
 import { InputType, Field, Int, Float } from '@nestjs/graphql';
 import { OrderStatus } from './order.model';
+import { RateRankingStrategy } from '@swiftship/domains-rate-shop';
 import {
+  IsBoolean,
   IsNotEmpty,
   IsString,
   IsNumber,
@@ -114,4 +116,31 @@ export class CreateOrderInput {
   @IsOptional()
   @IsNumber({}, { message: 'Package height must be a number' })
   packageHeightCm?: number;
+
+  /**
+   * SS-015: when true (default), the rate-engine auto-picks the best carrier
+   * for this order. When false, the merchant-supplied `carrierId` is used
+   * as today.
+   */
+  @Field(() => Boolean, {
+    defaultValue: true,
+    description:
+      'If true, the rate-engine picks the best carrier; if false, use the merchant-supplied carrierId',
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'rankRate must be a boolean' })
+  rankRate?: boolean;
+
+  /**
+   * SS-015: optional override for the rate-engine strategy. When omitted
+   * the merchant's tenant-level default (best_value) is used.
+   */
+  @Field(() => RateRankingStrategy, {
+    nullable: true,
+    description:
+      'Strategy for the rate-engine to use; defaults to the tenant-level setting',
+  })
+  @IsOptional()
+  @IsEnum(RateRankingStrategy, { message: 'Invalid rate strategy' })
+  rateStrategy?: RateRankingStrategy;
 }

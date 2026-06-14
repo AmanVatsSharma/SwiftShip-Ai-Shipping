@@ -9,11 +9,14 @@
     "tslib": "^2.3.0"
   },
   "peerDependencies": {
+    "@nestjs/bull": "^11.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/graphql": "^13.0.0",
     "@nestjs/typeorm": "^11.0.0",
-    "@swiftship/platform-auth": "*",
+    "@swiftship/domains-tenants": "*",
+    "@swiftship/platform-queues": "*",
     "@swiftship/platform-typeorm": "*",
+    "bullmq": "^5.0.0",
     "class-validator": "^0.14.1",
     "typeorm": "^0.3.20"
   }

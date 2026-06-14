@@ -1,8 +1,14 @@
 // Re-export barrel for the NDR (Non-Delivery Report) lib.
-// Until Plan 3 ships a full TypeORM implementation, the src/ implementation
-// runs against PrismaCompat (TypeORM-backed). New consumers should import
-// from `@swiftship/domains-ndr` rather than the relative `../ndr` paths.
+// Consumers should import from `@swiftship/domains-ndr` rather than
+// the relative `../ndr` paths.
 
-export { NdrModule, NdrModule as NdrLibModule } from '../../../../src/ndr/ndr.module';
-export { NdrService, NdrService as NdrLibService } from '../../../../src/ndr/ndr.service';
-export { NdrResolver, NdrResolver as NdrLibResolver } from '../../../../src/ndr/ndr.resolver';
+export { NdrModule, NdrModule as NdrLibModule } from './lib/ndr.module';
+export { NdrService, NdrService as NdrLibService } from './lib/ndr.service';
+export { NdrResolver, NdrResolver as NdrLibResolver } from './lib/ndr.resolver';
+export { NdrStateMachine } from './lib/ndr-state-machine.service';
+export {
+  TrackingIngestionProcessor,
+  TrackingIngestionJobData,
+  type TrackingToNdrAction,
+} from './lib/tracking-ingestion.processor';
+export { NdrCase, NdrCaseList } from './lib/ndr.model';

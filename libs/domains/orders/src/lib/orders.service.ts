@@ -17,9 +17,18 @@ import {
   ReturnEntity,
   PaymentStatus,
 } from '@swiftship/platform-typeorm';
+import { TenantContext } from '@swiftship/domains-tenants';
+import {
+  RateRankingService,
+  RateRankingStrategy,
+  type RateRankingStrategyName,
+  type RateRankingPreferences,
+  type RankedRateQuote,
+} from '@swiftship/domains-rate-shop';
 import { CreateOrderInput } from './dto/create-order.input';
 import { UpdateOrderInput } from './dto/update-order.input';
 import { OrdersFilterInput } from './dto/orders-filter.input';
+import { OrderRateQuoteService } from './order-rate-quote.service';
 
 @Injectable()
 export class OrdersService {
@@ -35,12 +44,29 @@ export class OrdersService {
     @InjectRepository(WarehouseCoverageEntity)
     private readonly coverage: Repository<WarehouseCoverageEntity>,
     private readonly dataSource: DataSource,
+    private readonly tenantContext: TenantContext,
+    private readonly rateRanking: RateRankingService,
+    private readonly orderRateQuoteService: OrderRateQuoteService,
   ) {}
+
+  /**
+   * SS-002c: every read/write of a tenant-scoped entity must include the
+   * current `tenantId` in the `where` clause. We centralise the guard so
+   * the rest of the service doesn't have to remember.
+   */
+  private requireTenantId(): number {
+    const tid = this.tenantContext.getTenantId();
+    if (tid === null || tid === undefined) {
+      throw new BadRequestException('Tenant context required for order operation');
+    }
+    return Number(tid);
+  }
 
   // ---- read
   async getOrder(id: number): Promise<OrderEntity> {
+    const tenantId = this.requireTenantId();
     const order = await this.orders.findOne({
-      where: { id },
+      where: { id, tenantId },
       relations: ['shipments', 'returns', 'warehouse'],
     });
     if (!order) {
@@ -50,14 +76,17 @@ export class OrdersService {
   }
 
   async getOrders(): Promise<OrderEntity[]> {
+    const tenantId = this.requireTenantId();
     return this.orders.find({
+      where: { tenantId },
       order: { createdAt: 'DESC' },
       relations: ['shipments', 'returns', 'warehouse'],
     });
   }
 
   async filterOrders(filter: OrdersFilterInput): Promise<OrderEntity[]> {
-    const where: any = {};
+    const tenantId = this.requireTenantId();
+    const where: any = { tenantId };
     if (filter.status) where.status = filter.status;
     if (filter.userId) where.userId = filter.userId;
     if (filter.carrierId) where.carrierId = filter.carrierId;
@@ -71,18 +100,20 @@ export class OrdersService {
   }
 
   async getOrdersByUser(userId: number): Promise<OrderEntity[]> {
+    const tenantId = this.requireTenantId();
     const user = await this.users.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException(`User with ID ${userId} not found`);
     return this.orders.find({
-      where: { userId },
+      where: { userId, tenantId },
       order: { createdAt: 'DESC' },
       relations: ['shipments', 'returns', 'warehouse'],
     });
   }
 
   async getOrdersByStatus(status: OrderStatus): Promise<OrderEntity[]> {
+    const tenantId = this.requireTenantId();
     return this.orders.find({
-      where: { status },
+      where: { status, tenantId },
       order: { createdAt: 'DESC' },
       relations: ['shipments', 'returns', 'warehouse'],
     });
@@ -90,27 +121,94 @@ export class OrdersService {
 
   // ---- create
   async createOrder(input: CreateOrderInput): Promise<OrderEntity> {
+    const tenantId = this.requireTenantId();
     // user
     const user = await this.users.findOne({ where: { id: input.userId } });
     if (!user) throw new BadRequestException(`User with ID ${input.userId} not found`);
-
-    // carrier (optional)
-    if (input.carrierId) {
-      const carrier = await this.carriers.findOne({ where: { id: input.carrierId } });
-      if (!carrier) throw new BadRequestException(`Carrier with ID ${input.carrierId} not found`);
-    }
 
     if (!input.destinationPincode) throw new BadRequestException('Destination pincode is required');
     if (!input.packageWeightGrams) throw new BadRequestException('Package weight is required');
 
     const warehouseId = await this.resolveWarehouse(input.warehouseId, input.destinationPincode);
 
+    // ---- SS-015: rate-engine auto-pick --------------------------------
+    // If `rankRate` is true (default), call `RateRankingService.rank(...)`
+    // and let the engine pick the winner. If false, the merchant-supplied
+    // `carrierId` is used as today.
+    let resolvedCarrierId = input.carrierId;
+    let rankedQuotes: RankedRateQuote[] = [];
+    if (input.rankRate !== false) {
+      const originPincode = await this.resolveOriginPincode(
+        warehouseId,
+        tenantId,
+      );
+      const strategyName = (input.rateStrategy ??
+        RateRankingStrategy.BEST_VALUE) as RateRankingStrategyName;
+      const prefs: RateRankingPreferences = {
+        strategy: strategyName,
+        // COD declared value (paise) — uses the order total as a proxy.
+        // Real COD orders will be tagged later by the billing lib.
+        codAmountPaise: Math.round((input.total ?? 0) * 100),
+      };
+
+      try {
+        rankedQuotes = await this.rateRanking.rank(
+          {
+            originPincode,
+            destinationPincode: input.destinationPincode!,
+            weightGrams: input.packageWeightGrams!,
+            paymentMethod: 'PREPAID',
+          },
+          prefs,
+        );
+      } catch (e) {
+        // Rate-engine failure is a hard error — we do NOT silently fall
+        // back to a default carrier. The merchant must explicitly opt out
+        // (rankRate=false) or fix the rate-engine.
+        throw new BadRequestException(
+          `Rate-engine auto-pick failed: ${(e as Error).message ?? 'unknown error'}`,
+        );
+      }
+
+      if (rankedQuotes.length === 0) {
+        throw new BadRequestException(
+          'No carriers available for this shipment — try rankRate=false to pick a carrier manually',
+        );
+      }
+
+      const winner = rankedQuotes[0];
+      const carrierId = await this.resolveCarrierId(
+        winner.carrierCode,
+        tenantId,
+      );
+      if (!carrierId) {
+        throw new BadRequestException(
+          `Winning carrier ${winner.carrierCode} is not connected for this tenant`,
+        );
+      }
+      resolvedCarrierId = carrierId;
+    } else {
+      // rankRate=false: validate the merchant-supplied carrierId as today.
+      if (input.carrierId) {
+        const carrier = await this.carriers.findOne({
+          where: { id: input.carrierId },
+        });
+        if (!carrier) {
+          throw new BadRequestException(
+            `Carrier with ID ${input.carrierId} not found`,
+          );
+        }
+      }
+    }
+    // ---- /SS-015 -----------------------------------------------------
+
     const order = this.orders.create({
       orderNumber: input.orderNumber,
       total: input.total,
       userId: input.userId,
-      carrierId: input.carrierId,
+      carrierId: resolvedCarrierId,
       warehouseId,
+      tenantId,
       status: input.status ?? OrderStatus.PENDING,
       paymentStatus: PaymentStatus.PENDING,
       destinationName: input.destinationName,
@@ -128,6 +226,17 @@ export class OrdersService {
     });
     try {
       const saved = await this.orders.save(order);
+
+      // Persist the ranked-quote audit trail. Done after the order save
+      // so we have a stable `orderId` and a failed save doesn't leak
+      // orphan rows.
+      if (rankedQuotes.length > 0) {
+        await this.orderRateQuoteService.recordRankedQuotes(
+          saved.id,
+          rankedQuotes,
+        );
+      }
+
       return this.getOrder(saved.id);
     } catch (e) {
       if (e instanceof QueryFailedError) {
@@ -145,6 +254,7 @@ export class OrdersService {
 
   // ---- update
   async updateOrder(input: UpdateOrderInput): Promise<OrderEntity> {
+    const tenantId = this.requireTenantId();
     const { id, ...data } = input;
     await this.getOrder(id);
 
@@ -160,7 +270,7 @@ export class OrdersService {
     }
 
     if (data.status) {
-      const current = await this.orders.findOne({ where: { id } });
+      const current = await this.orders.findOne({ where: { id, tenantId } });
       if (current?.status === OrderStatus.CANCELLED && data.status !== OrderStatus.CANCELLED) {
         throw new BadRequestException('Cannot change status of a CANCELLED order');
       }
@@ -169,17 +279,26 @@ export class OrdersService {
       }
     }
 
-    await this.orders.update(id, data);
+    // Refuse to write a tenantId from the payload — it's request-scoped.
+    delete (data as any).tenantId;
+    await this.orders.update({ id, tenantId } as any, data);
     return this.getOrder(id);
   }
 
   // ---- delete
   async deleteOrder(id: number): Promise<OrderEntity> {
+    const tenantId = this.requireTenantId();
     const order = await this.getOrder(id);
-    if ((await this.orders.findOne({ where: { id }, relations: ['shipments'] }))?.shipments?.length) {
+    if (
+      (await this.orders.findOne({ where: { id, tenantId }, relations: ['shipments'] }))?.shipments
+        ?.length
+    ) {
       throw new BadRequestException('Cannot delete an order with associated shipments');
     }
-    if ((await this.orders.findOne({ where: { id }, relations: ['returns'] }))?.returns?.length) {
+    if (
+      (await this.orders.findOne({ where: { id, tenantId }, relations: ['returns'] }))?.returns
+        ?.length
+    ) {
       throw new BadRequestException('Cannot delete an order with associated returns');
     }
     if (order.status === OrderStatus.PAID) {
@@ -255,5 +374,38 @@ export class OrdersService {
     });
     if (!fallback) throw new BadRequestException('No active warehouses configured');
     return fallback.id;
+  }
+
+  /**
+   * SS-015: origin pincode for the rate-engine request. Comes from the
+   * warehouse that the order will ship from. Falls back to a sentinel
+   * so the rate-engine can still produce a quote (the warehouse lookup
+   * itself would have thrown if there were no active warehouses).
+   */
+  private async resolveOriginPincode(
+    warehouseId: number,
+    tenantId: number,
+  ): Promise<string> {
+    const wh = await this.warehouses.findOne({
+      where: { id: warehouseId, tenantId },
+    });
+    if (wh?.pincode) return wh.pincode;
+    // Last-resort fallback — rate-engine would still need *some* string.
+    // 110001 is Delhi's CP pincode (a common default in shipping APIs).
+    return '110001';
+  }
+
+  /**
+   * SS-015: map the ranker's `carrierCode` (e.g. 'DELHIVERY') to the
+   * tenant-scoped `CarrierEntity.id`. Returns null when no row matches.
+   */
+  private async resolveCarrierId(
+    carrierCode: string,
+    tenantId: number,
+  ): Promise<number | null> {
+    const carrier = await this.carriers.findOne({
+      where: { name: carrierCode, tenantId },
+    });
+    return carrier?.id ?? null;
   }
 }
