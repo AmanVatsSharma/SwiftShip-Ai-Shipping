@@ -40,6 +40,7 @@ const TAGS = {
   DATA_ACCESS: ['layer:data-access'],
   TYPES: ['layer:types'],
   UTILS: ['layer:utils'],
+  TOOLS: ['layer:tools'],
   // App scopes (top-level entry points — exempt from domain→platform rules)
   APP: ['scope:api', 'scope:admin-portal', 'scope:web'],
 };
@@ -59,6 +60,11 @@ const FORBIDDEN_EDGES = [
   { from: 'TYPES', to: 'UTILS' },
   { from: 'UTILS', to: 'DOMAIN' },
   { from: 'UTILS', to: 'API' },
+  // TOOLS must stay leaf — no platform/domain/api/data-access imports.
+  { from: 'TOOLS', to: 'DOMAIN' },
+  { from: 'TOOLS', to: 'API' },
+  { from: 'TOOLS', to: 'DATA_ACCESS' },
+  { from: 'TOOLS', to: 'PLATFORM' },
 ];
 
 // ---------------------------------------------------------------------------

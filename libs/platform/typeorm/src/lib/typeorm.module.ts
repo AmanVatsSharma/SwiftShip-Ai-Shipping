@@ -46,3 +46,10 @@ export class TypeormModule {
     };
   }
 }
+
+/**
+ * Re-export the helpers other parts of the app use to bind a tenantId
+ * into the shim's per-request slot. Apps wire these into their
+ * request pipeline (see `apps/api/src/app.module.ts`).
+ */
+export { bindTenantContext, configurePrismaCompat, SYSTEM_TENANT_ID } from './prisma-compat.types';

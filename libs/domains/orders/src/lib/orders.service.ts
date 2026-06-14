@@ -25,6 +25,7 @@ import {
   type RateRankingPreferences,
   type RankedRateQuote,
 } from '@swiftship/domains-rate-shop';
+import { KycService } from '@swiftship/domains-onboarding';
 import { CreateOrderInput } from './dto/create-order.input';
 import { UpdateOrderInput } from './dto/update-order.input';
 import { OrdersFilterInput } from './dto/orders-filter.input';
@@ -47,6 +48,10 @@ export class OrdersService {
     private readonly tenantContext: TenantContext,
     private readonly rateRanking: RateRankingService,
     private readonly orderRateQuoteService: OrderRateQuoteService,
+    // SS-031: KYC guard for COD orders. Optional so legacy callers
+    // (tests, other services) that don't register KycModule don't break;
+    // when present, it gates `createOrder` for COD on a VERIFIED tenant.
+    private readonly kyc?: KycService,
   ) {}
 
   /**
@@ -130,6 +135,26 @@ export class OrdersService {
     if (!input.packageWeightGrams) throw new BadRequestException('Package weight is required');
 
     const warehouseId = await this.resolveWarehouse(input.warehouseId, input.destinationPincode);
+
+    // ---- SS-031: KYC gate for COD orders ------------------------------
+    // COD exposes the carrier to a settlement / remittance risk on the
+    // merchant — Shiprocket and every other Indian aggregator gate COD
+    // on a verified KYC. We do the same: if the merchant's KYC is not
+    // VERIFIED, refuse to create a COD order.
+    //
+    // Prepaid orders (the default) are allowed even for unverified
+    // tenants so that sandbox / new merchants can ship for free.
+    if ((input.paymentMethod ?? 'PREPAID') === 'COD') {
+      const verified = this.kyc
+        ? await this.kyc.isTenantKycVerified(tenantId)
+        : true; // KYC module not wired → don't break legacy callers
+      if (!verified) {
+        throw new BadRequestException(
+          'COD orders require tenant KYC to be VERIFIED. Submit your PAN, GSTIN, and bank details via submitKyc to enable COD.',
+        );
+      }
+    }
+    // ---- /SS-031 -----------------------------------------------------
 
     // ---- SS-015: rate-engine auto-pick --------------------------------
     // If `rankRate` is true (default), call `RateRankingService.rank(...)`

@@ -33,6 +33,10 @@ export class WebhookSubscriptionEntity {
   @Column({ type: 'boolean', default: true })
   active!: boolean;
 
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_webhook_subscriptions_tenantId')
+  tenantId!: number;
+
   @CreateDateColumn()
   createdAt!: Date;
 }
@@ -48,6 +52,10 @@ export class ShopifyStoreEntity {
 
   @Column({ type: 'text' })
   accessToken!: string;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_shopify_stores_tenantId')
+  tenantId!: number;
 
   @CreateDateColumn()
   connectedAt!: Date;
@@ -132,6 +140,10 @@ export class WooCommerceStoreEntity {
 
   @Column({ type: 'text' })
   consumerSecret!: string;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_woocommerce_stores_tenantId')
+  tenantId!: number;
 
   @CreateDateColumn()
   connectedAt!: Date;

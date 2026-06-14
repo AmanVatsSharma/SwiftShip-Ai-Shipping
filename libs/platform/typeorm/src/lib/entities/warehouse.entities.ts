@@ -53,6 +53,10 @@ export class WarehouseEntity {
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;
 
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_warehouses_tenantId')
+  tenantId!: number;
+
   @CreateDateColumn()
   createdAt!: Date;
 

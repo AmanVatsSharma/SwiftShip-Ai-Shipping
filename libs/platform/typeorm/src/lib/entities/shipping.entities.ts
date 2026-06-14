@@ -3,13 +3,14 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { LabelStatus, ShipmentStatus } from '../enums';
+import { LabelStatus, NdrCaseStatus, ShipmentStatus } from '../enums';
 import { OrderEntity } from './commerce.entities';
 import { WarehouseEntity } from './warehouse.entities';
 
@@ -24,6 +25,10 @@ export class CarrierEntity {
 
   @Column({ type: 'varchar', length: 255 })
   apiKey!: string;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_carriers_tenantId')
+  tenantId!: number;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -63,6 +68,10 @@ export class ShippingRateEntity {
   @Column({ type: 'int' })
   estimatedDeliveryDays!: number;
 
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_shipping_rates_tenantId')
+  tenantId!: number;
+
   @CreateDateColumn()
   createdAt!: Date;
 
@@ -83,6 +92,10 @@ export class ShipmentEntity {
 
   @Column({ type: 'int' })
   orderId!: number;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_shipments_tenantId')
+  tenantId!: number;
   @ManyToOne(() => OrderEntity, (o) => o.shipments)
   order?: OrderEntity;
 
@@ -242,8 +255,44 @@ export class PincodeZoneEntity {
 
   @Column({ type: 'int', nullable: true })
   carrierId?: number | null;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_pincode_zones_tenantId')
+  tenantId!: number;
   @ManyToOne(() => CarrierEntity, (c) => c.pincodeZones)
   carrier?: CarrierEntity | null;
+}
+
+@Entity('rate_zone_matrix')
+@Index('rate_zone_matrix_carrier_pair_key', ['carrierCode', 'originZone', 'destZone'], { unique: true })
+export class RateZoneMatrixEntity {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column({ type: 'varchar', length: 64 })
+  carrierCode!: string;
+
+  @Column({ type: 'varchar', length: 4 })
+  originZone!: string;
+
+  @Column({ type: 'varchar', length: 4 })
+  destZone!: string;
+
+  @Column({ type: 'bigint' })
+  baseRatePaise!: string;
+
+  @Column({ type: 'int', default: 500 })
+  weightSlabGrams!: number;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_rate_zone_matrix_tenantId')
+  tenantId!: number;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }
 
 @Entity('rate_surcharges')
@@ -267,6 +316,10 @@ export class RateSurchargeEntity {
 
   @Column({ type: 'boolean', default: true })
   active!: boolean;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_rate_surcharges_tenantId')
+  tenantId!: number;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -292,6 +345,10 @@ export class PickupEntity {
   @Column({ type: 'varchar', length: 32, default: 'SCHEDULED' })
   status!: string;
 
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_pickups_tenantId')
+  tenantId!: number;
+
   @CreateDateColumn()
   createdAt!: Date;
 
@@ -307,6 +364,10 @@ export class ManifestEntity {
 
   @Column({ type: 'varchar', length: 64 })
   manifestNo!: string;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_manifests_tenantId')
+  tenantId!: number;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -337,6 +398,8 @@ export class ManifestItemEntity {
 
 @Entity('ndr_cases')
 @Index('ndr_cases_shipmentId_key', ['shipmentId'], { unique: true })
+@Index('ndr_cases_status_idx', ['status'])
+@Index('ndr_cases_tenantId_status_idx', ['tenantId', 'status'])
 export class NdrCaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -346,14 +409,51 @@ export class NdrCaseEntity {
   @OneToOne(() => ShipmentEntity, (s) => s.ndrCase)
   shipment?: ShipmentEntity;
 
-  @Column({ type: 'text' })
-  reason!: string;
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_ndr_cases_tenantId')
+  tenantId!: number;
 
-  @Column({ type: 'varchar', length: 32, default: 'OPEN' })
-  status!: string;
+  @Column({ type: 'enum', enum: NdrCaseStatus, default: NdrCaseStatus.PENDING })
+  status!: NdrCaseStatus;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  awbNumber?: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  courierName?: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  customerPhone?: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  customerEmail?: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  customerName?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  ndrReason?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  reason?: string | null;
 
   @Column({ type: 'text', nullable: true })
   actionNotes?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  firstAttemptAt?: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastAttemptAt?: Date | null;
+
+  @Column({ type: 'int', default: 0 })
+  attemptCount!: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata?: Record<string, any> | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resolvedAt?: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -384,6 +484,10 @@ export class CodRemittanceEntity {
 
   @Column({ type: 'varchar', length: 128, nullable: true })
   referenceId?: string | null;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_cod_remittances_tenantId')
+  tenantId!: number;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -502,6 +606,70 @@ export class EwayBillEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any> | null;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}
+
+/**
+ * SS-019 — RtoDisputeEntity
+ *
+ * Represents a merchant dispute over an RTO (Return to Origin) shipment.
+ * Created automatically when a shipment transitions to RTO via the
+ * RtoSettlementService. Merchants can contest an RTO if they believe
+ * the carrier is at fault (e.g. driver marked RTO without attempting delivery).
+ *
+ * Lifecycle: OPEN → UNDER_REVIEW → RESOLVED_CARRIER_FAULT | RESOLVED_MERCHANT_FAULT | REJECTED
+ */
+@Entity('rto_disputes')
+@Index('rto_disputes_shipmentId_idx', ['shipmentId'])
+@Index('rto_disputes_tenantId_idx', ['tenantId'])
+@Index('rto_disputes_status_idx', ['status'])
+export class RtoDisputeEntity {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column({ type: 'int' })
+  shipmentId!: number;
+  @ManyToOne(() => ShipmentEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'shipmentId' })
+  shipment?: ShipmentEntity;
+
+  @Column({ type: 'int' })
+  orderId!: number;
+  @ManyToOne(() => OrderEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'orderId' })
+  order?: OrderEntity;
+
+  @Column({ type: 'int', default: 1 })
+  tenantId!: number;
+
+  @Column({ type: 'varchar', length: 32, default: 'OPEN' })
+  status!: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED_CARRIER_FAULT' | 'RESOLVED_MERCHANT_FAULT' | 'REJECTED';
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  reasonCode?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  merchantNotes?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  resolution?: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  resolvedByUserId?: number | null;
+
+  @Column({ type: 'int', nullable: true, comment: 'Refund amount in paise if carrier-fault resolution' })
+  refundedPaise?: number | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  openedAt?: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resolvedAt?: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;

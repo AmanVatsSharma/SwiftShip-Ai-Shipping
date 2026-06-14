@@ -38,6 +38,10 @@ export class UserEntity {
   @Column({ type: 'boolean', default: false })
   emailVerified!: boolean;
 
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_users_tenantId')
+  tenantId!: number;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   emailVerificationToken?: string | null;
 
@@ -156,6 +160,10 @@ export class OnboardingStateEntity {
 
   @Column({ type: 'boolean', default: false })
   firstPickupScheduled!: boolean;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_onboarding_states_tenantId')
+  tenantId!: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   nextAction?: string | null;

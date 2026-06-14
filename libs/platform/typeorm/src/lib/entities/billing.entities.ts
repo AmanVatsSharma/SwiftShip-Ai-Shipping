@@ -68,6 +68,10 @@ export class PaymentEntity {
   @Column({ type: 'varchar', length: 128, nullable: true })
   gatewayPaymentId?: string | null;
 
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_payments_tenantId')
+  tenantId!: number;
+
   @Column({ type: 'enum', enum: PaymentMethod, nullable: true })
   paymentMethod?: PaymentMethod | null;
 
@@ -230,6 +234,10 @@ export class InvoiceEntity {
   sellerProfileId?: number | null;
   @ManyToOne(() => WarehouseSellerProfileEntity, (p) => p.invoices)
   sellerProfile?: WarehouseSellerProfileEntity | null;
+
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_invoices_tenantId')
+  tenantId!: number;
 
   // Buyer
   @Column({ type: 'varchar', length: 128, nullable: true })

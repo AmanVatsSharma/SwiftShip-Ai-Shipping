@@ -95,3 +95,19 @@ export enum InvoiceStatus {
   CANCELLED = 'CANCELLED',
   REFUNDED = 'REFUNDED',
 }
+
+/**
+ * NDR (Non-Delivery Report) lifecycle. See `libs/domains/ndr` for the
+ * state-machine that governs legal transitions between these states.
+ */
+export enum NdrCaseStatus {
+  PENDING = 'PENDING',
+  CALL_ATTEMPTED = 'CALL_ATTEMPTED',
+  WHATSAPP_SENT = 'WHATSAPP_SENT',
+  EMAIL_SENT = 'EMAIL_SENT',
+  RESCHEDULED = 'RESCHEDULED',
+  DELIVERED = 'DELIVERED',
+  RTO_INITIATED = 'RTO_INITIATED',
+  RTO = 'RTO',
+  CANCELLED = 'CANCELLED',
+}

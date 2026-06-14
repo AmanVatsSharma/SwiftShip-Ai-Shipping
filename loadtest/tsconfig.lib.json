@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../dist/out-tsc",
+    "declaration": true,
+    "types": ["node"]
+  },
+  "include": ["k6/**/*.js", "index.js"],
+  "exclude": ["**/*.spec.js", "**/*.test.js", "dist", "results"]
+}

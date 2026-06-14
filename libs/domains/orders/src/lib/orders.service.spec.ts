@@ -276,4 +276,54 @@ describe('OrdersService', () => {
     // No silent fallback — the order is NOT saved.
     expect(orders.save).not.toHaveBeenCalled();
   });
+
+  // -------------------------------------------------------------------------
+  // SS-031: KYC gate for COD orders
+  // -------------------------------------------------------------------------
+
+  it('paymentMethod=COD with unverified KYC throws BadRequestException', async () => {
+    // KYC service is wired but says the tenant is NOT verified.
+    const kyc = { isTenantKycVerified: jest.fn().mockResolvedValue(false) };
+    (service as any).kyc = kyc;
+
+    await expect(
+      service.createOrder({ ...baseInput, paymentMethod: 'COD' }),
+    ).rejects.toThrow(/KYC/);
+    expect(kyc.isTenantKycVerified).toHaveBeenCalledWith(1);
+    // Order is NOT saved.
+    expect(orders.save).not.toHaveBeenCalled();
+  });
+
+  it('paymentMethod=COD with verified KYC proceeds to rate-ranking', async () => {
+    const kyc = { isTenantKycVerified: jest.fn().mockResolvedValue(true) };
+    (service as any).kyc = kyc;
+    const ranked = [mkRanked({ carrierCode: 'WIN' })];
+    rateRanking.rank.mockResolvedValueOnce(ranked);
+    carriers.findOne.mockResolvedValueOnce(mkCarrier(7, 'WIN'));
+    const saved = { id: 1, carrierId: 7, tenantId: 1 };
+    orders.create.mockReturnValue(saved);
+    orders.save.mockResolvedValue(saved);
+    orders.findOne.mockResolvedValueOnce({ id: 1, carrierId: 7 });
+
+    await service.createOrder({ ...baseInput, paymentMethod: 'COD' });
+    expect(kyc.isTenantKycVerified).toHaveBeenCalledWith(1);
+    expect(orders.save).toHaveBeenCalled();
+  });
+
+  it('paymentMethod=PREPAID (default) skips the KYC check entirely', async () => {
+    const kyc = { isTenantKycVerified: jest.fn().mockResolvedValue(false) };
+    (service as any).kyc = kyc;
+    const ranked = [mkRanked({ carrierCode: 'WIN' })];
+    rateRanking.rank.mockResolvedValueOnce(ranked);
+    carriers.findOne.mockResolvedValueOnce(mkCarrier(7, 'WIN'));
+    const saved = { id: 1, carrierId: 7, tenantId: 1 };
+    orders.create.mockReturnValue(saved);
+    orders.save.mockResolvedValue(saved);
+    orders.findOne.mockResolvedValueOnce({ id: 1, carrierId: 7 });
+
+    await service.createOrder({ ...baseInput });
+    // PREPAID is the default — KYC service must NOT be called.
+    expect(kyc.isTenantKycVerified).not.toHaveBeenCalled();
+    expect(orders.save).toHaveBeenCalled();
+  });
 });

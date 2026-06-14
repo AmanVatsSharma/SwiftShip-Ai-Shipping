@@ -2,6 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { Queue, QueueOptions, Worker, JobsOptions, QueueEvents } from 'bullmq';
 import IORedis from 'ioredis';
 
+/**
+ * SS-031: known queue names. Keep the list in sync with the modules
+ * that publish / consume on each queue. New queues should be added
+ * here so we have one place to audit BullMQ traffic in production.
+ */
+export const QUEUE_NAMES = {
+  /** SS-031: KYC async verification (PAN + GSTIN + bank). */
+  KYC_VERIFICATION: 'kyc-verification',
+  /** Legacy / generic webhook dispatch queue. */
+  WEBHOOK_DISPATCH: 'webhook-dispatch',
+  /** Label generation. */
+  LABEL_GENERATION: 'label-generation',
+} as const;
+
+export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
+
 @Injectable()
 export class QueuesService {
   private readonly connection: IORedis;

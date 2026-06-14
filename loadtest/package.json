@@ -1,0 +1,8 @@
+{
+  "name": "@swiftship/loadtest",
+  "version": "0.0.1",
+  "private": true,
+  "description": "k6 load test scenarios and seed scripts (SS-035 / Pillar 8).",
+  "main": "k6/lib/seed.js",
+  "license": "UNLICENSED"
+}

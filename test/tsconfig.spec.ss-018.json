@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "baseUrl": "c:/Users/ASUS TUF A15/Desktop/DevOPS/Workspace/SwiftShip-Ai-Shipping-NestJs-Backend",
+    "types": ["node", "jest"],
+    "paths": {
+      "@swiftship/observability": ["libs/observability/src/index.ts"],
+      "@swiftship/domains-notifications": ["libs/domains/notifications/src/index.ts"],
+      "@swiftship/platform-typeorm": ["test/stubs/platform-typeorm-stub.ts"]
+    }
+  }
+}

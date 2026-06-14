@@ -143,4 +143,19 @@ export class CreateOrderInput {
   @IsOptional()
   @IsEnum(RateRankingStrategy, { message: 'Invalid rate strategy' })
   rateStrategy?: RateRankingStrategy;
+
+  /**
+   * SS-031: payment method. `COD` orders are gated on tenant KYC
+   * being VERIFIED — see `OrdersService.createOrder` for the guard.
+   * Defaults to `PREPAID` for backward compatibility with existing
+   * merchants whose createOrder callers don't pass it.
+   */
+  @Field({
+    nullable: true,
+    defaultValue: 'PREPAID',
+    description: 'PREPAID | COD — COD orders require tenant KYC VERIFIED',
+  })
+  @IsOptional()
+  @IsString({ message: 'paymentMethod must be a string' })
+  paymentMethod?: 'PREPAID' | 'COD';
 }

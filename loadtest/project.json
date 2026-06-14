@@ -1,0 +1,30 @@
+{
+  "name": "loadtest",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "loadtest",
+  "projectType": "library",
+  "tags": [
+    "layer:tools",
+    "scope:loadtest",
+    "team:platform",
+    "maturity:experimental",
+    "type:tools"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["loadtest/**/*.js", "loadtest/**/*.mjs"]
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "command": "tsc --noEmit -p loadtest/tsconfig.json",
+        "outputFile": "dist/loadtest/typecheck.txt"
+      }
+    }
+  }
+}
