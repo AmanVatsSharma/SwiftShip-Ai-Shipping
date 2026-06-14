@@ -84,7 +84,8 @@ export default tseslint.config(
             // APPS (can import anything)
             { sourceTag: 'scope:api', onlyDependOnLibsWithTags: ['*'] },
             { sourceTag: 'scope:admin-portal', onlyDependOnLibsWithTags: ['*'] },
-            { sourceTag: 'scope:web', onlyDependOnLibsWithTags: ['*'] }
+            { sourceTag: 'scope:web', onlyDependOnLibsWithTags: ['*'] },
+            { sourceTag: 'scope:tenants', onlyDependOnLibsWithTags: ['layer:platform','layer:domain','layer:shared','type:types'] }
           ]
         }
       ]

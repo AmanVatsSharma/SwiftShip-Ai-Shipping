@@ -54,6 +54,9 @@
       "@swiftship/platform-config": [
         "libs/platform/config/src/index.ts"
       ],
+      "@swiftship/platform-throttler": [
+        "libs/platform/throttler/src/index.ts"
+      ],
       "@swiftship/domains-*": [
         "libs/domains/*"
       ],
@@ -117,6 +120,9 @@
       "@swiftship/domains-storage": [
         "libs/domains/storage/src/index.ts"
       ],
+      "@swiftship/domains-tenants": [
+        "libs/domains/tenants/src/index.ts"
+      ],
       "@swiftship/domains-metrics": [
         "libs/domains/metrics/src/index.ts"
       ],
@@ -128,6 +134,9 @@
       ],
       "@swiftship/domains-notifications": [
         "libs/domains/notifications/src/index.ts"
+      ],
+      "@swiftship/domains-channels": [
+        "libs/domains/channels/src/index.ts"
       ],
       "@swiftship/observability": [
         "libs/observability/src/index.ts"
