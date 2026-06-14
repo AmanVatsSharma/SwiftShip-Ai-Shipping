@@ -99,6 +99,7 @@ export interface RateQuote {
   codAvailable: boolean;
   pickupAvailable: boolean;
   expiresAt: Date;
+  metadata?: Record<string, any>;
   rawResponse?: unknown;
 }
 

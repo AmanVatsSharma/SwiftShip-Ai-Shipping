@@ -106,6 +106,7 @@ import { HealthController } from './health.controller';
     QueuesModule,
     CarriersLibModule,
     ObservabilityModule,
+    TenantModule,
   ],
   controllers: [AppController, HealthController, MetricsController],
   providers: [

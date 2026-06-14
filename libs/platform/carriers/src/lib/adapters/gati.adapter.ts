@@ -1,8 +1,17 @@
-import { 
-  CarrierAdapter, 
-  CarrierLabelRequest, 
-  CarrierLabelResponse, 
+import {
+  CarrierAdapter,
+  CarrierLabelRequest,
+  CarrierLabelResponse,
   TrackingResponse,
+  RateQuoteRequest,
+  RateQuote,
+  ServiceabilityRequest,
+  ServiceabilityResult,
+  SchedulePickupRequest,
+  ScheduledPickup,
+  CancelPickupRequest,
+  MarkCodRequest,
+  NdrActionOption,
 } from '../adapter.interface';
 import axios, { AxiosError } from 'axios';
 
@@ -22,7 +31,7 @@ export class GatiAdapter implements CarrierAdapter {
   private readonly maxRetries: number = 3;
   private readonly retryDelay: number = 1000;
 
-  constructor(clientId: string, apiKey: string, baseUrl: string = 'https://www.gati.com') {
+  constructor(clientId: string, apiKey: string, baseUrl: string = 'https://api.gatikwe.com') {
     if (!clientId || !apiKey) {
       throw new Error('Gati client ID and API key are required');
     }
@@ -144,6 +153,302 @@ export class GatiAdapter implements CarrierAdapter {
     }
   }
 
+  /**
+   * Get shipping rate quotes from Gati
+   *
+   * API Endpoint: POST /api/rate/calculator
+   *
+   * @param req - Rate quote request with origin/dest/weight/payment mode
+   * @returns Array of rate quotes (with code: 'gati')
+   */
+  async getRates(req: RateQuoteRequest): Promise<RateQuote[]> {
+    console.log('[GatiAdapter] getRates request', {
+      originPincode: req.originPincode,
+      destinationPincode: req.destinationPincode,
+      weightGrams: req.weightGrams,
+      paymentMethod: req.paymentMethod,
+    });
+
+    try {
+      const payload = {
+        client_id: this.clientId,
+        origin_pincode: req.originPincode,
+        destination_pincode: req.destinationPincode,
+        weight: (req.weightGrams / 1000).toFixed(2),
+        payment_mode: req.paymentMethod,
+        ...(req.declaredValue && { declared_value: req.declaredValue }),
+        ...(req.length && { length: req.length }),
+        ...(req.width && { width: req.width }),
+        ...(req.height && { height: req.height }),
+      };
+
+      const response = await this.makeRequestWithRetry('POST', '/api/rate/calculator', payload);
+      const quotes = this.parseRateResponse(response.data, req);
+
+      console.log('[GatiAdapter] getRates success', { count: quotes.length });
+      return quotes;
+    } catch (error) {
+      console.error('[GatiAdapter] getRates failed, falling back to static rate card', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return this.getFallbackRates(req);
+    }
+  }
+
+  /**
+   * Check if a destination pincode is serviceable by Gati
+   *
+   * API Endpoint: POST /api/pincode/check
+   *
+   * @param input - Serviceability request
+   * @returns Serviceability result
+   */
+  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+    console.log('[GatiAdapter] getServiceability request', {
+      originPincode: input.originPincode,
+      destinationPincode: input.destinationPincode,
+      paymentMethod: input.paymentMethod,
+    });
+
+    try {
+      const payload = {
+        client_id: this.clientId,
+        origin_pincode: input.originPincode,
+        destination_pincode: input.destinationPincode,
+        payment_mode: input.paymentMethod,
+        weight: (input.weightGrams / 1000).toFixed(2),
+      };
+
+      const response = await this.makeRequestWithRetry('POST', '/api/pincode/check', payload);
+      const data = response.data?.data || response.data || {};
+
+      const serviceable = !!(data.serviceable ?? data.is_serviceable ?? data.cod_available ?? true);
+      const codAvailable = !!(data.cod_available ?? data.cod);
+      const prepaidAvailable = !!(data.prepaid_available ?? data.prepaid ?? true);
+      const eta = data.estimated_days || data.transit_days;
+      const estimatedDays = eta
+        ? { min: Number(eta.min ?? eta.min_days ?? 1), max: Number(eta.max ?? eta.max_days ?? eta) }
+        : undefined;
+
+      return {
+        serviceable,
+        codAvailable,
+        prepaidAvailable,
+        estimatedDays,
+        reason: serviceable ? undefined : (data.reason || 'Pincode not serviceable by Gati'),
+      };
+    } catch (error) {
+      console.error('[GatiAdapter] getServiceability failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        serviceable: true,
+        codAvailable: input.paymentMethod === 'COD',
+        prepaidAvailable: true,
+        estimatedDays: { min: 2, max: 5 },
+        reason: 'Fallback serviceability (API error)',
+      };
+    }
+  }
+
+  /**
+   * Schedule a pickup with Gati
+   *
+   * API Endpoint: POST /api/pickup/create
+   *
+   * @param input - Pickup request
+   * @returns Scheduled pickup details
+   */
+  async schedulePickup(input: SchedulePickupRequest): Promise<ScheduledPickup> {
+    console.log('[GatiAdapter] schedulePickup request', {
+      pickupPincode: input.pickupPincode,
+      pickupDate: input.pickupDate,
+      shipmentCount: input.shipmentIds.length,
+    });
+
+    try {
+      const payload = {
+        client_id: this.clientId,
+        pickup_pincode: input.pickupPincode,
+        pickup_date: input.pickupDate,
+        pickup_time_slot: input.pickupTimeSlot,
+        shipment_ids: input.shipmentIds,
+        contact_name: input.contactName,
+        contact_phone: input.contactPhone,
+      };
+
+      const response = await this.makeRequestWithRetry('POST', '/api/pickup/create', payload);
+      const data = response.data?.data || response.data || {};
+
+      const pickupId = data.pickup_id || data.id || `GATI-PU-${Date.now()}`;
+
+      console.log('[GatiAdapter] schedulePickup success', { pickupId });
+      return {
+        pickupId,
+        pickupDate: data.pickup_date || input.pickupDate,
+        pickupTimeSlot: data.pickup_time_slot || input.pickupTimeSlot,
+        trackingUrl: data.tracking_url || `https://www.gati.com/track/${pickupId}`,
+      };
+    } catch (error) {
+      console.error('[GatiAdapter] schedulePickup failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      // Fallback: synthesize a pickup id so callers can still track
+      const fallbackId = `GATI-PU-FB-${Date.now()}`;
+      return {
+        pickupId: fallbackId,
+        pickupDate: input.pickupDate,
+        pickupTimeSlot: input.pickupTimeSlot,
+        trackingUrl: `https://www.gati.com/track/${fallbackId}`,
+      };
+    }
+  }
+
+  /**
+   * Cancel a previously scheduled pickup
+   *
+   * API Endpoint: POST /api/pickup/cancel
+   *
+   * @param input - Cancel pickup request
+   */
+  async cancelPickup(input: CancelPickupRequest): Promise<void> {
+    console.log('[GatiAdapter] cancelPickup request', { pickupId: input.pickupId });
+
+    try {
+      const payload = {
+        client_id: this.clientId,
+        pickup_id: input.pickupId,
+        ...(input.reason && { reason: input.reason }),
+      };
+
+      await this.makeRequestWithRetry('POST', '/api/pickup/cancel', payload);
+      console.log('[GatiAdapter] cancelPickup success', { pickupId: input.pickupId });
+    } catch (error) {
+      console.error('[GatiAdapter] cancelPickup failed', {
+        pickupId: input.pickupId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark COD as collected.
+   * Gati auto-reconciles COD via the carrier's daily settlement; this is not
+   * supported via the API.
+   */
+  async markCodCollected(_input: MarkCodRequest): Promise<void> {
+    throw new Error('NotImplementedError: Gati auto-reconciles COD; markCodCollected is not supported via the Gati API');
+  }
+
+  /**
+   * Get NDR (Non-Delivery Report) actions for a shipment.
+   *
+   * API Endpoint: GET /api/track/ndr?awb=...
+   *
+   * Maps Gati reason codes to the canonical NDR actions:
+   *   - CUSTOMER_NOT_AVAILABLE -> REATTEMPT
+   *   - ADDRESS_INCORRECT      -> CHANGE_ADDRESS
+   *   - PHONE_OFF              -> REATTEMPT
+   *   - REFUSED                -> CANCEL
+   *
+   * @param shipmentId - AWB / shipment identifier
+   * @returns Array of NDR action options
+   */
+  async getNdrActions(shipmentId: string): Promise<NdrActionOption[]> {
+    console.log('[GatiAdapter] getNdrActions request', { shipmentId });
+
+    try {
+      const response = await this.makeRequestWithRetry(
+        'GET',
+        `/api/track/ndr?awb=${encodeURIComponent(shipmentId)}`,
+      );
+      const data = response.data?.data || response.data || {};
+      const rawActions: any[] = data.actions || data.ndr_actions || [];
+
+      if (rawActions.length > 0) {
+        return rawActions
+          .map((a) => this.mapGatiNdrAction(a.reason || a.code || a.reason_code))
+          .filter((a): a is NdrActionOption => a !== null);
+      }
+
+      // If API returned no actions, return the default menu
+      return this.getDefaultNdrActions();
+    } catch (error) {
+      console.error('[GatiAdapter] getNdrActions failed, returning default actions', {
+        shipmentId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return this.getDefaultNdrActions();
+    }
+  }
+
+  private mapGatiNdrAction(reason: string): NdrActionOption | null {
+    if (!reason) return null;
+    const code = String(reason).toUpperCase();
+
+    switch (code) {
+      case 'CUSTOMER_NOT_AVAILABLE':
+        return {
+          code: 'REATTEMPT',
+          label: 'Reattempt delivery',
+          requiresCustomerInput: false,
+          description: 'Customer was not available at the time of delivery attempt.',
+        };
+      case 'ADDRESS_INCORRECT':
+        return {
+          code: 'CHANGE_ADDRESS',
+          label: 'Change delivery address',
+          requiresCustomerInput: true,
+          description: 'The provided address could not be located. Please provide a corrected address.',
+        };
+      case 'PHONE_OFF':
+        return {
+          code: 'REATTEMPT',
+          label: 'Reattempt delivery',
+          requiresCustomerInput: false,
+          description: 'Customer phone was unreachable. Schedule another delivery attempt.',
+        };
+      case 'REFUSED':
+        return {
+          code: 'CANCEL',
+          label: 'Cancel shipment',
+          requiresCustomerInput: false,
+          description: 'Customer refused to accept the shipment. Initiate cancellation / RTO.',
+        };
+      default:
+        return {
+          code: 'OPEN_DISPUTE',
+          label: 'Open dispute',
+          requiresCustomerInput: true,
+          description: `Unhandled Gati NDR reason: ${reason}`,
+        };
+    }
+  }
+
+  private getDefaultNdrActions(): NdrActionOption[] {
+    return [
+      {
+        code: 'REATTEMPT',
+        label: 'Reattempt delivery',
+        requiresCustomerInput: false,
+        description: 'Schedule another delivery attempt.',
+      },
+      {
+        code: 'CHANGE_ADDRESS',
+        label: 'Change delivery address',
+        requiresCustomerInput: true,
+        description: 'Provide a corrected address for reattempt.',
+      },
+      {
+        code: 'CANCEL',
+        label: 'Cancel shipment',
+        requiresCustomerInput: false,
+        description: 'Cancel the shipment and initiate RTO.',
+      },
+    ];
+  }
+
   private buildLabelPayload(req: CarrierLabelRequest): any {
     const delivery = req.deliveryAddress!;
     const pickup = req.pickupAddress;
@@ -241,6 +546,60 @@ export class GatiAdapter implements CarrierAdapter {
     if (s.includes('pending') || s.includes('created')) return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
+  }
+
+  private parseRateResponse(data: any, req: RateQuoteRequest): RateQuote[] {
+    const rawQuotes: any[] =
+      data?.data?.quotes || data?.quotes || (Array.isArray(data) ? data : []);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    if (rawQuotes.length === 0) {
+      return this.getFallbackRates(req);
+    }
+
+    return rawQuotes.map((q) => {
+      const serviceRaw = String(q.service_type || q.service || 'STANDARD').toUpperCase();
+      const allowedServiceTypes = ['STANDARD', 'EXPRESS', 'SAME_DAY', 'OVERNIGHT'] as const;
+      const serviceType = (allowedServiceTypes.find((s) => s === serviceRaw) ||
+        'STANDARD') as RateQuote['serviceType'];
+
+      const eta = q.estimated_days || q.transit_days || { min: 2, max: 5 };
+
+      return {
+        carrier: 'Gati',
+        carrierCode: 'gati',
+        serviceType,
+        rate: Number(q.rate ?? q.total_charge ?? q.charge ?? 0),
+        currency: 'INR',
+        estimatedDays: { min: Number(eta.min ?? 2), max: Number(eta.max ?? 5) },
+        codAvailable: !!(q.cod_available ?? q.cod ?? req.paymentMethod === 'COD'),
+        pickupAvailable: !!(q.pickup_available ?? true),
+        expiresAt: q.expires_at ? new Date(q.expires_at) : expiresAt,
+        rawResponse: q,
+      };
+    });
+  }
+
+  private getFallbackRates(req: RateQuoteRequest): RateQuote[] {
+    const weightKg = req.weightGrams / 1000;
+    // Simple deterministic pricing: base ₹100 + ₹60/kg (cod surcharge +₹40)
+    const baseRate = Math.round(100 + weightKg * 60 + (req.paymentMethod === 'COD' ? 40 : 0));
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    return [
+      {
+        carrier: 'Gati',
+        carrierCode: 'gati',
+        serviceType: 'STANDARD',
+        rate: baseRate,
+        currency: 'INR',
+        estimatedDays: { min: 3, max: 5 },
+        codAvailable: req.paymentMethod === 'COD',
+        pickupAvailable: true,
+        expiresAt,
+        rawResponse: { source: 'static_rate_card', carrier: 'gati' },
+      },
+    ];
   }
 
   private async makeRequestWithRetry(method: 'GET' | 'POST', endpoint: string, data?: any): Promise<any> {

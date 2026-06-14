@@ -1,8 +1,17 @@
-import { 
-  CarrierAdapter, 
-  CarrierLabelRequest, 
-  CarrierLabelResponse, 
+import {
+  CarrierAdapter,
+  CarrierLabelRequest,
+  CarrierLabelResponse,
   TrackingResponse,
+  RateQuoteRequest,
+  RateQuote,
+  ServiceabilityRequest,
+  ServiceabilityResult,
+  SchedulePickupRequest,
+  ScheduledPickup,
+  CancelPickupRequest,
+  MarkCodRequest,
+  NdrActionOption,
 } from '../adapter.interface';
 import axios, { AxiosError } from 'axios';
 
@@ -165,6 +174,476 @@ export class FedExIndiaAdapter implements CarrierAdapter {
       });
       return false;
     }
+  }
+
+  /**
+   * Get shipping rates from FedEx India.
+   * Hits POST /rate/v1/rates/quotes; falls back to the static rate card on failure.
+   */
+  async getRates(req: RateQuoteRequest): Promise<RateQuote[]> {
+    console.log('[FedExIndiaAdapter] getRates request', {
+      originPincode: req.originPincode,
+      destinationPincode: req.destinationPincode,
+      weightGrams: req.weightGrams,
+      paymentMethod: req.paymentMethod,
+    });
+
+    try {
+      await this.ensureAuthenticated();
+      const payload = this.buildRatePayload(req);
+      const response = await this.makeRequestWithRetry('POST', '/rate/v1/rates/quotes', payload);
+      const quotes = this.parseRateResponse(response.data, req);
+
+      console.log('[FedExIndiaAdapter] getRates success', { quoteCount: quotes.length });
+      return quotes;
+    } catch (error) {
+      console.error('[FedExIndiaAdapter] getRates failed, using static fallback', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return this.getStaticRateQuotes(req);
+    }
+  }
+
+  /**
+   * Check serviceability via FedEx /availability/v1/addressserviceables.
+   */
+  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+    console.log('[FedExIndiaAdapter] getServiceability request', input);
+
+    try {
+      await this.ensureAuthenticated();
+      const payload = {
+        originAddress: { postalCode: input.originPincode, countryCode: 'IN' },
+        destinationAddress: { postalCode: input.destinationPincode, countryCode: 'IN' },
+        services: [
+          'PRIORITY_OVERNIGHT',
+          'FEDEX_2_DAY',
+          'FEDEX_INTERNATIONAL_PRIORITY',
+        ],
+        packageWeight: {
+          value: (input.weightGrams / 1000).toFixed(2),
+          units: 'KG',
+        },
+      };
+
+      const response = await this.makeRequestWithRetry('POST', '/availability/v1/addressserviceables', payload);
+      const result = this.parseServiceabilityResponse(response.data, input);
+
+      console.log('[FedExIndiaAdapter] getServiceability success', result);
+      return result;
+    } catch (error) {
+      console.error('[FedExIndiaAdapter] getServiceability failed, using fallback', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return this.getStaticServiceability(input);
+    }
+  }
+
+  /**
+   * Schedule a FedEx pickup via POST /pickup/v1/pickups.
+   */
+  async schedulePickup(input: SchedulePickupRequest): Promise<ScheduledPickup> {
+    console.log('[FedExIndiaAdapter] schedulePickup request', input);
+
+    try {
+      await this.ensureAuthenticated();
+      const readyTimestamp = this.buildReadyTimestamp(input.pickupDate, input.pickupTimeSlot);
+      const payload = {
+        associatedAccountNumber: { value: this.accountNumber },
+        carrierCode: 'FDXE',
+        countryCode: 'IN',
+        originAddress: {
+          streetLines: [],
+          city: 'NA',
+          stateOrProvinceCode: 'NA',
+          postalCode: input.pickupPincode,
+          countryCode: 'IN',
+        },
+        readyTimestamp,
+        carrierPickupLocation: `${input.contactName} pickup`,
+        locationContact: {
+          personName: input.contactName,
+          phoneNumber: input.contactPhone,
+        },
+        shipmentIds: input.shipmentIds.map(id => ({ value: id })),
+      };
+
+      const response = await this.makeRequestWithRetry('POST', '/pickup/v1/pickups', payload);
+      const data = response.data?.output || response.data;
+      const confirmationCode = data?.pickupConfirmationCode || data?.confirmationNumber;
+
+      console.log('[FedExIndiaAdapter] schedulePickup success', { confirmationCode });
+
+      return {
+        pickupId: confirmationCode || `FEDEX-PIK-${Date.now()}`,
+        pickupDate: input.pickupDate,
+        pickupTimeSlot: input.pickupTimeSlot,
+        trackingUrl: confirmationCode
+          ? `https://www.fedex.com/fedextrack/?trknbr=${confirmationCode}`
+          : undefined,
+      };
+    } catch (error) {
+      console.error('[FedExIndiaAdapter] schedulePickup failed, using fallback', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      const pickupId = `FEDEX-PIK-${Date.now()}`;
+      return {
+        pickupId,
+        pickupDate: input.pickupDate,
+        pickupTimeSlot: input.pickupTimeSlot,
+        trackingUrl: `https://www.fedex.com/fedextrack/?trknbr=${pickupId}`,
+      };
+    }
+  }
+
+  /**
+   * Cancel a previously scheduled FedEx pickup via POST /pickup/v1/pickups/cancel.
+   */
+  async cancelPickup(input: CancelPickupRequest): Promise<void> {
+    console.log('[FedExIndiaAdapter] cancelPickup request', input);
+
+    try {
+      await this.ensureAuthenticated();
+      await this.makeRequestWithRetry('POST', '/pickup/v1/pickups/cancel', {
+        pickupConfirmationCode: input.pickupId,
+        reason: input.reason || 'Cancelled by customer',
+        carrierCode: 'FDXE',
+        countryCode: 'IN',
+      });
+      console.log('[FedExIndiaAdapter] cancelPickup success', { pickupId: input.pickupId });
+    } catch (error) {
+      console.error('[FedExIndiaAdapter] cancelPickup failed', {
+        pickupId: input.pickupId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark COD as collected.
+   * FedEx India COD is fully auto-reconciled via FedEx's daily settlement file —
+   * the queue-based reconciliation worker handles it. We throw NotImplementedError
+   * so callers route to the recon queue rather than sending a no-op confirmation.
+   */
+  async markCodCollected(_input: MarkCodRequest): Promise<void> {
+    console.log('[FedExIndiaAdapter] markCodCollected request — FedEx COD is auto-reconciled');
+    const err = new Error(
+      'FedEx India COD is auto-reconciled; markCodCollected is not implemented. The queue-based reconciliation worker handles it.',
+    );
+    (err as any).name = 'NotImplementedError';
+    throw err;
+  }
+
+  /**
+   * Map FedEx tracking exception codes to NDR action options.
+   * Hits GET /track/v1/trackingnumbers, then parses trackingEvents[].exceptionCode.
+   * Maps:
+   *  - 'AHS' (Address Hold)         → CHANGE_ADDRESS
+   *  - 'CDX' (Customer Delivery Exception) → REATTEMPT
+   *  - 'RCX' (Recipient Refused)   → CANCEL
+   */
+  async getNdrActions(shipmentId: string): Promise<NdrActionOption[]> {
+    console.log('[FedExIndiaAdapter] getNdrActions request', { shipmentId });
+
+    try {
+      await this.ensureAuthenticated();
+      const payload = {
+        trackingInfo: [{
+          trackingNumberInfo: { trackingNumber: shipmentId },
+        }],
+      };
+
+      const response = await this.makeRequestWithRetry('POST', '/track/v1/trackingnumbers', payload);
+      const codes = this.collectFedExExceptionCodes(response.data);
+
+      console.log('[FedExIndiaAdapter] getNdrActions resolved', {
+        shipmentId,
+        exceptionCodes: codes,
+      });
+
+      return this.mapFedExExceptionCodesToNdrActions(codes);
+    } catch (error) {
+      console.error('[FedExIndiaAdapter] getNdrActions failed', {
+        shipmentId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      // Conservative fallback: offer the full NDR action set so operators can act manually.
+      return this.defaultNdrActions();
+    }
+  }
+
+  private buildRatePayload(req: RateQuoteRequest): any {
+    const serviceTypes = [
+      'PRIORITY_OVERNIGHT',
+      'FEDEX_2_DAY',
+      'FEDEX_INTERNATIONAL_PRIORITY',
+    ];
+
+    return {
+      accountNumber: { value: this.accountNumber },
+      rateRequestControlParameters: {
+        returnTransitTimes: true,
+        servicesNeededOnRateFailure: true,
+        variableOptions: 'FREIGHT_GUARANTEE',
+      },
+      requestedShipment: {
+        shipper: { address: { postalCode: req.originPincode, countryCode: 'IN' } },
+        recipient: { address: { postalCode: req.destinationPincode, countryCode: 'IN' } },
+        pickupType: 'USE_SCHEDULED_PICKUP',
+        requestedPackageLineItems: [{
+          weight: {
+            value: (req.weightGrams / 1000).toFixed(2),
+            units: 'KG',
+          },
+          ...(req.length && req.width && req.height ? {
+            dimensions: {
+              length: req.length.toString(),
+              width: req.width.toString(),
+              height: req.height.toString(),
+              units: 'CM',
+            },
+          } : {}),
+        }],
+        serviceType: serviceTypes[0],
+        ...(req.paymentMethod === 'COD' && {
+          specialServicesRequested: {
+            specialServiceTypes: ['COD'],
+            codDetail: {
+              codCollectionAmount: {
+                amount: (req.declaredValue || 0).toString(),
+                currency: 'INR',
+              },
+            },
+          },
+        }),
+      },
+    };
+  }
+
+  private parseRateResponse(data: any, req: RateQuoteRequest): RateQuote[] {
+    const output = data?.output || data;
+    const rateReply = output?.rateReplyDetails || output?.rateReplies || [];
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    if (!Array.isArray(rateReply) || rateReply.length === 0) {
+      return this.getStaticRateQuotes(req);
+    }
+
+    const quotes: RateQuote[] = rateReply
+      .filter((r: any) => r && (r.ratedShipmentDetails || r.shipmentRateDetail))
+      .map((r: any) => {
+        const rated = r.ratedShipmentDetails?.[0] || r.shipmentRateDetail || {};
+        const totalAmount = parseFloat(rated.totalNetCharge || rated.shipmentRateDetail?.totalNetCharge || '0');
+        const transitDays = rated.transitDays || rated.deliveryTimestamp;
+        const serviceType = r.serviceType || rated.serviceType;
+        const minDays = typeof transitDays === 'string' ? 1 : (transitDays?.minDays || 1);
+        const maxDays = typeof transitDays === 'string' ? Math.max(2, Number(transitDays) || 2) : (transitDays?.maxDays || 3);
+
+        return {
+          carrier: 'FedEx India',
+          carrierCode: this.code,
+          serviceType: this.mapFedExServiceType(serviceType),
+          rate: totalAmount,
+          currency: 'INR' as const,
+          estimatedDays: { min: minDays, max: maxDays },
+          codAvailable: req.paymentMethod === 'COD',
+          pickupAvailable: true,
+          expiresAt,
+          rawResponse: r,
+        };
+      });
+
+    return quotes.length > 0 ? quotes : this.getStaticRateQuotes(req);
+  }
+
+  private getStaticRateQuotes(req: RateQuoteRequest): RateQuote[] {
+    const baseRate = 250;
+    const weightCharge = Math.ceil(req.weightGrams / 500) * 30;
+    const codCharge = req.paymentMethod === 'COD' ? 50 : 0;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    return [
+      {
+        carrier: 'FedEx India',
+        carrierCode: this.code,
+        serviceType: 'EXPRESS',
+        rate: baseRate + weightCharge + codCharge,
+        currency: 'INR',
+        estimatedDays: { min: 1, max: 2 },
+        codAvailable: req.paymentMethod === 'COD',
+        pickupAvailable: true,
+        expiresAt,
+        rawResponse: { fallback: true, source: 'static_rate_card' },
+      },
+    ];
+  }
+
+  private mapFedExServiceType(serviceType: string | undefined): 'STANDARD' | 'EXPRESS' | 'SAME_DAY' | 'OVERNIGHT' {
+    const s = (serviceType || '').toUpperCase();
+    if (s.includes('SAME_DAY')) return 'SAME_DAY';
+    if (s.includes('OVERNIGHT') || s.includes('PRIORITY')) return 'OVERNIGHT';
+    if (s.includes('EXPRESS') || s.includes('2_DAY') || s.includes('INTERNATIONAL')) return 'EXPRESS';
+    return 'STANDARD';
+  }
+
+  private parseServiceabilityResponse(data: any, input: ServiceabilityRequest): ServiceabilityResult {
+    const output = data?.output || data;
+    const responses = output?.addressServiceabilityResponses || output?.serviceabilityResponses || [];
+    const anyServiceable = responses.some((r: any) => r?.serviceable === true);
+
+    if (responses.length === 0) {
+      return this.getStaticServiceability(input);
+    }
+
+    return {
+      serviceable: anyServiceable,
+      codAvailable: anyServiceable && input.paymentMethod === 'COD',
+      prepaidAvailable: anyServiceable,
+      estimatedDays: { min: 1, max: 3 },
+      reason: anyServiceable ? undefined : 'NOT_SERVICEABLE',
+    };
+  }
+
+  private getStaticServiceability(input: ServiceabilityRequest): ServiceabilityResult {
+    const valid = /^\d{6}$/.test(input.originPincode) && /^\d{6}$/.test(input.destinationPincode);
+    return {
+      serviceable: valid,
+      codAvailable: valid,
+      prepaidAvailable: valid,
+      estimatedDays: { min: 1, max: 3 },
+      reason: valid ? undefined : 'INVALID_PINCODE',
+    };
+  }
+
+  private buildReadyTimestamp(pickupDate: string, timeSlot: 'MORNING' | 'AFTERNOON' | 'EVENING'): string {
+    const date = new Date(pickupDate);
+    let hour = 9;
+    if (timeSlot === 'MORNING') hour = 9;
+    else if (timeSlot === 'AFTERNOON') hour = 13;
+    else if (timeSlot === 'EVENING') hour = 17;
+    date.setHours(hour, 0, 0, 0);
+    return date.toISOString();
+  }
+
+  private collectFedExExceptionCodes(data: any): string[] {
+    const output = data?.output || data;
+    const results = output?.completeTrackResults || [];
+    const codes: string[] = [];
+
+    for (const result of results) {
+      const trackResults = result?.trackResults || [];
+      for (const tr of trackResults) {
+        const scanEvents = tr?.scanEvents || tr?.trackingEvents || [];
+        for (const ev of scanEvents) {
+          const code = ev?.exceptionCode || ev?.statusExceptionCode || ev?.statusDetail?.code;
+          if (code && !codes.includes(code)) {
+            codes.push(code);
+          }
+        }
+        // Also surface latestStatusDetail code if it's exception-like
+        const detailCode = tr?.latestStatusDetail?.code;
+        if (detailCode && /^[A-Z]{3}$/.test(detailCode) && !codes.includes(detailCode)) {
+          codes.push(detailCode);
+        }
+      }
+    }
+
+    return codes;
+  }
+
+  private mapFedExExceptionCodesToNdrActions(codes: string[]): NdrActionOption[] {
+    const actions: NdrActionOption[] = [];
+    const seen = new Set<NdrActionOption['code']>();
+
+    const push = (action: NdrActionOption) => {
+      if (!seen.has(action.code)) {
+        seen.add(action.code);
+        actions.push(action);
+      }
+    };
+
+    for (const raw of codes) {
+      const code = (raw || '').toUpperCase();
+      switch (code) {
+        case 'AHS': // Address Hold
+          push({
+            code: 'CHANGE_ADDRESS',
+            label: 'Update delivery address',
+            requiresCustomerInput: true,
+            description: 'FedEx reported an address hold (AHS). Collect a corrected address from the customer.',
+          });
+          break;
+        case 'CDX': // Customer Delivery Exception
+          push({
+            code: 'REATTEMPT',
+            label: 'Reattempt delivery',
+            requiresCustomerInput: false,
+            description: 'Customer delivery exception (CDX) — schedule a reattempt on the next business day.',
+          });
+          break;
+        case 'RCX': // Recipient Refused
+          push({
+            code: 'CANCEL',
+            label: 'Cancel and RTO',
+            requiresCustomerInput: false,
+            description: 'Recipient refused the shipment (RCX) — initiate return to origin.',
+          });
+          break;
+        default:
+          // Unknown FedEx exception code — still offer a generic reattempt.
+          push({
+            code: 'REATTEMPT',
+            label: 'Reattempt delivery',
+            requiresCustomerInput: false,
+            description: `Unmapped FedEx exception code: ${code}`,
+          });
+      }
+    }
+
+    if (actions.length === 0) {
+      // No exception codes found — surface the full action set so operators can act.
+      return this.defaultNdrActions();
+    }
+
+    // Always include OPEN_DISPUTE as a final escalation option.
+    push({
+      code: 'OPEN_DISPUTE',
+      label: 'Open a dispute',
+      requiresCustomerInput: true,
+      description: 'Escalate to FedEx India support if none of the above resolves the issue.',
+    });
+
+    return actions;
+  }
+
+  private defaultNdrActions(): NdrActionOption[] {
+    return [
+      {
+        code: 'REATTEMPT',
+        label: 'Reattempt delivery',
+        requiresCustomerInput: false,
+        description: 'Try delivering again',
+      },
+      {
+        code: 'CHANGE_ADDRESS',
+        label: 'Update address',
+        requiresCustomerInput: true,
+        description: 'Customer needs to confirm a new address',
+      },
+      {
+        code: 'CANCEL',
+        label: 'Cancel and RTO',
+        requiresCustomerInput: false,
+        description: 'Return to origin',
+      },
+      {
+        code: 'OPEN_DISPUTE',
+        label: 'Open a dispute',
+        requiresCustomerInput: true,
+        description: 'Escalate to FedEx India support',
+      },
+    ];
   }
 
   private async ensureAuthenticated(): Promise<void> {

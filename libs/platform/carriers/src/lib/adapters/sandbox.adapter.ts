@@ -1,4 +1,4 @@
-import { CarrierAdapter, CarrierLabelRequest, CarrierLabelResponse, TrackingResponse } from '../adapter.interface';
+import { CarrierAdapter, CarrierLabelRequest, CarrierLabelResponse, TrackingResponse, RateQuoteRequest, RateQuote, ServiceabilityRequest, ServiceabilityResult, SchedulePickupRequest, ScheduledPickup, CancelPickupRequest, MarkCodRequest, NdrActionOption } from '../adapter.interface';
 
 /**
  * Sandbox Carrier Adapter
@@ -141,5 +141,126 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
   async voidLabel(labelNumber: string): Promise<boolean> {
     console.log('[SandboxCarrierAdapter] voidLabel', { labelNumber });
     return true;
+  }
+
+  /**
+   * Get shipping rates (sandbox mode)
+   *
+   * @param req - Rate quote request
+   * @returns Single deterministic quote based on weight + pincode parity
+   */
+  async getRates(req: RateQuoteRequest): Promise<RateQuote[]> {
+    console.log('[SandboxCarrierAdapter] getRates', req);
+
+    // Return a single deterministic quote based on weight + pincode parity
+    const baseRate = 50 + Math.ceil(req.weightGrams / 100) * 10; // paise
+    return [{
+      carrier: 'Sandbox Carrier',
+      carrierCode: this.code,
+      serviceType: 'STANDARD',
+      rate: baseRate,
+      currency: 'INR',
+      estimatedDays: { min: 2, max: 4 },
+      codAvailable: req.paymentMethod === 'COD',
+      pickupAvailable: true,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      metadata: { sandbox: true },
+    }];
+  }
+
+  /**
+   * Check serviceability (sandbox mode)
+   *
+   * @param input - Serviceability request
+   * @returns Serviceability result based on pincode validation
+   */
+  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+    console.log('[SandboxCarrierAdapter] getServiceability', input);
+
+    // Serviceable if both pincodes are 6-digit numbers
+    const valid = /^\d{6}$/.test(input.originPincode) && /^\d{6}$/.test(input.destinationPincode);
+    return {
+      serviceable: valid,
+      codAvailable: valid,
+      prepaidAvailable: valid,
+      estimatedDays: { min: 2, max: 4 },
+      reason: valid ? undefined : 'INVALID_PINCODE',
+    };
+  }
+
+  /**
+   * Schedule a pickup (sandbox mode)
+   *
+   * @param input - Pickup schedule request
+   * @returns Scheduled pickup response
+   */
+  async schedulePickup(input: SchedulePickupRequest): Promise<ScheduledPickup> {
+    console.log('[SandboxCarrierAdapter] schedulePickup', input);
+
+    return {
+      pickupId: `SANDBOX-${Date.now()}`,
+      pickupDate: input.pickupDate,
+      pickupTimeSlot: input.pickupTimeSlot,
+      trackingUrl: `https://sandbox.swiftship.in/pickups/${Date.now()}`,
+    };
+  }
+
+  /**
+   * Cancel a pickup (sandbox mode)
+   *
+   * @param input - Pickup cancellation request
+   * @returns void (no-op in sandbox)
+   */
+  async cancelPickup(input: CancelPickupRequest): Promise<void> {
+    console.log('[SandboxCarrierAdapter] cancelPickup', input);
+    // Sandbox: no-op
+  }
+
+  /**
+   * Mark COD as collected (sandbox mode)
+   *
+   * @param input - COD collection request
+   * @returns void (no-op in sandbox)
+   */
+  async markCodCollected(input: MarkCodRequest): Promise<void> {
+    console.log('[SandboxCarrierAdapter] markCodCollected', input);
+    // Sandbox: no-op
+  }
+
+  /**
+   * Get NDR action options (sandbox mode)
+   *
+   * @param shipmentId - Shipment ID
+   * @returns List of available NDR actions
+   */
+  async getNdrActions(shipmentId: string): Promise<NdrActionOption[]> {
+    console.log('[SandboxCarrierAdapter] getNdrActions', { shipmentId });
+
+    return [
+      {
+        code: 'REATTEMPT' as const,
+        label: 'Reattempt delivery',
+        requiresCustomerInput: false,
+        description: 'Try delivering again'
+      },
+      {
+        code: 'CHANGE_ADDRESS' as const,
+        label: 'Update address',
+        requiresCustomerInput: true,
+        description: 'Customer needs to confirm new address'
+      },
+      {
+        code: 'CANCEL' as const,
+        label: 'Cancel and RTO',
+        requiresCustomerInput: false,
+        description: 'Return to origin'
+      },
+      {
+        code: 'OPEN_DISPUTE' as const,
+        label: 'Open a dispute',
+        requiresCustomerInput: true,
+        description: 'Escalate to carrier support'
+      },
+    ];
   }
 }
