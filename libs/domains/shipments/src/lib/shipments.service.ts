@@ -30,6 +30,7 @@ import {
   UserEntity,
   OrderStatus,
 } from '@swiftship/platform-typeorm';
+import { TenantContext } from '@swiftship/domains-tenants';
 import { CreateShipmentInput } from './dto/create-shipment.input';
 import { UpdateShipmentInput } from './dto/update-shipment.input';
 import { ShipmentsFilterInput } from './dto/shipments-filter.input';
@@ -57,12 +58,28 @@ export class ShipmentsService {
     private readonly carrierAdapter: CarrierAdapterService,
     private readonly queues: QueuesService,
     private readonly gateway: ShipmentsGateway,
+    private readonly tenantContext: TenantContext,
   ) {}
+
+  /**
+   * SS-002c: every read/write of a tenant-scoped entity must include the
+   * current `tenantId` in the `where` clause. The shim's safety net would
+   * catch a missing filter, but adding it explicitly here keeps the
+   * intent clear at the call site.
+   */
+  private requireTenantId(): number {
+    const tid = this.tenantContext.getTenantId();
+    if (tid === null || tid === undefined) {
+      throw new BadRequestException('Tenant context required for shipment operation');
+    }
+    return Number(tid);
+  }
 
   // ---- read
   async getShipment(id: number): Promise<ShipmentEntity> {
+    const tenantId = this.requireTenantId();
     const shipment = await this.shipments.findOne({
-      where: { id },
+      where: { id, tenantId },
       relations: ['order', 'carrier', 'warehouse', 'labels', 'trackingEvents'],
     });
     if (!shipment) {
@@ -72,14 +89,17 @@ export class ShipmentsService {
   }
 
   async getShipments(): Promise<ShipmentEntity[]> {
+    const tenantId = this.requireTenantId();
     return this.shipments.find({
+      where: { tenantId },
       order: { createdAt: 'DESC' },
       relations: ['order', 'carrier', 'warehouse'],
     });
   }
 
   async filterShipments(filter: ShipmentsFilterInput): Promise<ShipmentEntity[]> {
-    const where: any = {};
+    const tenantId = this.requireTenantId();
+    const where: any = { tenantId };
     if (filter.status) where.status = filter.status;
     if (filter.orderId) where.orderId = filter.orderId;
     if (filter.carrierId) where.carrierId = filter.carrierId;
@@ -94,13 +114,18 @@ export class ShipmentsService {
 
   // ---- create
   async createShipment(input: CreateShipmentInput): Promise<ShipmentEntity> {
-    const order = await this.orders.findOne({ where: { id: input.orderId } });
+    const tenantId = this.requireTenantId();
+    const order = await this.orders.findOne({ where: { id: input.orderId, tenantId } });
     if (!order) {
       throw new NotFoundException(`Order with ID ${input.orderId} not found`);
     }
-    // shipNumber uniqueness
+    // shipNumber uniqueness (scoped to the tenant — tenant A's AWB must
+    // not collide with tenant B's because AWBs are issued by the carrier
+    // per merchant account, but we still scope to be safe).
     if (input.trackingNumber) {
-      const exists = await this.shipments.findOne({ where: { trackingNumber: input.trackingNumber } });
+      const exists = await this.shipments.findOne({
+        where: { trackingNumber: input.trackingNumber, tenantId },
+      });
       if (exists) throw new ConflictException(`Tracking number already exists`);
     }
     const shipment = this.shipments.create({
@@ -108,6 +133,7 @@ export class ShipmentsService {
       carrierId: input.carrierId,
       warehouseId: input.warehouseId,
       trackingNumber: input.trackingNumber,
+      tenantId,
       status: ShipmentStatus.PENDING,
       courierName: input.courierName,
       awbNumber: input.awbNumber,
@@ -120,7 +146,7 @@ export class ShipmentsService {
       const saved = await this.shipments.save(shipment);
       // mark order as processing
       if (order.status === OrderStatus.PENDING) {
-        await this.orders.update(order.id, { status: OrderStatus.PENDING });
+        await this.orders.update({ id: order.id, tenantId } as any, { status: OrderStatus.PENDING });
       }
       return this.getShipment(saved.id);
     } catch (e) {
@@ -139,14 +165,17 @@ export class ShipmentsService {
 
   // ---- update
   async updateShipment(input: UpdateShipmentInput): Promise<ShipmentEntity> {
+    const tenantId = this.requireTenantId();
     const { id, ...data } = input;
     await this.getShipment(id);
-    await this.shipments.update(id, data);
+    delete (data as any).tenantId;
+    await this.shipments.update({ id, tenantId } as any, data);
     return this.getShipment(id);
   }
 
   // ---- label generation
   async generateLabel(input: CreateLabelInput): Promise<ShippingLabelEntity> {
+    const tenantId = this.requireTenantId();
     const shipment = await this.getShipment(input.shipmentId);
     if (!shipment.carrierId) {
       throw new BadRequestException('Shipment must have a carrier to generate a label');
@@ -155,6 +184,7 @@ export class ShipmentsService {
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.carrier', 'c')
       .where('s.id = :id', { id: shipment.id })
+      .andWhere('s.tenantId = :tenantId', { tenantId })
       .getOne();
     if (!carrier?.carrier) {
       throw new BadRequestException('Carrier not found for shipment');
@@ -176,7 +206,10 @@ export class ShipmentsService {
 
   // ---- tracking ingest
   async ingestTracking(input: IngestTrackingInput): Promise<TrackingEventEntity> {
-    const shipment = await this.shipments.findOne({ where: { trackingNumber: input.trackingNumber } });
+    const tenantId = this.requireTenantId();
+    const shipment = await this.shipments.findOne({
+      where: { trackingNumber: input.trackingNumber, tenantId },
+    });
     if (!shipment) {
       throw new NotFoundException(`Shipment not found for tracking number ${input.trackingNumber}`);
     }
@@ -190,18 +223,24 @@ export class ShipmentsService {
     });
     const saved = await this.tracking.save(event);
     // derive shipment status
-    await this.shipments.update(shipment.id, { status: input.status as any });
+    await this.shipments.update({ id: shipment.id, tenantId } as any, {
+      status: input.status as any,
+    });
     this.gateway.emitTrackingUpdate(shipment.id, saved);
     return saved;
   }
 
   // ---- cancel
   async cancelShipment(id: number): Promise<ShipmentEntity> {
+    const tenantId = this.requireTenantId();
     const shipment = await this.getShipment(id);
     if (shipment.status === ShipmentStatus.DELIVERED) {
       throw new BadRequestException('Cannot cancel a delivered shipment');
     }
-    await this.shipments.update(id, { status: ShipmentStatus.CANCELLED });
+    await this.shipments.update(
+      { id, tenantId } as any,
+      { status: ShipmentStatus.CANCELLED },
+    );
     return this.getShipment(id);
   }
 }

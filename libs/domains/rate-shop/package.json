@@ -13,7 +13,11 @@
     "@nestjs/graphql": "^13.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@swiftship/platform-auth": "*",
+    "@swiftship/platform-carriers": "*",
+    "@swiftship/platform-rate-cache": "*",
+    "@swiftship/platform-rate-math": "*",
     "@swiftship/platform-typeorm": "*",
+    "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "typeorm": "^0.3.20"
   }

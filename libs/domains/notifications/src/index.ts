@@ -1,3 +1,5 @@
-// Placeholder barrel — fully implemented in Plan 3.
-// The legacy `src/notifications/` module is the source of truth for now.
-export const NOTIFICATIONS_LIB_VERSION = '0.0.1-pilot';
+export const NOTIFICATIONS_LIB_VERSION = '0.1.0';
+
+export { WatiService } from './lib/wati/wati.service';
+export { ExotelService } from './lib/exotel/exotel.service';
+export { NotificationsModule } from './lib/notifications.module';

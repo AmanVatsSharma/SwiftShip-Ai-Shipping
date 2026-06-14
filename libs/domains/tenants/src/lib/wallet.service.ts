@@ -18,6 +18,7 @@ import {
   WalletLedgerEntryType,
 } from './wallet-ledger.entity';
 import { WalletEntity } from './wallet.entity';
+import { TenantContext } from './tenant.context';
 
 const REASON_TOPUP = 'WALLET_TOPUP';
 const REASON_INTERNAL_TRANSFER = 'INTERNAL_TRANSFER';
@@ -35,7 +36,31 @@ export class WalletService {
     private readonly ledger: Repository<WalletLedgerEntity>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
+    private readonly tenantContext: TenantContext,
   ) {}
+
+  /**
+   * SS-002c: explicit tenantId filter on the read path. The wallet table
+   * already has a `tenantId` column from the SS-002 migration; we add it
+   * to every `findOne` / `find` / `where` so a request from tenant A
+   * cannot read tenant B's wallet balance.
+   *
+   * `findByTenant(tenantId)` is preserved as the system path — it's the
+   * call sites used by onboarding and admin tools that *legitimately* need
+   * to look up a wallet by tenantId. The system callers should wrap the
+   * call in `withSystemContext` (see prisma-compat.types.ts) for clarity.
+   */
+  async getWallet(): Promise<WalletEntity> {
+    const tid = this.tenantContext.getTenantId();
+    if (tid === null || tid === undefined) {
+      throw new BadRequestException('Tenant context required for wallet read');
+    }
+    const wallet = await this.wallets.findOne({ where: { tenantId: Number(tid) } });
+    if (!wallet) {
+      throw new NotFoundException(`Wallet for tenant ${tid} not found`);
+    }
+    return wallet;
+  }
 
   // ---------------------------------------------------------------------
   // topUp

@@ -265,6 +265,7 @@ describe('WalletService', () => {
       env.walletRepo as never,
       env.ledgerRepo as never,
       env.dataSource as never,
+      { getTenantId: () => null } as never,
     );
     const input: TopUpWalletInput = {
       tenantId: 42,
@@ -290,6 +291,7 @@ describe('WalletService', () => {
       env.walletRepo as never,
       env.ledgerRepo as never,
       env.dataSource as never,
+      { getTenantId: () => null } as never,
     );
     const input: TopUpWalletInput = {
       tenantId: 42,
@@ -308,6 +310,7 @@ describe('WalletService', () => {
       env.walletRepo as never,
       env.ledgerRepo as never,
       env.dataSource as never,
+      { getTenantId: () => null } as never,
     );
     await service.topUp({
       tenantId: 42,
@@ -339,6 +342,7 @@ describe('WalletService', () => {
       env.walletRepo as never,
       env.ledgerRepo as never,
       env.dataSource as never,
+      { getTenantId: () => null } as never,
     );
     await service.topUp({
       tenantId: 42,
@@ -374,6 +378,7 @@ describe('WalletService', () => {
       env.walletRepo as never,
       env.ledgerRepo as never,
       env.dataSource as never,
+      { getTenantId: () => null } as never,
     );
     await service.topUp({
       tenantId: 42,
@@ -396,6 +401,7 @@ describe('WalletService', () => {
       env.walletRepo as never,
       env.ledgerRepo as never,
       env.dataSource as never,
+      { getTenantId: () => null } as never,
     );
     await expect(
       service.releaseFunds({
@@ -413,6 +419,7 @@ describe('WalletService', () => {
       env.walletRepo as never,
       env.ledgerRepo as never,
       env.dataSource as never,
+      { getTenantId: () => null } as never,
     );
     await expect(
       service.topUp({
