@@ -1,0 +1,46 @@
+{
+  "name": "throttler",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/platform/throttler/src",
+  "projectType": "library",
+  "tags": [
+    "layer:platform",
+    "scope:shared",
+    "team:platform",
+    "type:infrastructure",
+    "maturity:stable"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/throttler",
+        "tsConfig": "libs/platform/throttler/tsconfig.lib.json",
+        "packageJson": "libs/platform/throttler/package.json",
+        "main": "libs/platform/throttler/src/index.ts",
+        "assets": [
+          "libs/platform/throttler/*.md"
+        ]
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/platform/throttler",
+        "tsConfig": "libs/platform/throttler/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
+    }
+  }
+}

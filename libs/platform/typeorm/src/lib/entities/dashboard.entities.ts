@@ -32,12 +32,12 @@ import {
 @Entity('courier_score_daily')
 @Index('idx_courier_score_carrier_day', ['carrierId', 'day'])
 @Index('idx_courier_score_carrier_zone_day', ['carrierId', 'zone', 'day'])
-@Index('idx_courier_score_tenant_day', ['tenantId', 'day'])
 export class CourierScoreDailyEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', default: 1 })
+  @Index('idx_courier_score_tenant_day', ['tenantId', 'day'])
   tenantId!: number;
 
   @Column({ type: 'int' })
