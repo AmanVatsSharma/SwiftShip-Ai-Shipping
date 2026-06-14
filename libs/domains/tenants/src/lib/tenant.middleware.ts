@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 import type { TenantService } from './tenant.service';
+import { TenantContext } from './tenant.context';
 
 export interface TenantRequest extends Request {
   tenantId?: number;
@@ -11,7 +12,10 @@ const AUTH_HEADER = 'authorization';
 
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
-  constructor(private readonly tenants: TenantService) {}
+  constructor(
+    private readonly tenants: TenantService,
+    private readonly tenantContext: TenantContext,
+  ) {}
 
   async use(req: TenantRequest, _res: Response, next: NextFunction): Promise<void> {
     const apiKey = this.headerValue(req.headers[API_KEY_HEADER]);
@@ -21,6 +25,7 @@ export class TenantMiddleware implements NestMiddleware {
         const tenant = await this.tenants.findByApiKey(prefix, hashedKey);
         if (tenant) {
           req.tenantId = tenant.id;
+          this.tenantContext.setTenant(tenant.id, tenant.tier);
         }
       }
       return next();
@@ -33,6 +38,7 @@ export class TenantMiddleware implements NestMiddleware {
       const decoded = this.decodeJwtPayload(auth.slice(7).trim());
       if (decoded?.tenantId && typeof decoded.tenantId === 'number') {
         req.tenantId = decoded.tenantId;
+        this.tenantContext.setTenant(decoded.tenantId);
       }
     }
 

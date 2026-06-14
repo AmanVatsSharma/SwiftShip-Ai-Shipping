@@ -1,4 +1,5 @@
 export { TenantModule } from './lib/tenant.module';
+export { TenantContext } from './lib/tenant.context';
 export { TenantGuard } from './lib/tenant.guard';
 export { TenantMiddleware } from './lib/tenant.middleware';
 export { TenantService } from './lib/tenant.service';

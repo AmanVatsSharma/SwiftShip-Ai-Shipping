@@ -1,4 +1,6 @@
+import { UseGuards } from '@nestjs/common';
 import { Args, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { TenantGuard } from './tenant.guard';
 import { Tenant, TenantMember } from './tenant.model';
 import {
   ApiKey,
@@ -87,6 +89,7 @@ export class TenantResolver {
     return this.onboarding.onboardTenant(input);
   }
 
+  @UseGuards(TenantGuard)
   @Mutation(() => Invite, { name: 'inviteTeamMember' })
   async inviteTeamMember(
     @Args('input') input: InviteTeamMemberInput,
@@ -103,6 +106,7 @@ export class TenantResolver {
     };
   }
 
+  @UseGuards(TenantGuard)
   @Mutation(() => TenantMember, { name: 'acceptInvite' })
   async acceptInvite(
     @Args('token') token: string,
@@ -119,6 +123,7 @@ export class TenantResolver {
     };
   }
 
+  @UseGuards(TenantGuard)
   @Mutation(() => OnboardingApiKey, { name: 'rotateApiKey' })
   async rotateApiKey(
     @Args('oldKeyId', { type: () => ID }) oldKeyId: number,
@@ -126,6 +131,7 @@ export class TenantResolver {
     return this.onboarding.rotateApiKey(oldKeyId);
   }
 
+  @UseGuards(TenantGuard)
   @Mutation(() => Tenant, { name: 'createSubAccount' })
   async createSubAccount(
     @Args('parentTenantId', { type: () => ID }) parentTenantId: number,

@@ -3,17 +3,20 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 
-// Platform libs (TypeORM, auth, queues, carriers, graphql, config)
+// Platform libs (TypeORM, auth, queues, carriers, graphql, config, throttler)
 import { TypeormModule } from '../../libs/platform/typeorm/src/lib/typeorm.module';
 import { AuthLibModule } from '../../libs/platform/auth/src/lib/auth.module';
 import { QueuesModule } from '../../libs/platform/queues/src/lib/queues.module';
 import { CarriersLibModule } from '../../libs/platform/carriers/src/lib/carriers.module';
 import { GraphqlLibModule } from '../../libs/platform/graphql/src/lib/graphql.module';
 import { ConfigLibModule } from '../../libs/platform/config/src/lib/config.module';
+import {
+  ThrottlerModule as PlatformThrottlerModule,
+  TenantThrottlerGuard,
+} from '@swiftship/platform-throttler';
 
 // Observability lib
 import { ObservabilityModule } from '../../libs/observability/src/lib/observability.module';
@@ -82,9 +85,13 @@ import { HealthController } from './health.controller';
         S3_FORCE_PATH_STYLE: Joi.string().optional(),
       }),
     }),
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60_000, limit: 120 }],
-    }),
+    // Per-tenant throttler (SS-003b). Replaces the previous global
+    // 120/min in-memory ThrottlerModule. The platform throttler lib wires
+    // `PostgresThrottlerStorage` as the storage (so limits hold across
+    // API instances) and `TenantThrottlerGuard` picks the bucket size
+    // per tenant tier (Starter 60/min, Growth 300/min, Pro 1000/min,
+    // Enterprise 10000/min) at request time.
+    PlatformThrottlerModule,
     GraphqlLibModule.forRoot({
       autoSchemaFile: join(process.cwd(), 'apps/api/src/schema.graphql'),
       playground: process.env.NODE_ENV !== 'production',
@@ -112,7 +119,11 @@ import { HealthController } from './health.controller';
   providers: [
     AppService,
     AppResolver,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // SS-003b: per-tenant throttler guard. Reads `req.tenantId` set by
+    // TenantMiddleware (or the request-scoped TenantContext) and applies
+    // the per-tier bucket. Replaces the previous IP-based `ThrottlerGuard`
+    // which used an in-memory store.
+    { provide: APP_GUARD, useClass: TenantThrottlerGuard },
   ],
 })
 export class AppModule {}

@@ -9,6 +9,7 @@ import {
   TenantRoleEntity,
 } from './entities';
 import { InviteEntity } from './invite.entity';
+import { TenantContext } from './tenant.context';
 import { TenantFeatureFlagService } from './tenant-feature-flag.service';
 import { TenantGuard } from './tenant.guard';
 import { TenantMiddleware } from './tenant.middleware';
@@ -37,6 +38,7 @@ import { WalletService } from './wallet.service';
     ]),
   ],
   providers: [
+    TenantContext,
     TenantService,
     TenantFeatureFlagService,
     TenantGuard,
@@ -48,6 +50,7 @@ import { WalletService } from './wallet.service';
     WalletInvoiceService,
   ],
   exports: [
+    TenantContext,
     TenantService,
     TenantFeatureFlagService,
     TenantGuard,
