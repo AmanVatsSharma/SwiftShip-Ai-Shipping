@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -14,6 +15,7 @@ import type {
   TenantStatus,
   TenantTier,
 } from './enums';
+import { WalletEntity } from './wallet.entity';
 
 @Entity('tenants')
 @Index('idx_tenants_slug', ['slug'], { unique: true })
@@ -53,6 +55,9 @@ export class TenantEntity {
 
   @OneToMany(() => TenantRoleEntity, (r) => r.tenant)
   roles: TenantRoleEntity[];
+
+  @OneToOne(() => WalletEntity, (w) => w.tenant)
+  wallet: WalletEntity | null;
 }
 
 @Entity('tenant_members')
