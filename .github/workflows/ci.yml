@@ -27,6 +27,11 @@ jobs:
         with: { node-version: 22, cache: 'npm' }
       - run: npm ci
       - run: node scripts/check-nx-graph.mjs
+      - name: PrismaCompat audit (SS-040)
+        # Fails the run if a new @prisma/client or PrismaCompat import
+        # sneaks into a domain/platform lib. The shim is being removed
+        # 1 lib/week — see MIGRATION.md §7 for the migration runbook.
+        run: npm run audit:prisma
 
   lint:
     name: Lint
