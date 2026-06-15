@@ -75,6 +75,34 @@ export default tseslint.config(
         },
       },
 
+      // SS-036: chaos scenarios are CommonJS scripts run by Node, not
+      // TypeScript. They use the same `require` style as the k6
+      // scenarios. Also, ban hardcoded infrastructure endpoints and
+      // credentials — the scenarios must be configurable via env vars
+      // so they can be pointed at staging or prod.
+      {
+        files: ['chaos/**/*.js', 'chaos/**/*.mjs'],
+        rules: {
+          '@typescript-eslint/no-require-imports': 'off',
+          '@typescript-eslint/no-var-requires': 'off',
+          '@typescript-eslint/no-unused-vars': 'off',
+          '@typescript-eslint/no-unused-expressions': 'off',
+          'no-restricted-syntax': [
+            'error',
+            {
+              selector: "Literal[value=/^https?://(localhost|127\\.0\\.0\\.1|10\\.|192\\.168\\.)/]",
+              message:
+                'Hardcoded local URLs are forbidden. Read from env vars (API_BASE_URL, REDIS_URL, etc.).',
+            },
+            {
+              selector: "Literal[value=/postgres:\\/\\/[^\\s'\"]*:[^\\s'\"]*@/]",
+              message:
+                'Hardcoded Postgres connection strings with credentials are forbidden. Use DATABASE_URL env var.',
+            },
+          ],
+        },
+      },
+
       // Nx boundary enforcement - WARNINGS in Plan 1, will become ERRORS in Plan 5
       '@nx/enforce-module-boundaries': [
         'error',

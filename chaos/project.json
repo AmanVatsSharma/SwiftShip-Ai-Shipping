@@ -1,0 +1,63 @@
+{
+  "name": "chaos",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "chaos",
+  "projectType": "library",
+  "tags": [
+    "layer:tools",
+    "scope:chaos",
+    "team:platform",
+    "maturity:experimental",
+    "type:tools"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": [
+          "chaos/**/*.js",
+          "chaos/**/*.mjs",
+          "chaos/**/*.md"
+        ]
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "command": "tsc --noEmit -p chaos/tsconfig.json",
+        "outputFile": "dist/chaos/typecheck.txt"
+      }
+    },
+    "redis": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node chaos/scenarios/redis-down.js"
+      }
+    },
+    "postgres": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node chaos/scenarios/postgres-failover.js"
+      }
+    },
+    "carrier": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node chaos/scenarios/carrier-timeout.js"
+      }
+    },
+    "all": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "node chaos/scenarios/redis-down.js",
+          "node chaos/scenarios/postgres-failover.js",
+          "node chaos/scenarios/carrier-timeout.js"
+        ],
+        "parallel": false
+      }
+    }
+  }
+}

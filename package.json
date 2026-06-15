@@ -35,7 +35,14 @@
     "loadtest:seed": "node loadtest/k6/lib/seed.js",
     "loadtest:order-create": "k6 run loadtest/k6/scenarios/order-create.js",
     "loadtest:rate-shop": "k6 run loadtest/k6/scenarios/rate-shop.js",
-    "loadtest:graphql-rps": "k6 run loadtest/k6/scenarios/graphql-rps.js"
+    "loadtest:graphql-rps": "k6 run loadtest/k6/scenarios/graphql-rps.js",
+    "chaos:redis": "node chaos/scenarios/redis-down.js",
+    "chaos:postgres": "node chaos/scenarios/postgres-failover.js",
+    "chaos:carrier": "node chaos/scenarios/carrier-timeout.js",
+    "chaos:all": "nx run-many --target=all --projects=chaos",
+    "docs:api:openapi": "node scripts/generate-openapi.mjs",
+    "docs:api:postman": "node scripts/refresh-postman.mjs",
+    "docs:api:run": "newman run postman/SwiftShip.postman_collection.json --environment postman/SwiftShip.postman_environment.json --reporters cli,json --reporter-json-export postman/test-results.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.943.0",
