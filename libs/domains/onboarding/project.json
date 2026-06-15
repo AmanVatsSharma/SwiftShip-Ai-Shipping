@@ -36,6 +36,15 @@
         "tsConfig": "libs/domains/onboarding/tsconfig.lib.json"
       }
     },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "jestConfig": "libs/domains/onboarding/jest.config.ts"
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": [
