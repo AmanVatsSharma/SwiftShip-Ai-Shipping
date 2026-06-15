@@ -12,6 +12,14 @@ export {
   type TrackingToNdrAction,
 } from './lib/tracking-ingestion.processor';
 export { NdrCase, NdrCaseList } from './lib/ndr.model';
+// SS-018 — outbound customer-contact (WhatsApp + Exotel IVR)
+export {
+  NdrContactService,
+  type CustomerIntent,
+  type ContactChannel,
+  type ContactResult,
+} from './lib/ndr-contact.service';
+export { NdrVoiceWebhookController } from './lib/ndr-voice-webhook.controller';
 export {
   RtoSettlementService,
   type RefundServiceLike,

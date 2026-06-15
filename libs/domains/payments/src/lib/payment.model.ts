@@ -1,7 +1,25 @@
-import { ObjectType, Field, Int, Float, registerEnumType } from '@nestjs/graphql';
-import { User } from '../users/entities/user.entity';
-import { Order } from '../orders/order.model';
-import { Invoice } from '../billing/billing.model';
+/**
+ * SS-043g — GraphQL model for the payments domain.
+ *
+ * The `ObjectType` classes here drive schema generation; the underlying
+ * storage entities live in `@swiftship/platform-typeorm` (`PaymentEntity`,
+ * `RefundEntity`). The GraphQL types deliberately mirror the TypeORM
+ * entities 1:1 so resolver code can return them with no extra mapping.
+ */
+import {
+  ObjectType,
+  Field,
+  Int,
+  Float,
+  registerEnumType,
+} from '@nestjs/graphql';
+import {
+  PaymentEntity as Payment,
+  RefundEntity as Refund,
+  UserEntity as User,
+  OrderEntity as Order,
+  InvoiceEntity as Invoice,
+} from '@swiftship/platform-typeorm';
 
 export enum PaymentStatus {
   PENDING = 'PENDING',
@@ -13,18 +31,14 @@ export enum PaymentStatus {
   CANCELLED = 'CANCELLED',
 }
 
-registerEnumType(PaymentStatus, {
-  name: 'PaymentStatus',
-});
+registerEnumType(PaymentStatus, { name: 'PaymentStatus' });
 
 export enum PaymentGateway {
   STRIPE = 'STRIPE',
   RAZORPAY = 'RAZORPAY',
 }
 
-registerEnumType(PaymentGateway, {
-  name: 'PaymentGateway',
-});
+registerEnumType(PaymentGateway, { name: 'PaymentGateway' });
 
 export enum PaymentMethod {
   CARD = 'CARD',
@@ -34,9 +48,7 @@ export enum PaymentMethod {
   COD = 'COD',
 }
 
-registerEnumType(PaymentMethod, {
-  name: 'PaymentMethod',
-});
+registerEnumType(PaymentMethod, { name: 'PaymentMethod' });
 
 export enum PaymentReconciliationStatus {
   NOT_APPLICABLE = 'NOT_APPLICABLE',
@@ -51,12 +63,12 @@ registerEnumType(PaymentReconciliationStatus, {
 });
 
 @ObjectType()
-export class Payment {
+export class PaymentModel {
   @Field()
-  id: string;
+  id!: string;
 
   @Field(() => Int)
-  userId: number;
+  userId!: number;
 
   @Field(() => User, { nullable: true })
   user?: User;
@@ -74,16 +86,16 @@ export class Payment {
   invoice?: Invoice;
 
   @Field(() => Float)
-  amount: number;
+  amount!: number;
 
   @Field()
-  currency: string;
+  currency!: string;
 
   @Field(() => PaymentStatus)
-  status: PaymentStatus;
+  status!: PaymentStatus;
 
   @Field(() => PaymentGateway)
-  gateway: PaymentGateway;
+  gateway!: PaymentGateway;
 
   @Field({ nullable: true })
   gatewayPaymentId?: string;
@@ -95,40 +107,40 @@ export class Payment {
   failureReason?: string;
 
   @Field(() => Float)
-  refundedAmount: number;
+  refundedAmount!: number;
 
   @Field(() => PaymentReconciliationStatus)
-  reconciliationStatus: PaymentReconciliationStatus;
+  reconciliationStatus!: PaymentReconciliationStatus;
 
   @Field({ nullable: true })
   reconciledAt?: Date;
 
-  @Field(() => [Refund], { nullable: true })
-  refunds?: Refund[];
+  @Field(() => [RefundModel], { nullable: true })
+  refunds?: RefundModel[];
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 @ObjectType()
-export class Refund {
+export class RefundModel {
   @Field()
-  id: string;
+  id!: string;
 
   @Field()
-  paymentId: string;
+  paymentId!: string;
 
-  @Field(() => Payment, { nullable: true })
-  payment?: Payment;
+  @Field(() => PaymentModel, { nullable: true })
+  payment?: PaymentModel;
 
   @Field(() => Float)
-  amount: number;
+  amount!: number;
 
   @Field()
-  currency: string;
+  currency!: string;
 
   @Field({ nullable: true })
   gatewayRefundId?: string;
@@ -137,49 +149,49 @@ export class Refund {
   reason?: string;
 
   @Field(() => PaymentStatus)
-  status: PaymentStatus;
+  status!: PaymentStatus;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 @ObjectType()
 export class PaymentIntent {
   @Field()
-  paymentId: string;
+  paymentId!: string;
 
   @Field({ nullable: true })
   clientSecret?: string;
 
   @Field(() => Float)
-  amount: number;
+  amount!: number;
 
   @Field()
-  currency: string;
+  currency!: string;
 
   @Field(() => PaymentStatus)
-  status: PaymentStatus;
+  status!: PaymentStatus;
 }
 
 @ObjectType()
 export class SubscriptionPlan {
   @Field()
-  id: string;
+  id!: string;
 
   @Field()
-  name: string;
+  name!: string;
 
   @Field(() => Float)
-  price: number;
+  price!: number;
 
   @Field()
-  currency: string;
+  currency!: string;
 
   @Field()
-  interval: string; // monthly, yearly
+  interval!: string;
 
   @Field(() => [String], { nullable: true })
   features?: string[];
