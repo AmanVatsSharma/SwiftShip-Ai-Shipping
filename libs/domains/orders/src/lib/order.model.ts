@@ -9,7 +9,8 @@ import { OrderStatus, PaymentStatus } from '@swiftship/platform-typeorm';
 import { Warehouse } from '@swiftship/domains-warehouses';
 
 // OrderStatus enum (re-exported from the platform-typeorm lib so we own the
-// canonical enum definition; previously this came from @prisma/client).
+// canonical enum definition; see MIGRATION.md for the history of the move
+// off the legacy prisma-client shim).
 registerEnumType(OrderStatus, {
   name: 'OrderStatus',
 });
