@@ -35,30 +35,6 @@ module.exports = tseslint.config(
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
 
-      // Plan 5 enforcement: ban direct Prisma imports outside the compat shim.
-      // Libs should use `@swiftship/platform-typeorm` instead.
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@prisma/client', '@prisma/client/runtime/library'],
-              message:
-                'Do not import from @prisma/client — use @swiftship/platform-typeorm or the entities/enums re-exports.',
-            },
-          ],
-        },
-      ],
-      {
-        files: [
-          'libs/platform/typeorm/src/lib/@prisma/**/*',
-          'src/prisma/**/*',
-        ],
-        rules: {
-          'no-restricted-imports': 'off',
-        },
-      },
-
       // SS-035: k6 scenarios are JS executed by the k6 binary. They
       // deliberately use CommonJS (`require`, `module.exports`) and
       // depend on k6 built-ins that don't have type definitions —

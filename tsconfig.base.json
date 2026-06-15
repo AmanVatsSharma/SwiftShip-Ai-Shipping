@@ -173,12 +173,6 @@
       ],
       "graphql": [
         "./libs/platform/graphql/src/index.ts"
-      ],
-      "@prisma/client": [
-        "./libs/platform/typeorm/src/lib/@prisma/client/index.d.ts"
-      ],
-      "@prisma/client/runtime/library": [
-        "./libs/platform/typeorm/src/lib/@prisma/client/runtime.d.ts"
       ]
     }
   },

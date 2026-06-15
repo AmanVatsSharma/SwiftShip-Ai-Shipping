@@ -3,10 +3,11 @@ import type { Request, Response, NextFunction } from 'express';
 import { bindTenantContext } from '@swiftship/platform-typeorm';
 
 /**
- * SS-002c — bind `req.tenantId` (set by TenantMiddleware) into the
- * PrismaCompat shim's AsyncLocalStorage slot for the lifetime of the
- * request. Without this, every compat call would either throw
- * "No tenant context" or fall back to the system tenant.
+ * SS-002c / SS-044 — bind `req.tenantId` (set by TenantMiddleware) into
+ * the platform-typeorm tenant-context helper's AsyncLocalStorage slot for
+ * the lifetime of the request. The PrismaCompat shim that previously
+ * owned this was removed in SS-044; the helpers are now in
+ * `tenant-context.helpers.ts`.
  *
  * The middleware runs *after* TenantMiddleware in the chain. It is
  * registered in `TenantModule#configure` immediately after the existing

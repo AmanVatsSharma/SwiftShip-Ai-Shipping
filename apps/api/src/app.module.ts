@@ -8,7 +8,7 @@ import { join } from 'path';
 
 // Platform libs (TypeORM, auth, queues, carriers, graphql, config, throttler)
 import { TypeormModule } from '../../libs/platform/typeorm/src/lib/typeorm.module';
-import { configurePrismaCompat } from '@swiftship/platform-typeorm';
+import { configureTenantContext } from '@swiftship/platform-typeorm';
 import { AuthLibModule } from '../../libs/platform/auth/src/lib/auth.module';
 import { QueuesModule } from '../../libs/platform/queues/src/lib/queues.module';
 import { CarriersLibModule } from '../../libs/platform/carriers/src/lib/carriers.module';
@@ -158,19 +158,20 @@ export class AppModule implements NestModule, OnModuleInit {
   }
 
   /**
-   * SS-002c: tell the shim how to read a tenantId from the active request
-   * when the ALS slot isn't already populated. This is the fallback used
-   * by worker / cron contexts that never had a request to bind to.
+   * SS-002c / SS-044: tell the tenant-context helper how to read a tenantId
+   * from the active request when the ALS slot isn't already populated.
+   * This is the fallback used by worker / cron contexts that never had a
+   * request to bind to. The PrismaCompat shim that previously owned this
+   * was removed in SS-044; the helpers are now in `tenant-context.helpers.ts`.
    */
   onModuleInit(): void {
-    configurePrismaCompat({
+    configureTenantContext({
       getTenantId: () => {
-        // The shim's request middleware populates `als` directly. This
-        // callback is the safety-net for code paths outside of HTTP
-        // (e.g. a worker that uses PrismaCompat for a single read). In
-        // those contexts there is no `req` to read from — returning
-        // undefined forces the shim to either use withSystemContext or
-        // throw a clear "no tenant context" error.
+        // The request middleware populates `als` directly. This callback
+        // is the safety-net for code paths outside of HTTP (e.g. a worker
+        // that processes a single read). In those contexts there is no
+        // `req` to read from — returning undefined forces the helper to
+        // fall through to whatever the caller has already bound.
         return undefined;
       },
     });
