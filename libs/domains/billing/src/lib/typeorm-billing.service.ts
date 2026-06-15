@@ -3,8 +3,8 @@
  *
  * This is the *new* TypeORM implementation. The four legacy services under
  * `src/billing/services/` (invoice, eway-bill, gst, pdf) keep working via
- * the PrismaCompat shim until Plan 5 sweeps them. New code should target
- * this service.
+ * the legacy shim until Plan 5 sweeps them — see MIGRATION.md. New code
+ * should target this service.
  */
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -49,7 +49,7 @@ export class BillingService {
     private readonly tenantContext: TenantContext,
     // SS-032: needed to enforce the GSTIN-paying-customer gate for
     // invoices > Rs 10k. The service can be undefined in legacy
-    // contexts (legacy PrismaCompat sites) — we guard the call.
+    // contexts (see MIGRATION.md) — we guard the call.
     private readonly gstInvoiceService: GstInvoiceService,
   ) {}
 
