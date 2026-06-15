@@ -1,10 +1,11 @@
 /**
- * Manifests service (TypeORM-backed — SS-043b).
+ * Manifests service (TypeORM-backed — SS-043a).
  *
  * Generates shipment manifests: a manifest groups a set of outbound
  * shipments under a single manifest number that the carrier picks up as
- * one bundle. The legacy PrismaCompat implementation was removed in
- * SS-043b; the service now uses `@InjectRepository` per MIGRATION.md §7.
+ * one bundle. Persistence is via `@InjectRepository(ManifestEntity)` and
+ * `@InjectRepository(ManifestItemEntity)`. See MIGRATION.md §7 for the
+ * runbook that moved this lib off the legacy shim.
  */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';

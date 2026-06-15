@@ -36,6 +36,15 @@
         "tsConfig": "libs/domains/manifests/tsconfig.lib.json"
       }
     },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "jestConfig": "libs/domains/manifests/jest.config.ts"
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": [
