@@ -2,27 +2,30 @@
 /**
  * scripts/audit-prisma-compat.mjs
  *
- * Static guard for the Prisma -> TypeORM migration (SS-040).
+ * Static guard for the Prisma -> TypeORM migration (SS-040, SS-047).
  *
- * Prevents any new `@prisma/client` or `PrismaCompat` import from being
- * added to the repo. The shim is being removed (1 lib/week) but without
- * a guard, the cadence is meaningless.
+ * Prevents any new `@prisma/client` or `PrismaCompat` consumer import from
+ * being added to the repo. The shim is being removed (1 lib/week) but
+ * without a guard, the cadence is meaningless.
  *
  * What it does:
  *   1. Walks every `src/` under `libs/domains/*` and `libs/platform/*`.
- *   2. Greps each file for `PrismaCompat` and `@prisma/client`.
- *   3. Excludes the known shim files in `libs/platform/typeorm/`:
- *        - libs/platform/typeorm/src/lib/prisma-compat.types.ts
- *        - libs/platform/typeorm/src/lib/@prisma/client/index.d.ts
- *        - libs/platform/typeorm/src/lib/@prisma/client/runtime.d.ts
- *   4. Prints a count of offending matches per lib (or per shim file when
- *      the match is inside the shim itself, so the operator can see the
- *      baseline).
- *   5. Exits 1 if any consumer import is found outside the shim files;
- *      exits 0 otherwise.
+ *   2. Strips `//` line comments and `/* ... *\/` block comments from each
+ *      file before searching, so JSDoc and `// link to PrismaCompat in
+ *      MIGRATION.md` style comments don't produce false positives.
+ *   3. Greps the comment-stripped text for `PrismaCompat` and
+ *      `@prisma/client`.
+ *   4. Separates matches into:
+ *        - "consumer" matches: any file OUTSIDE the shim.
+ *        - "shim-internal" matches: matches inside the shim file(s). These
+ *          are reported for visibility but never fail the build.
+ *   5. Exits 1 if any consumer import is found; exits 0 otherwise.
  *
  * Usage:
  *   node scripts/audit-prisma-compat.mjs
+ *   node scripts/audit-prisma-compat.mjs --json
+ *   node scripts/audit-prisma-compat.mjs <path>
+ *   node scripts/audit-prisma-compat.mjs --json <path>
  *   npm run audit:prisma
  *
  * Exit codes:
@@ -32,13 +35,13 @@
  * Notes:
  *   - The script only inspects `.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.mjs`,
  *     `.cjs`, and `.d.ts` files. node_modules / dist are skipped.
- *   - Comments that mention `PrismaCompat` are NOT filtered out — the goal
- *     is to ban the symbol entirely from consumer code. If you need to
- *     reference the shim in a comment, link to MIGRATION.md instead.
  *   - The script intentionally does NOT scan `apps/` (apps are composition
  *     roots; the shim's exported helpers like `configurePrismaCompat` are
- *     valid app-level imports and will be dropped in SS-044). If you
- *     need an app-level audit, run grep directly.
+ *     valid app-level imports and will be dropped in SS-044). If you need
+ *     an app-level audit, run grep directly.
+ *   - `--json` emits a single-line JSON object to stdout (suitable for
+ *     `node -e 'JSON.parse(require("fs").readFileSync(0,"utf8"))'` in CI).
+ *     All human-readable text is suppressed when `--json` is set.
  */
 
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
@@ -47,6 +50,31 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = dirname(dirname(__filename));
+
+// ---------------------------------------------------------------------------
+// CLI
+// ---------------------------------------------------------------------------
+
+/**
+ * @returns {{ json: boolean, scanRoot: string }}
+ */
+function parseArgs(argv) {
+  let json = false;
+  let scanRoot = ROOT;
+  for (const arg of argv) {
+    if (arg === '--json') {
+      json = true;
+    } else if (arg === '--help' || arg === '-h') {
+      console.log(
+        'Usage: node scripts/audit-prisma-compat.mjs [--json] [<path>]',
+      );
+      process.exit(0);
+    } else if (!arg.startsWith('--')) {
+      scanRoot = arg;
+    }
+  }
+  return { json, scanRoot };
+}
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -59,12 +87,17 @@ const PATTERNS = [
 ];
 
 // Files inside the shim that are allowed to mention the patterns. These are
-// the implementation of the shim itself, not consumers of it.
+// the implementation of the shim itself (and the shim's own unit tests),
+// not consumers of it. Add to this set when a new shim-internal file is
+// created; do NOT add domain lib files here.
+//
+// SS-044: The PrismaCompat shim was deleted entirely. The set is now empty
+// (replaced by tenant-context.helpers.ts which uses no PrismaCompat symbols).
+// The set + shimTotals reporting is kept in case a future shim is added.
 const SHIM_FILES = new Set(
   [
-    'libs/platform/typeorm/src/lib/prisma-compat.types.ts',
-    'libs/platform/typeorm/src/lib/@prisma/client/index.d.ts',
-    'libs/platform/typeorm/src/lib/@prisma/client/runtime.d.ts',
+    // 'libs/platform/typeorm/src/lib/prisma-compat.types.ts', // SS-044 deleted
+    // 'libs/platform/typeorm/src/lib/typeorm.module.ts',      // re-export only
   ].map((p) => p.split('/').join(sep)),
 );
 
@@ -79,7 +112,8 @@ const SCAN_EXTENSIONS = new Set([
   '.d.ts',
 ]);
 
-const SCAN_DIRS = ['libs/domains', 'libs/platform'];
+// Default scan dirs (used when scanRoot === ROOT, i.e. no path argument).
+const DEFAULT_SCAN_DIRS = ['libs/domains', 'libs/platform'];
 
 // ---------------------------------------------------------------------------
 // File walker
@@ -97,7 +131,12 @@ function walk(dir) {
   if (!existsSync(dir)) return out;
 
   for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry === 'dist' || entry === 'coverage' || entry === '.nx') {
+    if (
+      entry === 'node_modules' ||
+      entry === 'dist' ||
+      entry === 'coverage' ||
+      entry === '.nx'
+    ) {
       continue;
     }
     const full = join(dir, entry);
@@ -120,22 +159,57 @@ function walk(dir) {
 }
 
 // ---------------------------------------------------------------------------
+// Comment stripping
+// ---------------------------------------------------------------------------
+
+/**
+ * Strip `//` line comments and `/* ... *\/` block comments from a TypeScript
+ * source string. Preserves line counts (block-comment removals replace with
+ * newlines) so any subsequent line/column reporting stays anchored to the
+ * original source.
+ *
+ * This is intentionally not a full parser — it's a regex-based stripper
+ * good enough for audit purposes. It does NOT handle:
+ *   - `//` inside a string literal  (false negative risk: low)
+ *   - `/*` inside a string literal  (false negative risk: low)
+ *   - nested block comments         (TS doesn't allow them anyway)
+ * The cost of any false positive from a string literal is a single manual
+ * "this is in a string, not a comment" triage — acceptable for a CI guard.
+ *
+ * @param {string} src
+ * @returns {string}
+ */
+export function stripComments(src) {
+  // Block comments first (greedy across newlines). Replace with newlines
+  // so line numbers stay aligned.
+  let out = src.replace(/\/\*[\s\S]*?\*\//g, (m) =>
+    m.replace(/[^\n]/g, ' '),
+  );
+  // Line comments to end of line. Replace with spaces (preserves \n).
+  out = out.replace(/\/\/[^\n]*/g, (m) => ' '.repeat(m.length));
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Per-file scan
 // ---------------------------------------------------------------------------
 
 /**
+ * Scan a single file for PATTERNS, ignoring matches inside comments.
+ *
  * @param {string} absPath
  * @returns {{ name: string, line: number, col: number, pattern: string }[]}
  */
-function scanFile(absPath) {
+export function scanFile(absPath) {
   const text = readFileSync(absPath, 'utf-8');
+  const cleaned = stripComments(text);
   const hits = [];
   for (const { name, regex } of PATTERNS) {
     // Use a fresh regex per scan to avoid lastIndex bleed.
     const re = new RegExp(regex.source, 'g');
     let m;
-    while ((m = re.exec(text)) !== null) {
-      const before = text.slice(0, m.index);
+    while ((m = re.exec(cleaned)) !== null) {
+      const before = cleaned.slice(0, m.index);
       const line = (before.match(/\n/g) ?? []).length + 1;
       const col = m.index - (before.lastIndexOf('\n') + 1) + 1;
       hits.push({ name, line, col, pattern: m[0] });
@@ -171,13 +245,18 @@ function libName(absPath) {
 // ---------------------------------------------------------------------------
 
 const main = () => {
-  /** @type {Map<string, { hits: { file: string, line: number, col: number, pattern: string }[], shim: boolean }>} */
-  const byLib = new Map();
+  const { json, scanRoot } = parseArgs(process.argv.slice(2));
+  const scanRoots =
+    scanRoot === ROOT
+      ? DEFAULT_SCAN_DIRS.map((d) => join(ROOT, d))
+      : [scanRoot];
+
+  /** @type {Map<string, { hits: { file: string, line: number, col: number, pattern: string }[] }>} */
+  const consumerByLib = new Map();
   /** @type {Map<string, number>} */
   const shimTotals = new Map();
 
-  for (const dir of SCAN_DIRS) {
-    const absDir = join(ROOT, dir);
+  for (const absDir of scanRoots) {
     if (!existsSync(absDir)) continue;
     for (const file of walk(absDir)) {
       const rel = relative(ROOT, file).split(sep).join('/');
@@ -192,19 +271,24 @@ const main = () => {
       }
 
       const lib = libName(file);
-      const bucket = byLib.get(lib) ?? { hits: [], shim: false };
+      const bucket = consumerByLib.get(lib) ?? { hits: [] };
       for (const h of hits) {
-        bucket.hits.push({ file: rel, line: h.line, col: h.col, pattern: h.pattern });
+        bucket.hits.push({
+          file: rel,
+          line: h.line,
+          col: h.col,
+          pattern: h.pattern,
+        });
       }
-      byLib.set(lib, bucket);
+      consumerByLib.set(lib, bucket);
     }
   }
 
   // Sort libs alphabetically for stable output.
-  const libKeys = Array.from(byLib.keys()).sort();
+  const libKeys = Array.from(consumerByLib.keys()).sort();
 
   const totalConsumerHits = libKeys.reduce(
-    (acc, k) => acc + byLib.get(k).hits.length,
+    (acc, k) => acc + consumerByLib.get(k).hits.length,
     0,
   );
 
@@ -213,27 +297,53 @@ const main = () => {
   const patternCounts = {};
   for (const { name } of PATTERNS) patternCounts[name] = 0;
   for (const k of libKeys) {
-    for (const h of byLib.get(k).hits) {
+    for (const h of consumerByLib.get(k).hits) {
       patternCounts[h.name] = (patternCounts[h.name] ?? 0) + 1;
     }
   }
 
-  console.log('PrismaCompat audit (SS-040)');
-  console.log('===========================');
+  if (json) {
+    const payload = {
+      consumerMatches: totalConsumerHits,
+      consumerByLib: Object.fromEntries(
+        libKeys.map((k) => [
+          k,
+          consumerByLib.get(k).hits.map((h) => ({
+            file: h.file,
+            line: h.line,
+            col: h.col,
+            pattern: h.pattern,
+          })),
+        ]),
+      ),
+      patternCounts,
+      shimInternal: Object.fromEntries(shimTotals.entries()),
+      status: totalConsumerHits > 0 ? 'FAIL' : 'OK',
+    };
+    process.stdout.write(JSON.stringify(payload) + '\n');
+    process.exit(totalConsumerHits > 0 ? 1 : 0);
+  }
+
+  console.log('PrismaCompat audit (SS-040 / SS-047)');
+  console.log('====================================');
   console.log('');
 
   if (libKeys.length === 0) {
     console.log('Consumer matches: 0');
     console.log('');
-    console.log('No @prisma/client or PrismaCompat imports found in libs/*/src.');
+    console.log(
+      'No @prisma/client or PrismaCompat imports found in the scan root.',
+    );
   } else {
     console.log(`Consumer matches: ${totalConsumerHits}`);
     console.log('');
     for (const k of libKeys) {
-      const { hits } = byLib.get(k);
+      const { hits } = consumerByLib.get(k);
       console.log(`  ${k}: ${hits.length}`);
       for (const h of hits) {
-        console.log(`    - ${h.file}:${h.line}:${h.col}  (${h.pattern})`);
+        console.log(
+          `    - ${h.file}:${h.line}:${h.col}  (${h.pattern})`,
+        );
       }
     }
     console.log('');
@@ -245,7 +355,9 @@ const main = () => {
 
   if (shimTotals.size > 0) {
     console.log('');
-    console.log('Shim file matches (excluded from the failure check):');
+    console.log(
+      'Shim-internal matches (excluded from the failure check):',
+    );
     for (const [file, count] of shimTotals.entries()) {
       console.log(`  ${file}: ${count}`);
     }
@@ -254,19 +366,36 @@ const main = () => {
   console.log('');
 
   if (totalConsumerHits > 0) {
-    console.error('FAIL: new PrismaCompat / @prisma/client consumer imports detected.');
+    console.error(
+      'FAIL: new PrismaCompat / @prisma/client consumer imports detected.',
+    );
     console.error('');
-    console.error('The PrismaCompat shim is being removed (1 lib/week, see MIGRATION.md).');
-    console.error('Do not add new consumers. If you are migrating a service off the');
+    console.error(
+      'The PrismaCompat shim is being removed (1 lib/week, see MIGRATION.md).',
+    );
+    console.error(
+      'Do not add new consumers. If you are migrating a service off the',
+    );
     console.error('shim, see MIGRATION.md section 7 for the runbook.');
-    console.error('');
-    console.error('If a match is inside a comment, link to MIGRATION.md instead of');
-    console.error('naming the symbol.');
     process.exit(1);
   }
 
-  console.log('OK: 0 consumer matches. Shim is still in place (SS-040 baseline).');
+  console.log('OK: 0 consumer matches. PrismaCompat shim is deleted (SS-044).');
   process.exit(0);
 };
 
-main();
+// Only auto-run main() when this module is the entrypoint (i.e. invoked
+// via `node scripts/audit-prisma-compat.mjs`). When imported from a test
+// file, the helpers (stripComments, scanFile) are exposed for testing
+// without spinning up the full audit + process.exit.
+const isEntrypoint = (() => {
+  try {
+    return process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+  } catch {
+    return false;
+  }
+})();
+
+if (isEntrypoint) {
+  main();
+}
