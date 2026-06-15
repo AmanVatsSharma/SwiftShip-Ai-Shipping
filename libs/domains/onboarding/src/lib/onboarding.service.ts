@@ -7,9 +7,10 @@
  * scheduled — and computes a `status` + `nextAction` from those flags.
  *
  * Persistence is via `@InjectRepository(OnboardingStateEntity)`. The
- * `OnboardingStatus` enum comes from `@swiftship/platform-typeorm` (no
- * longer from `@prisma/client`). See MIGRATION.md §7 for the call-site
- * mapping from the legacy `prisma.onboardingState` shim.
+ * `OnboardingStatus` enum comes from `@swiftship/platform-typeorm` (the
+ * same enum the legacy Prisma re-export used to point at). See
+ * MIGRATION.md §7 for the call-site mapping from the old
+ * `prisma.onboardingState` shim.
  */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';

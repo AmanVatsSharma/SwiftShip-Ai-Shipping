@@ -9,7 +9,7 @@ import { ManifestsService } from './manifests.service';
  * minimal `manager` object), and `TenantContext`.
  *
  * The point of this suite is to pin behaviour that used to flow
- * through the PrismaCompat shim:
+ * through the legacy Prisma-shaped shim:
  *  - tenant scoping on list + get
  *  - 404 for unknown id
  *  - generateManifest persists the manifest and its items in one tx
