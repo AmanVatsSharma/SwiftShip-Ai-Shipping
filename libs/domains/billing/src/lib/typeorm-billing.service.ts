@@ -21,6 +21,10 @@ import {
   BillingCycle,
 } from '@swiftship/platform-typeorm';
 import { TenantContext } from '@swiftship/domains-tenants';
+import {
+  GSTIN_PAYING_THRESHOLD_INR,
+  GstInvoiceService,
+} from './gst/gst-invoice.service';
 
 @Injectable()
 export class BillingService {
@@ -43,6 +47,10 @@ export class BillingService {
     private readonly warehouses: Repository<WarehouseEntity>,
     private readonly dataSource: DataSource,
     private readonly tenantContext: TenantContext,
+    // SS-032: needed to enforce the GSTIN-paying-customer gate for
+    // invoices > Rs 10k. The service can be undefined in legacy
+    // contexts (legacy PrismaCompat sites) — we guard the call.
+    private readonly gstInvoiceService: GstInvoiceService,
   ) {}
 
   /**
@@ -116,6 +124,21 @@ export class BillingService {
       };
     });
     const total = subtotal + totalTax;
+
+    // SS-032: GSTIN-paying-customer gate. For invoices over the GST
+    // threshold we require a verified KYC record with a GSTIN — without
+    // one we cannot produce a compliant tax invoice. The check is
+    // best-effort: if the GstInvoiceService isn't wired (legacy call
+    // sites) we let the invoice through and log a warning.
+    if (total > GSTIN_PAYING_THRESHOLD_INR) {
+      const isGstin = await this.gstInvoiceService?.isGstinPayingCustomer(tenantId);
+      if (isGstin === false) {
+        throw new BadRequestException(
+          `Invoices over Rs ${GSTIN_PAYING_THRESHOLD_INR} require a verified KYC record with a GSTIN. ` +
+            'Submit KYC before creating a high-value invoice.',
+        );
+      }
+    }
 
     // Generate invoice number (per warehouse + financial year)
     const { invoiceNumber, sequenceNumber, financialYear } =

@@ -29,6 +29,9 @@ import { MetricsController } from '../../libs/observability/src/lib/metrics.cont
 // inject the TypeORM-platform entities (no PrismaCompat shim).
 import { KycModule } from '../../libs/domains/onboarding/src/lib/kyc/kyc.module';
 
+// SS-032: GST invoicing + E-way bill (ClearTax sandbox adapter).
+import { GstModule } from '../../libs/domains/billing/src/lib/gst/gst.module';
+
 // Domain libs — every feature is now an importable Nx lib.
 import { OrdersLibModule } from '../../libs/domains/orders/src/lib/orders.module';
 import { ShipmentsLibModule } from '../../libs/domains/shipments/src/lib/shipments.module';
@@ -127,6 +130,8 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     RateShopPublicModule,
     // SS-031: KYC (PAN + GSTIN + bank) with BullMQ async verify.
     KycModule,
+    // SS-032: GST invoicing + E-way bill generation.
+    GstModule,
   ],
   controllers: [AppController, HealthController, MetricsController],
   providers: [

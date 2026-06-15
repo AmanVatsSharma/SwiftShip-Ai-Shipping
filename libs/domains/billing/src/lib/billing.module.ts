@@ -12,6 +12,7 @@ import {
 } from '@swiftship/platform-typeorm';
 import { BillingService } from './typeorm-billing.service';
 import { BillingResolver } from './billing.resolver';
+import { GstModule } from './gst/gst.module';
 
 @Module({
   imports: [
@@ -25,6 +26,9 @@ import { BillingResolver } from './billing.resolver';
       WarehouseEntity,
     ]),
     AuthLibModule,
+    // SS-032: register GstModule so BillingService can inject
+    // GstInvoiceService for the GSTIN-paying-customer gate.
+    GstModule,
   ],
   providers: [BillingService, BillingResolver],
   exports: [BillingService],
