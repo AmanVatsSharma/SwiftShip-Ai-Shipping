@@ -1,7 +1,7 @@
 import { ObjectType, Field, Int, registerEnumType } from '@nestjs/graphql';
-import { OnboardingStatus } from '@prisma/client';
+import { OnboardingStatus } from '@swiftship/platform-typeorm';
 
-// Register Prisma enum for GraphQL
+// Register the TypeORM-sourced enum for GraphQL.
 registerEnumType(OnboardingStatus, { name: 'OnboardingStatus' });
 
 @ObjectType()
