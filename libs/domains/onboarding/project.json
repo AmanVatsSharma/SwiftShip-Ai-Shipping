@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/onboarding",
-        "tsConfig": "libs/domains/onboarding/tsconfig.lib.json"
+        "tsConfig": "libs/domains/onboarding/tsconfig.lib.json",
+        "main": "libs/domains/onboarding/src/index.ts",
+        "packageJson": "libs/domains/onboarding/package.json"
       }
     },
     "test": {

@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/manifests",
-        "tsConfig": "libs/domains/manifests/tsconfig.lib.json"
+        "tsConfig": "libs/domains/manifests/tsconfig.lib.json",
+        "main": "libs/domains/manifests/src/index.ts",
+        "packageJson": "libs/domains/manifests/package.json"
       }
     },
     "test": {
