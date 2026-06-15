@@ -1,5 +1,5 @@
 {
-  "name": "carriers",
+  "name": "carrier-adapters",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/platform/carriers/src",
   "projectType": "library",
