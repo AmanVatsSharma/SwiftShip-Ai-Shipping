@@ -1,35 +1,42 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
+import { RoleEntity, UserEntity } from '@swiftship/platform-typeorm';
 import { UsersService } from './users.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let prismaService: PrismaService;
+  let usersRepo: { create: jest.Mock; save: jest.Mock; find: jest.Mock; findOne: jest.Mock; update: jest.Mock; delete: jest.Mock };
+  let rolesRepo: { find: jest.Mock };
 
-  const mockPrismaService = {
-    user: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
+  const mockUsersRepo = {
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  };
+
+  const mockRolesRepo = {
+    find: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: getRepositoryToken(UserEntity), useValue: mockUsersRepo },
+        { provide: getRepositoryToken(RoleEntity), useValue: mockRolesRepo },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    usersRepo = mockUsersRepo;
+    rolesRepo = mockRolesRepo;
   });
 
   afterEach(() => {
@@ -48,47 +55,48 @@ describe('UsersService', () => {
 
     const mockUser = {
       id: 1,
-      ...createUserInput,
+      email: createUserInput.email,
+      name: createUserInput.name,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     it('should create a new user successfully', async () => {
-      mockPrismaService.user.create.mockResolvedValue(mockUser);
+      mockUsersRepo.create.mockReturnValue(mockUser);
+      mockUsersRepo.save.mockResolvedValue(mockUser);
 
       const result = await service.create(createUserInput);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.create).toHaveBeenCalledWith({
-        data: createUserInput,
+      expect(mockUsersRepo.create).toHaveBeenCalledWith({
+        email: createUserInput.email,
+        name: createUserInput.name,
       });
+      expect(mockUsersRepo.save).toHaveBeenCalledWith(mockUser);
     });
 
-    it('should throw ConflictException if email already exists', async () => {
-      const prismaError = new PrismaClientKnownRequestError(
-        'Unique constraint failed on the fields: (`email`)',
-        {
-          code: 'P2002',
-          clientVersion: '4.5.0',
-          meta: { target: ['email'] }
-        }
+    it('should throw ConflictException if email already exists (PG 23505)', async () => {
+      const pgError = new QueryFailedError(
+        'insert into "users"',
+        [],
+        new Error('duplicate key value violates unique constraint'),
       );
-
-      mockPrismaService.user.create.mockRejectedValue(prismaError);
+      (pgError as unknown as { driverError: { code: string } }).driverError = {
+        code: '23505',
+      };
+      mockUsersRepo.create.mockReturnValue(mockUser);
+      mockUsersRepo.save.mockRejectedValue(pgError);
 
       await expect(service.create(createUserInput)).rejects.toThrow(ConflictException);
-      expect(mockPrismaService.user.create).toHaveBeenCalledWith({
-        data: createUserInput,
-      });
+      expect(mockUsersRepo.save).toHaveBeenCalled();
     });
 
     it('should throw InternalServerErrorException for other errors', async () => {
-      mockPrismaService.user.create.mockRejectedValue(new Error('Database error'));
+      mockUsersRepo.create.mockReturnValue(mockUser);
+      mockUsersRepo.save.mockRejectedValue(new Error('Database error'));
 
       await expect(service.create(createUserInput)).rejects.toThrow(InternalServerErrorException);
-      expect(mockPrismaService.user.create).toHaveBeenCalledWith({
-        data: createUserInput,
-      });
+      expect(mockUsersRepo.save).toHaveBeenCalled();
     });
   });
 
@@ -111,21 +119,21 @@ describe('UsersService', () => {
     ];
 
     it('should return an array of users', async () => {
-      mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+      mockUsersRepo.find.mockResolvedValue(mockUsers);
 
       const result = await service.findAll();
 
       expect(result).toEqual(mockUsers);
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith({
-        orderBy: { createdAt: 'desc' }
+      expect(mockUsersRepo.find).toHaveBeenCalledWith({
+        order: { createdAt: 'DESC' },
       });
     });
 
     it('should throw InternalServerErrorException if database query fails', async () => {
-      mockPrismaService.user.findMany.mockRejectedValue(new Error('Database error'));
+      mockUsersRepo.find.mockRejectedValue(new Error('Database error'));
 
       await expect(service.findAll()).rejects.toThrow(InternalServerErrorException);
-      expect(mockPrismaService.user.findMany).toHaveBeenCalled();
+      expect(mockUsersRepo.find).toHaveBeenCalled();
     });
   });
 
@@ -140,32 +148,26 @@ describe('UsersService', () => {
     };
 
     it('should return a user if it exists', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockUsersRepo.findOne.mockResolvedValue(mockUser);
 
       const result = await service.findOne(userId);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalledWith({ where: { id: userId } });
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockUsersRepo.findOne.mockResolvedValue(null);
 
       await expect(service.findOne(userId)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalledWith({ where: { id: userId } });
     });
 
     it('should throw InternalServerErrorException if database query fails', async () => {
-      mockPrismaService.user.findUnique.mockRejectedValue(new Error('Database error'));
+      mockUsersRepo.findOne.mockRejectedValue(new Error('Database error'));
 
       await expect(service.findOne(userId)).rejects.toThrow(InternalServerErrorException);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalled();
     });
   });
 
@@ -180,34 +182,28 @@ describe('UsersService', () => {
     };
 
     it('should return a user if it exists', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockUsersRepo.findOne.mockResolvedValue(mockUser);
 
       const result = await service.findByEmail(userEmail);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email: userEmail },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalledWith({ where: { email: userEmail } });
     });
 
     it('should return null if user does not exist', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockUsersRepo.findOne.mockResolvedValue(null);
 
       const result = await service.findByEmail(userEmail);
 
       expect(result).toBeNull();
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email: userEmail },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalledWith({ where: { email: userEmail } });
     });
 
     it('should throw InternalServerErrorException if database query fails', async () => {
-      mockPrismaService.user.findUnique.mockRejectedValue(new Error('Database error'));
+      mockUsersRepo.findOne.mockRejectedValue(new Error('Database error'));
 
       await expect(service.findByEmail(userEmail)).rejects.toThrow(InternalServerErrorException);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email: userEmail },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalled();
     });
   });
 
@@ -232,29 +228,26 @@ describe('UsersService', () => {
     };
 
     it('should update a user successfully', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockUser);
-      mockPrismaService.user.update.mockResolvedValue(mockUpdatedUser);
+      mockUsersRepo.findOne
+        .mockResolvedValueOnce(mockUser) // first call: findOne(id) verifies user exists
+        .mockResolvedValueOnce(mockUpdatedUser); // final call: findOne(id) returns the updated row
+      mockUsersRepo.update.mockResolvedValue({ affected: 1 });
 
       const result = await service.update(userId, updateUserInput);
 
       expect(result).toEqual(mockUpdatedUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: userId },
-        data: {
-          email: updateUserInput.email,
-          name: updateUserInput.name,
-        },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalledWith({ where: { id: userId } });
+      expect(mockUsersRepo.update).toHaveBeenCalledWith(
+        { id: userId },
+        { name: updateUserInput.name },
+      );
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockUsersRepo.findOne.mockResolvedValue(null);
 
       await expect(service.update(userId, updateUserInput)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+      expect(mockUsersRepo.update).not.toHaveBeenCalled();
     });
 
     it('should throw ConflictException if updating to an email that is already in use', async () => {
@@ -271,12 +264,12 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique
+      mockUsersRepo.findOne
         .mockResolvedValueOnce(mockUser) // First call to verify user exists
         .mockResolvedValueOnce(existingUser); // Second call to check email
 
       await expect(service.update(userId, updateWithEmail)).rejects.toThrow(ConflictException);
-      expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+      expect(mockUsersRepo.update).not.toHaveBeenCalled();
     });
 
     it('should allow updating to the same email', async () => {
@@ -293,16 +286,16 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique
+      mockUsersRepo.findOne
         .mockResolvedValueOnce(mockUser) // First call to verify user exists
-        .mockResolvedValueOnce(sameUser); // Second call to check email
-
-      mockPrismaService.user.update.mockResolvedValue(mockUser);
+        .mockResolvedValueOnce(sameUser) // Second call to check email
+        .mockResolvedValueOnce(mockUser); // Final call: return the updated row
+      mockUsersRepo.update.mockResolvedValue({ affected: 1 });
 
       const result = await service.update(userId, updateWithSameEmail);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.update).toHaveBeenCalled();
+      expect(mockUsersRepo.update).toHaveBeenCalled();
     });
   });
 
@@ -317,38 +310,30 @@ describe('UsersService', () => {
     };
 
     it('should delete a user successfully', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.delete.mockResolvedValue(mockUser);
+      mockUsersRepo.findOne.mockResolvedValue(mockUser);
+      mockUsersRepo.delete.mockResolvedValue({ affected: 1 });
 
       const result = await service.remove(userId);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
-      expect(mockPrismaService.user.delete).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalledWith({ where: { id: userId } });
+      expect(mockUsersRepo.delete).toHaveBeenCalledWith({ id: userId });
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockUsersRepo.findOne.mockResolvedValue(null);
 
       await expect(service.remove(userId)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.user.delete).not.toHaveBeenCalled();
+      expect(mockUsersRepo.delete).not.toHaveBeenCalled();
     });
 
     it('should throw InternalServerErrorException if database delete fails', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.delete.mockRejectedValue(new Error('Database error'));
+      mockUsersRepo.findOne.mockResolvedValue(mockUser);
+      mockUsersRepo.delete.mockRejectedValue(new Error('Database error'));
 
       await expect(service.remove(userId)).rejects.toThrow(InternalServerErrorException);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
-      expect(mockPrismaService.user.delete).toHaveBeenCalledWith({
-        where: { id: userId },
-      });
+      expect(mockUsersRepo.findOne).toHaveBeenCalled();
+      expect(mockUsersRepo.delete).toHaveBeenCalled();
     });
   });
-}); 
+});
