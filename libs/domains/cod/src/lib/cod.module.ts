@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CodRemittanceEntity, OrderEntity } from '@swiftship/platform-typeorm';
 import { CodService } from './cod.service';
 import { CodResolver } from './cod.resolver';
 
 @Module({
-  providers: [PrismaService, CodService, CodResolver],
+  imports: [TypeOrmModule.forFeature([OrderEntity, CodRemittanceEntity])],
+  providers: [CodService, CodResolver],
   exports: [CodService],
 })
 export class CodModule {}

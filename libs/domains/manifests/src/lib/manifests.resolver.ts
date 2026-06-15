@@ -1,17 +1,38 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
+import { ManifestEntity } from '@swiftship/platform-typeorm';
+import { OnboardingGuard } from '@swiftship/domains-onboarding';
 import { ManifestsService } from './manifests.service';
 import { GenerateManifestInput } from './generate-manifest.input';
-import { UseGuards } from '@nestjs/common';
-import { OnboardingGuard } from '../onboarding/onboarding.guard';
 
-@Resolver()
+/**
+ * GraphQL surface for the Manifests domain.
+ *
+ * The guard is the same OnboardingGuard that legacy manifests used —
+ * it refuses calls from users whose onboarding state is BLOCKED.
+ * New code should keep using this guard so a manifest can't be
+ * generated from a tenant that hasn't completed KYC.
+ */
+@Resolver(() => ManifestEntity)
 export class ManifestsResolver {
-  constructor(private readonly manifests: ManifestsService) {}
+  constructor(private readonly manifestsService: ManifestsService) {}
+
+  @Query(() => [ManifestEntity], { description: 'All manifests for the current tenant, newest first.' })
+  manifests(): Promise<ManifestEntity[]> {
+    return this.manifestsService.listManifests();
+  }
+
+  @Query(() => ManifestEntity, {
+    nullable: true,
+    description: 'Look up a single manifest by id.',
+  })
+  manifest(@Args('id', { type: () => Int }) id: number) {
+    return this.manifestsService.getManifest(id);
+  }
 
   @UseGuards(OnboardingGuard)
-  @Mutation(() => String, { description: 'Generate manifest for shipments' })
+  @Mutation(() => ManifestEntity, { description: 'Generate manifest for shipments' })
   async generateManifest(@Args('generateManifestInput') input: GenerateManifestInput) {
-    const m = await this.manifests.generateManifest(input.shipmentIds);
-    return JSON.stringify(m);
+    return this.manifestsService.generateManifest(input.shipmentIds);
   }
 }
