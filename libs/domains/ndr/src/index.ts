@@ -22,3 +22,16 @@ export {
   RtoDisputeResolver as RtoDisputeLibResolver,
 } from './lib/rto-dispute.resolver';
 export { RtoDispute, RtoDisputeStatus } from './lib/rto-dispute.model';
+
+// SS-038 — analytics sub-module (NDR reason / pincode / courier / time-of-day)
+export {
+  NdrAnalyticsModule,
+  NdrAnalyticsService,
+  NdrAnalyticsResolver,
+  DateRangeInput,
+  NdrAnalyticsFilter,
+  NdrReasonBreakdown,
+  NdrPincodeBreakdown,
+  NdrCourierBreakdown,
+  NdrTimeOfDayBucket,
+} from './lib/analytics';

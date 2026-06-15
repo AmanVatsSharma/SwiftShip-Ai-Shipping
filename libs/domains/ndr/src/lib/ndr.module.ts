@@ -18,6 +18,7 @@ import { NdrContactService } from './ndr-contact.service';
 import { NdrVoiceWebhookController } from './ndr-voice-webhook.controller';
 import { RtoSettlementService } from './rto-settlement.service';
 import { RtoDisputeResolver } from './rto-dispute.resolver';
+import { NdrAnalyticsModule } from './analytics/ndr-analytics.module';
 
 /**
  * NdrModule — public API for the NDR (Non-Delivery Report) domain.
@@ -53,6 +54,7 @@ import { RtoDisputeResolver } from './rto-dispute.resolver';
     QueuesModule,
     TenantModule,
     NotificationsModule,
+    NdrAnalyticsModule,
   ],
   providers: [
     NdrService,
