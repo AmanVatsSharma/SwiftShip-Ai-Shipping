@@ -73,7 +73,7 @@ export class RateCacheService {
    * (one tenant's pricing being sensitive to another) can't leak.
    *
    * Falls back to `1` (the legacy default-tenant id used in unit tests
-   * and the `PrismaCompat` shim) when there is no request-scoped
+   * and the pre-TypeORM default) when there is no request-scoped
    * tenant — that mirrors the historical behaviour the rest of the
    * code base relies on.
    */
