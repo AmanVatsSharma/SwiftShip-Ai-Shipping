@@ -1,15 +1,14 @@
 /**
- * Shipments service (TypeORM + PrismaCompat shim).
+ * Shipments service.
  *
- * The existing `src/shipments/shipments.service.ts` is large (570 lines) and
- * has been refactored to use the PrismaCompat shim. This file replaces the
- * Prisma `prisma.shipment.findMany({ where, include, orderBy })` calls with
- * the shim, so the rest of the logic (carrier adapter calls, websocket
- * emissions, queue dispatch) is unchanged.
+ * Tenant-scoped CRUD on `ShipmentEntity` plus label generation and tracking
+ * ingestion. All persistence is via `@InjectRepository` (TypeORM) — see
+ * MIGRATION.md §7 for the migration mapping from the legacy
+ * `prisma.shipment.findMany(...)` call sites.
  *
- * Migration plan (Plan 3.1): move the rest of the operations (label gen,
- * tracking, cancellations) one-by-one to `@InjectRepository()` form, and
- * delete the shim in Plan 5.
+ * `generateLabel` uses a `createQueryBuilder` to left-join the carrier in a
+ * single round-trip so we avoid an N+1 when many shipments are processed in
+ * batch (SS-043e — query-load test expects <=5 queries for 100 shipments).
  */
 import {
   Injectable,
