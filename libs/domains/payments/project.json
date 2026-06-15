@@ -33,13 +33,24 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/payments",
-        "tsConfig": "libs/domains/payments/tsconfig.lib.json"
+        "tsConfig": "libs/domains/payments/tsconfig.lib.json",
+        "main": "libs/domains/payments/src/index.ts",
+        "packageJson": "libs/domains/payments/package.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "jestConfig": "libs/domains/payments/jest.config.ts"
       }
     },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": [
-        "{options.outputFile}"
+        "{outputFile}"
       ]
     }
   }
