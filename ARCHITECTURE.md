@@ -147,7 +147,7 @@ entities, models, inputs, specs). The 18:
 ## The 5 architectural rules
 
 1. **No cycles between libs.** The Nx `@nx/enforce-module-boundaries` rule
-   in `eslint.config.mjs` is the enforcement. If a circular dep is
+   in `eslint.config.cjs` is the enforcement. If a circular dep is
    required, the boundary is wrong — split the lib.
 2. **Platform libs can only depend on other platform libs** (plus
    `shared` and `type:types`). Platform libs must not import from

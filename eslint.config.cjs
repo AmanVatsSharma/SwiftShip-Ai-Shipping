@@ -1,13 +1,13 @@
 // @ts-check
-import eslint from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
-import nx from '@nx/eslint-plugin';
+const eslint = require('@eslint/js');
+const eslintPluginPrettierRecommended = require('eslint-plugin-prettier/recommended');
+const globals = require('globals');
+const tseslint = require('typescript-eslint');
+const nx = require('@nx/eslint-plugin');
 
-export default tseslint.config(
+module.exports = tseslint.config(
   {
-    ignores: ['eslint.config.mjs', 'dist/**', 'node_modules/**', '.nx/**', 'tmp/**'],
+    ignores: ['eslint.config.cjs', 'dist/**', 'node_modules/**', '.nx/**', 'tmp/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -22,7 +22,7 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
       },
     },
   },
@@ -90,7 +90,7 @@ export default tseslint.config(
           'no-restricted-syntax': [
             'error',
             {
-              selector: "Literal[value=/^https?://(localhost|127\\.0\\.0\\.1|10\\.|192\\.168\\.)/]",
+              selector: "Literal[value=/^https?:\/\/(localhost|127\\.0\\.0\\.1|10\\.|192\\.168\\.)/]",
               message:
                 'Hardcoded local URLs are forbidden. Read from env vars (API_BASE_URL, REDIS_URL, etc.).',
             },

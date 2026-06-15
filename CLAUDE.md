@@ -78,7 +78,7 @@ libs/
   shared-ui/     cn(), formatINR(), formatDate() (used by both Next apps)
 ```
 
-### The 5 dependency rules (enforced by `@nx/enforce-module-boundaries` in `eslint.config.mjs`)
+### The 5 dependency rules (enforced by `@nx/enforce-module-boundaries` in `eslint.config.cjs`)
 
 1. **No cycles between libs.** If you need one, the boundary is wrong — split the lib.
 2. **Platform libs can only depend on other platform libs** (plus `shared` and `type:types`). Platform libs must not import from `domains/`. That keeps infrastructure reusable across multiple business domains.
@@ -95,7 +95,7 @@ ESLint also bans direct `@prisma/client` imports outside the compat shim — see
 - **Fully TypeORM** (real `@InjectRepository(Entity)` services): `orders`, `shipments`, `billing`, `warehouses`, `notifications`, `serviceability`, `rate-shop`, `ecommerce-integrations`.
 - **Still on `PrismaCompat`** (legacy `prisma.x.findMany({ ... })` call sites go through a shim that translates to TypeORM): `carriers`, `cod`, `ndr`, `manifests`, `pickups`, `returns`, `shipping-rates`, `users`, `roles`, `webhooks`, `plugins`, `surcharges`, `dashboard`, `storage`, `metrics`, `onboarding`, `payments`, `bulk-operations`.
 - The `PrismaCompat` shim lives in `libs/platform/typeorm/src/lib/prisma-compat.types.ts` and is registered per-module via `registerPrismaCompat(...)`. If you are tempted to add a new translator to that file, don't — migrate the service instead.
-- Plan 5 (delete the shim) is unblocked when: every lib is off `PrismaCompat`, every test passes without it, and the `@prisma/client` entries in `tsconfig.base.json` and the `no-restricted-imports` rule in `eslint.config.mjs` can be removed as one atomic PR.
+- Plan 5 (delete the shim) is unblocked when: every lib is off `PrismaCompat`, every test passes without it, and the `@prisma/client` entries in `tsconfig.base.json` and the `no-restricted-imports` rule in `eslint.config.cjs` can be removed as one atomic PR.
 
 The runbook in MIGRATION.md §7 walks through migrating a service. The Prisma→TypeORM call-site mapping (`include` → `relations`, `orderBy: { x: 'desc' }` → `order: { x: 'DESC' }`, `findUnique` → `findOne`, etc.) is in the same section.
 
@@ -103,7 +103,7 @@ The runbook in MIGRATION.md §7 walks through migrating a service. The Prisma→
 
 1. `mkdir libs/domains/<name>/src/lib` and add a `project.json` (copy the shape from an existing domain lib), `tsconfig.json`, `tsconfig.lib.json`, `package.json`, and an `index.ts` barrel.
 2. Add a `@swiftship/domains-<name>` entry to `tsconfig.base.json` under `compilerOptions.paths`.
-3. Add the lib to the `depConstraints` array in `eslint.config.mjs` (pick the layer tag — typically `layer:domain`).
+3. Add the lib to the `depConstraints` array in `eslint.config.cjs` (pick the layer tag — typically `layer:domain`).
 4. Register the module in `apps/api/src/app.module.ts`. If it has React components, register it in `apps/admin-portal/app/` and/or `apps/web/app/` too.
 5. Use the established shape: `*.module.ts`, `*.resolver.ts` (GraphQL `@Query` / `@Mutation`), `*.service.ts` (business logic), `*.model.ts` (`@ObjectType` classes — these drive schema generation, do not hand-edit `apps/api/src/schema.graphql`), `*.input.ts` / `*.dto.ts`, co-located `*.spec.ts` tests.
 6. If it adds an entity, add it under `libs/platform/typeorm/src/lib/entities/` and re-export from `libs/platform/typeorm/src/lib/entities/index.ts`.
@@ -151,7 +151,7 @@ node scripts/check-nx-graph.mjs
 ```
 
 When adding a new project to the workspace:
-- **New lib**: `libs/<layer>/<name>/project.json` with tags from the layer taxonomy (mirrors `eslint.config.mjs` `depConstraints`), plus `tsconfig.json`, `tsconfig.lib.json`, `package.json`, and `src/index.ts` exporting the public API.
+- **New lib**: `libs/<layer>/<name>/project.json` with tags from the layer taxonomy (mirrors `eslint.config.cjs` `depConstraints`), plus `tsconfig.json`, `tsconfig.lib.json`, `package.json`, and `src/index.ts` exporting the public API.
 - **New app**: `apps/<name>/project.json` with a `scope:<app>` tag, plus `tsconfig.json` and a `src/` directory.
 - Add a path mapping in `tsconfig.base.json` if the lib should be importable as `@swiftship/<...>`.
-- Add the lib to the `depConstraints` array in `eslint.config.mjs` if it introduces a new layer tag.
+- Add the lib to the `depConstraints` array in `eslint.config.cjs` if it introduces a new layer tag.

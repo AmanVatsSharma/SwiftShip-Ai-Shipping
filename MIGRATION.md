@@ -182,7 +182,7 @@ When you add a new domain lib, also add a `@swiftship/domains-<name>` entry.
 
 ## 6. ESLint rule that bans direct `@prisma/client` imports
 
-`eslint.config.mjs` ships with a `no-restricted-imports` rule that fires
+`eslint.config.cjs` ships with a `no-restricted-imports` rule that fires
 whenever code outside the shim tries to import from `@prisma/client` or
 `@prisma/client/runtime/library`:
 
