@@ -1,16 +1,25 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { PickupEntity, ShipmentEntity } from '@swiftship/platform-typeorm';
 
 @Injectable()
 export class PickupsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(PickupEntity)
+    private readonly pickups: Repository<PickupEntity>,
+    @InjectRepository(ShipmentEntity)
+    private readonly shipments: Repository<ShipmentEntity>,
+  ) {}
 
   async schedulePickup(shipmentId: number, scheduledAt: Date) {
-    const shipment = await this.prisma.shipment.findUnique({ where: { id: shipmentId } });
+    const shipment = await this.shipments.findOne({ where: { id: shipmentId } });
     if (!shipment) throw new NotFoundException(`Shipment ${shipmentId} not found`);
-    if (await this.prisma.pickup.findUnique({ where: { shipmentId } })) {
+    const existing = await this.pickups.findOne({ where: { shipmentId } });
+    if (existing) {
       throw new BadRequestException('Pickup already scheduled for this shipment');
     }
-    return this.prisma.pickup.create({ data: { shipmentId, scheduledAt } });
+    const pickup = this.pickups.create({ shipmentId, scheduledAt });
+    return this.pickups.save(pickup);
   }
 }

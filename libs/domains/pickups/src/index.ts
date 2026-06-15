@@ -1,9 +1,11 @@
 // Re-export barrel for the Pickups lib.
-// Until Plan 3 ships a full TypeORM implementation, the src/ implementation
-// runs against PrismaCompat (TypeORM-backed). New consumers should import
-// from `@swiftship/domains-pickups` rather than the relative `../pickups` paths.
+// Migrated to TypeORM (SS-043f) — `PickupsService` now uses
+// `@InjectRepository(PickupEntity)` / `@InjectRepository(ShipmentEntity)`
+// from `@swiftship/platform-typeorm` directly. New consumers should
+// import from `@swiftship/domains-pickups` rather than the relative
+// `../../../../src/pickups/...` paths.
 
-export { PickupsModule, PickupsModule as PickupsLibModule } from '../../../../src/pickups/pickups.module';
-export { PickupsService, PickupsService as PickupsLibService } from '../../../../src/pickups/pickups.service';
-export { PickupsResolver, PickupsResolver as PickupsLibResolver } from '../../../../src/pickups/pickups.resolver';
-export { SchedulePickupInput } from '../../../../src/pickups/schedule-pickup.input';
+export { PickupsModule, PickupsModule as PickupsLibModule } from './lib/pickups.module';
+export { PickupsService, PickupsService as PickupsLibService } from './lib/pickups.service';
+export { PickupsResolver, PickupsResolver as PickupsLibResolver } from './lib/pickups.resolver';
+export { SchedulePickupInput } from './lib/schedule-pickup.input';

@@ -1,7 +1,7 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PickupsService } from './pickups.service';
 import { SchedulePickupInput } from './schedule-pickup.input';
-import { OnboardingGuard } from '../onboarding/onboarding.guard';
+import { OnboardingGuard } from '@swiftship/domains-onboarding';
 import { UseGuards } from '@nestjs/common';
 
 @Resolver()
