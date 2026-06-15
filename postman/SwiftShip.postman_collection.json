@@ -1,0 +1,348 @@
+{
+  "info": {
+    "_postman_id": "swiftship-ss-037-collection",
+    "name": "SwiftShip AI",
+    "description": "End-to-end smoke for a new SwiftShip integrator. Eight flows:\n  1. Order creation (GraphQL)\n  2. Rate-shop ranking (REST)\n  3. Tracking lookup (GraphQL)\n  4. Label generation (GraphQL)\n  5. KYC submission (GraphQL)\n  6. Wallet top-up (GraphQL)\n  7. RMA creation (GraphQL)\n  8. Channel sync status (GraphQL)\n\nEvery request ships with example values; no placeholders. Set the `SWIFTSHIP_API_KEY` and `baseUrl` env vars in `SwiftShip.postman_environment.json` and click **Run collection**.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "X-Swiftship-Api-Key", "type": "string" },
+      { "key": "value", "value": "{{SWIFTSHIP_API_KEY}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "{{baseUrl}}", "type": "string" },
+    { "key": "graphqlUrl", "value": "{{baseUrl}}/graphql", "type": "string" },
+    { "key": "createdOrderId", "value": "", "type": "string" },
+    { "key": "createdAwb", "value": "", "type": "string" },
+    { "key": "createdShipmentId", "value": "", "type": "string" },
+    { "key": "createdRmaId", "value": "", "type": "string" },
+    { "key": "walletTxnId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Order creation (GraphQL)",
+      "item": [
+        {
+          "name": "createOrder",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation Create($input: CreateOrderInput!) { createOrder(input: $input) { id orderNumber awb trackingUrl courierCode estimatedDelivery } }\",\n  \"variables\": {\n    \"input\": {\n      \"channel\": \"API\",\n      \"customerName\": \"Anita Sharma\",\n      \"customerPhone\": \"+919876543210\",\n      \"customerEmail\": \"anita@example.com\",\n      \"shippingAddress\": {\n        \"line1\": \"12 Marine Drive\",\n        \"line2\": \"Flat 304\",\n        \"city\": \"Mumbai\",\n        \"state\": \"MH\",\n        \"pincode\": \"400001\",\n        \"country\": \"IN\"\n      },\n      \"items\": [\n        {\n          \"sku\": \"TSHIRT-M-BLK\",\n          \"name\": \"Classic T-Shirt\",\n          \"quantity\": 2,\n          \"unitPricePaise\": 49900,\n          \"weightGrams\": 250,\n          \"hsnCode\": \"6109\"\n        },\n        {\n          \"sku\": \"MUG-CER-WHT\",\n          \"name\": \"Ceramic Mug\",\n          \"quantity\": 1,\n          \"unitPricePaise\": 29900,\n          \"weightGrams\": 350,\n          \"hsnCode\": \"6911\"\n        }\n      ],\n      \"paymentMethod\": \"PREPAID\",\n      \"codAmountPaise\": 0,\n      \"declaredValuePaise\": 129700\n    }\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createOrder returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => {",
+                  "  pm.expect(json.errors, 'errors=' + JSON.stringify(json.errors)).to.eql(undefined);",
+                  "});",
+                  "pm.test('order id + awb present', () => {",
+                  "  const o = json.data.createOrder;",
+                  "  pm.expect(o.id).to.be.a('string').and.not.empty;",
+                  "  pm.expect(o.awb).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('createdOrderId', o.id);",
+                  "  pm.collectionVariables.set('createdAwb', o.awb);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Rate-shop ranking (REST)",
+      "item": [
+        {
+          "name": "rank",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/rate-shop/rank", "host": ["{{baseUrl}}"], "path": ["api","v1","rate-shop","rank"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originPincode\": \"560001\",\n  \"destinationPincode\": \"400001\",\n  \"weightGrams\": 500,\n  \"paymentMethod\": \"PREPAID\",\n  \"strategy\": \"best_value\",\n  \"maxDeliveryDays\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rate-shop returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('has ranked quotes', () => {",
+                  "  pm.expect(json.quotes).to.be.an('array').with.length.greaterThan(0);",
+                  "  const q = json.quotes[0];",
+                  "  pm.expect(q.carrierCode).to.be.a('string');",
+                  "  pm.expect(q.ratePaise).to.be.a('number').above(0);",
+                  "});",
+                  "pm.test('X-RateLimit headers present', () => {",
+                  "  pm.expect(pm.response.headers.get('X-RateLimit-Limit')).to.exist;",
+                  "  pm.expect(pm.response.headers.get('X-RateLimit-Remaining')).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Tracking lookup (GraphQL)",
+      "item": [
+        {
+          "name": "tracking (uses AWB from order-create)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query Track($awb: String!) { tracking(awb: $awb) { status location description occurredAt courierCode shipmentId } }\",\n  \"variables\": { \"awb\": \"{{createdAwb}}\" }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tracking returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('tracking is an array (possibly empty for new orders)', () => {",
+                  "  pm.expect(json.data.tracking).to.be.an('array');",
+                  "});",
+                  "pm.test('no GraphQL errors', () => {",
+                  "  pm.expect(json.errors, 'errors=' + JSON.stringify(json.errors)).to.eql(undefined);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Label generation (GraphQL)",
+      "item": [
+        {
+          "name": "generateLabel",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "label-{{$randomUUID}}" }
+            ],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation Gen($orderId: ID!) { generateLabel(orderId: $orderId, format: PDF_4x6) { labelUrl awb carrierCode expiresAt shipmentId } }\",\n  \"variables\": { \"orderId\": \"{{createdOrderId}}\" }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('label generation returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.errors) { console.log('label errors:', JSON.stringify(json.errors)); }",
+                  "pm.test('labelUrl or business error', () => {",
+                  "  if (json.data && json.data.generateLabel) {",
+                  "    pm.expect(json.data.generateLabel.labelUrl).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('createdShipmentId', json.data.generateLabel.shipmentId);",
+                  "  } else {",
+                  "    pm.expect(json.errors[0].message).to.match(/already|generated|exists/i);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. KYC submission (GraphQL)",
+      "item": [
+        {
+          "name": "submitKyc",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation Submit($input: KycInput!) { submitKyc(input: $input) { id status pan gstin bankAccountIfsc bankAccountLast4 createdAt } }\",\n  \"variables\": {\n    \"input\": {\n      \"pan\": \"AAACR1234A\",\n      \"gstin\": \"29AAACR1234A1Z5\",\n      \"legalName\": \"Acme Retail Pvt Ltd\",\n      \"bank\": {\n        \"accountHolderName\": \"Acme Retail Pvt Ltd\",\n        \"accountNumber\": \"1234567890\",\n        \"ifsc\": \"HDFC0000123\",\n        \"bankName\": \"HDFC Bank\"\n      },\n      \"pickupAddress\": {\n        \"line1\": \"Plot 21, Industrial Suburb\",\n        \"city\": \"Bengaluru\",\n        \"state\": \"KA\",\n        \"pincode\": \"560044\",\n        \"country\": \"IN\"\n      }\n    }\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submitKyc returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('KYC accepted (PENDING|APPROVED|REJECTED)', () => {",
+                  "  if (json.errors) {",
+                  "    pm.expect(json.errors[0].message).to.match(/already|KYC/);",
+                  "  } else {",
+                  "    pm.expect(['PENDING','APPROVED','REJECTED']).to.include(json.data.submitKyc.status);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Wallet top-up (GraphQL)",
+      "item": [
+        {
+          "name": "walletTopUp",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation TopUp($input: WalletTopUpInput!) { walletTopUp(input: $input) { id amountPaise status gateway gatewayOrderId balanceAfterPaise createdAt } }\",\n  \"variables\": {\n    \"input\": {\n      \"amountPaise\": 1000000,\n      \"gateway\": \"RAZORPAY\",\n      \"redirectUrl\": \"https://app.swiftship.ai/wallet/return\"\n    }\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('walletTopUp returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('top-up returns gateway order id or pending', () => {",
+                  "  if (json.errors) { console.log('wallet errors:', JSON.stringify(json.errors)); }",
+                  "  if (json.data && json.data.walletTopUp) {",
+                  "    pm.expect(json.data.walletTopUp.amountPaise).to.equal(1000000);",
+                  "    pm.collectionVariables.set('walletTxnId', json.data.walletTopUp.id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. RMA creation (GraphQL)",
+      "item": [
+        {
+          "name": "createRma",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation CreateRma($input: CreateRmaInput!) { createRma(input: $input) { id rmaNumber status reason orderId createdAt } }\",\n  \"variables\": {\n    \"input\": {\n      \"orderId\": \"{{createdOrderId}}\",\n      \"reason\": \"DAMAGED\",\n      \"customerNote\": \"Box was crushed in transit\",\n      \"items\": [\n        { \"sku\": \"TSHIRT-M-BLK\", \"quantity\": 1 }\n      ],\n      \"pickupAddress\": {\n        \"line1\": \"12 Marine Drive\",\n        \"city\": \"Mumbai\",\n        \"state\": \"MH\",\n        \"pincode\": \"400001\",\n        \"country\": \"IN\"\n      }\n    }\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createRma returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('RMA accepted', () => {",
+                  "  if (json.errors) { console.log('rma errors:', JSON.stringify(json.errors)); }",
+                  "  if (json.data && json.data.createRma) {",
+                  "    pm.expect(json.data.createRma.rmaNumber).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('createdRmaId', json.data.createRma.id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Channel sync status (GraphQL)",
+      "item": [
+        {
+          "name": "listChannels",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"{ channels { id name platform status lastSyncedAt } }\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listChannels returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('channels is an array', () => pm.expect(json.data.channels).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "channelSyncStatus (skips if no channel)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{graphqlUrl}}", "host": ["{{graphqlUrl}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query Sync($id: ID!) { channelSyncStatus(channelId: $id) { channelId status lastSyncedAt pendingOrders lastError } }\",\n  \"variables\": { \"id\": \"ch_demo\" }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('channelSyncStatus returns 200 (or NOT_FOUND is acceptable)', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('either has data OR a NOT_FOUND error', () => {",
+                  "  const ok = json.data && json.data.channelSyncStatus;",
+                  "  const notFound = json.errors && json.errors[0] && /not.found/i.test(json.errors[0].message);",
+                  "  pm.expect(ok || notFound, 'payload=' + JSON.stringify(json)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

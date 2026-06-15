@@ -1,0 +1,547 @@
+openapi: 3.0.3
+info:
+  title: SwiftShip AI Public API
+  description: |
+    Multi-carrier shipping platform for Indian D2C brands.
+
+    **Authentication** — every request needs an `X-Swiftship-Api-Key` header.
+    Get your key from the admin portal: **Settings → API keys → Create**.
+    See `docs/public-api/authentication.md` for the full auth model.
+
+    **Rate limits** — per-tenant buckets (Starter 60/min, Growth 300/min,
+    Pro 1000/min, Enterprise 10000/min). Headers:
+    `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+    See `docs/public-api/rate-limits.md`.
+
+    **GraphQL** — the full GraphQL surface (mutations + queries for orders,
+    shipments, NDR, RMA, KYC, wallet, webhooks, etc.) is at
+    `POST /graphql`. The auto-generated schema lives in
+    `apps/api/src/schema.graphql` (also served at `/graphql` in GraphiQL when
+    `NODE_ENV !== 'production'`). This OpenAPI document covers the REST
+    surface; for GraphQL, import the Postman collection in `postman/`.
+
+    **Hosted** — this spec is also served at `GET /api/v1/openapi.json` and
+    rendered at `GET /api/v1/docs` (Swagger UI) when the API runs.
+  version: 1.0.0
+  contact:
+    name: SwiftShip Developer Experience
+    email: devex@swiftship.ai
+    url: https://docs.swiftship.ai
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.swiftship.ai
+    description: Production
+  - url: https://sandbox.swiftship.ai
+    description: Sandbox (deterministic fixtures, free)
+  - url: http://localhost:3000
+    description: Local dev (`nx serve api`)
+
+tags:
+  - name: Health
+    description: Liveness / readiness — bypass rate limit, no auth.
+  - name: Auth
+    description: Sign-in, refresh, password reset.
+  - name: Public Rate Shop
+    description: Server-to-server carrier ranking used by checkout widgets.
+  - name: Webhooks
+    description: Incoming tracking / carrier / Shopify callbacks.
+  - name: GraphQL
+    description: Full GraphQL surface (mutations + queries) at POST /graphql.
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /:
+    get:
+      tags: [Health]
+      summary: Root
+      security: []
+      description: Returns the service name and a ping endpoint hint.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service: { type: string, example: swiftship-api }
+                  version: { type: string, example: 1.0.0 }
+                  docs: { type: string, example: /api/v1/docs }
+
+  /ping:
+    get:
+      tags: [Health]
+      summary: Liveness ping
+      security: []
+      description: Trivial 200 — used by the admin portal's health bar.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pong: { type: boolean, example: true }
+                  at:   { type: string, format: date-time, example: '2026-06-15T10:21:00.000Z' }
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness
+      security: []
+      description: Returns 200 if the process is up. Bypasses rate limit.
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  at:     { type: string, format: date-time }
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness
+      security: []
+      description: Returns 200 once the app has finished initialising. K8s uses this for the readiness probe.
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ready }
+                  at:     { type: string, format: date-time }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in (email + password) — get a JWT pair
+      security: []
+      description: |
+        Returns an `accessToken` (15-minute JWT) and a `refreshToken` (7-day
+        opaque token, hashed in DB). Refresh tokens are single-use.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email, example: ops@brand.in }
+                password: { type: string, format: password, example: hunter2-correct-horse }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:  { type: string, example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... }
+                  refreshToken: { type: string, example: rt_8c4f9a2c }
+                  expiresIn:    { type: integer, example: 900 }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange a refresh token for a new JWT pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, example: rt_8c4f9a2c }
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:  { type: string }
+                  refreshToken: { type: string }
+                  expiresIn:    { type: integer, example: 900 }
+        '401':
+          description: Refresh token was already used or revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                statusCode: 401
+                message: refresh_revoked
+                error: Unauthorized
+                code: INVALID_REFRESH_TOKEN
+
+  /api/v1/rate-shop/rank:
+    post:
+      tags: [Public Rate Shop]
+      summary: Rank carrier quotes for a route
+      description: |
+        Server-to-server ranking used by checkout widgets. Returns
+        `Delhivery`, `BlueDart`, `EcomExpress`, `Xpressbees`, `Shadowfax`,
+        `DTDC`, etc., sorted by the requested `strategy`.
+
+        The first quote is the recommended carrier.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateShopRequest'
+            examples:
+              prepaid500g:
+                summary: Prepaid 500 g within Karnataka
+                value:
+                  originPincode: "560001"
+                  destinationPincode: "560100"
+                  weightGrams: 500
+                  paymentMethod: PREPAID
+                  strategy: best_value
+              cod2kg:
+                summary: COD 2 kg inter-state
+                value:
+                  originPincode: "110001"
+                  destinationPincode: "400001"
+                  weightGrams: 2000
+                  paymentMethod: COD
+                  codAmountPaise: 149900
+                  strategy: fastest
+      responses:
+        '200':
+          description: Ranked quotes (best first)
+          headers:
+            X-RateLimit-Limit:     { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+            X-RateLimit-Reset:     { $ref: '#/components/headers/XRateLimitReset' }
+            X-Request-Id:          { $ref: '#/components/headers/XRequestId' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateShopResponse'
+              example:
+                quotes:
+                  - carrierCode: delhivery
+                    serviceType: SURFACE
+                    ratePaise: 8400
+                    rateInr: 84.00
+                    etaDays: 4
+                    codAvailable: true
+                    breakdown: { fuelPct: 12, codChargePaise: 5000 }
+                  - carrierCode: shadowfax
+                    serviceType: SURFACE
+                    ratePaise: 9100
+                    rateInr: 91.00
+                    etaDays: 3
+                    codAvailable: true
+                    breakdown: null
+                totalCandidates: 7
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: Pincode not serviceable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                statusCode: 422
+                message: Pincode 999999 is not serviceable
+                error: Unprocessable Entity
+                code: PINCODE_NOT_SERVICEABLE
+                details: { pincode: "999999" }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /carrier-webhook/tracking:
+    post:
+      tags: [Webhooks]
+      summary: Generic carrier-tracking callback (Delhivery, BlueDart, Xpressbees, Shadowfax, DTDC, EcomExpress)
+      security: []
+      description: |
+        Accepts carrier tracking events and persists them idempotently.
+        Verified via `X-Delhivery-Signature` or `X-Hub-Signature` (hex
+        HMAC-SHA256 of the raw body) if a `DELHIVERY_WEBHOOK_SECRET` is
+        configured. Returns `401` on signature mismatch.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                shipment_id: 12345
+                awb: SWFT1234567890
+                status: OutForDelivery
+                scan_date: "2026-06-15T10:21:00+05:30"
+                location: "Mumbai hub"
+                remarks: "Out for delivery"
+                event_id: evt_8c4f9a2c
+      responses:
+        '200':
+          description: Event accepted (idempotent — duplicate `event_id` is a no-op)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+        '401':
+          description: Invalid or missing signature
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /shopify/webhook:
+    post:
+      tags: [Webhooks]
+      summary: Shopify webhook receiver
+      security: []
+      description: |
+        Accepts `orders/create`, `orders/paid`, `orders/cancelled`,
+        `app/uninstalled`, and product-update events. Verified via the
+        `X-Shopify-Hmac-Sha256` header (base64 HMAC-SHA256 of the raw body
+        using your Shopify API secret). Returns `400` on HMAC mismatch.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                id: 820982911946154508
+                email: bob@biller.com
+                created_at: "2026-06-15T15:31:00+05:30"
+                line_items: [{ id: 1, sku: TSHIRT-M-BLK, title: "Classic T-Shirt", quantity: 2, price: "499.00" }]
+                shipping_address:
+                  address1: "1 Infinite Loop"
+                  city: Bengaluru
+                  province: Karnataka
+                  zip: "560001"
+                  country: India
+      responses:
+        '200':
+          description: Event accepted
+        '400':
+          description: Invalid HMAC
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/openapi.json:
+    get:
+      tags: [Health]
+      summary: This OpenAPI document
+      security: []
+      responses:
+        '200':
+          description: The OpenAPI 3.0 spec for this API
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/v1/docs:
+    get:
+      tags: [Health]
+      summary: Swagger UI
+      security: []
+      responses:
+        '200':
+          description: Interactive Swagger UI
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /graphql:
+    post:
+      tags: [GraphQL]
+      summary: GraphQL endpoint
+      description: |
+        Full GraphQL surface for orders, shipments, NDR, RMA, KYC, wallet,
+        webhooks, returns, manifests, etc. Auto-generated schema is at
+        `apps/api/src/schema.graphql`; browse in GraphiQL when
+        `NODE_ENV !== 'production'`.
+
+        Key mutations / queries (see the Postman collection for full
+        example payloads):
+          - `mutation createOrder(input: CreateOrderInput!): Order!`
+          - `mutation generateLabel(orderId: ID!, format: LabelFormat!): Label!`
+          - `mutation submitKyc(input: KycInput!): KycSubmission!`
+          - `mutation walletTopUp(input: WalletTopUpInput!): WalletTransaction!`
+          - `mutation createRma(input: CreateRmaInput!): Rma!`
+          - `query order(id: ID!): Order`
+          - `query tracking(awb: String!): [TrackingEvent!]!`
+          - `query channelSyncStatus(channelId: ID!): ChannelSyncStatus!`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:         { type: string, example: "query { me { id email tenantId } }" }
+                variables:     { type: object, additionalProperties: true }
+                operationName: { type: string, example: GetMe }
+      responses:
+        '200':
+          description: GraphQL response (errors in `errors[]` even on 200)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:   { type: object, additionalProperties: true }
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:    { type: string }
+                        path:       { type: array, items: { type: string } }
+                        extensions:
+                          type: object
+                          properties:
+                            code:       { type: string, example: PINCODE_NOT_SERVICEABLE }
+                            statusCode: { type: integer, example: 422 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Swiftship-Api-Key
+      description: Server-to-server API key from the admin portal.
+    JwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Browser session JWT (15-minute TTL, refresh via /api/v1/auth/refresh).
+
+  headers:
+    XRateLimitLimit:
+      description: Your tier bucket size (requests per 60s)
+      schema: { type: integer, example: 300 }
+    XRateLimitRemaining:
+      description: Requests remaining in the current 60s window
+      schema: { type: integer, example: 247 }
+    XRateLimitReset:
+      description: Unix timestamp (seconds) when the window resets
+      schema: { type: integer, example: 1718448000 }
+    XRequestId:
+      description: Quote this when contacting support
+      schema: { type: string, example: req_8c4f9a2c }
+
+  responses:
+    BadRequest:
+      description: Malformed body / missing required field
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            statusCode: 400
+            message: weightGrams must be > 0
+            error: Bad Request
+            code: VALIDATION_FAILED
+            details: { field: weightGrams }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            statusCode: 401
+            message: Invalid API key
+            error: Unauthorized
+            code: INVALID_API_KEY
+    RateLimited:
+      description: Per-tenant rate limit hit
+      headers:
+        Retry-After: { description: Seconds to wait, schema: { type: integer, example: 42 } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            statusCode: 429
+            message: "Rate limit exceeded. Retry after 42 seconds."
+            error: Too Many Requests
+            code: RATE_LIMIT_EXCEEDED
+            retryAfter: 42
+
+  schemas:
+    Error:
+      type: object
+      required: [statusCode, message, error]
+      properties:
+        statusCode: { type: integer, example: 422 }
+        message:    { type: string,  example: Pincode 999999 is not serviceable }
+        error:      { type: string,  example: Unprocessable Entity }
+        code:       { type: string,  example: PINCODE_NOT_SERVICEABLE }
+        details:
+          type: object
+          additionalProperties: true
+        requestId:  { type: string,  example: req_8c4f9a2c }
+
+    RateShopRequest:
+      type: object
+      required: [originPincode, destinationPincode, weightGrams]
+      properties:
+        originPincode:      { type: string, example: "560001", description: 6-digit Indian pincode }
+        destinationPincode: { type: string, example: "400001" }
+        weightGrams:        { type: integer, minimum: 1, example: 500 }
+        paymentMethod:
+          type: string
+          enum: [PREPAID, COD]
+          default: PREPAID
+        strategy:
+          type: string
+          enum: [cheapest, fastest, best_value, balanced, reliability_first]
+          default: best_value
+        maxDeliveryDays:    { type: integer, minimum: 1, example: 5 }
+        minCourierScore:    { type: number,  minimum: 0, maximum: 1, example: 0.7 }
+        codAmountPaise:     { type: integer, minimum: 0, example: 49900, description: Required when paymentMethod=COD; total invoice value in paise }
+
+    RateShopResponse:
+      type: object
+      required: [quotes, totalCandidates]
+      properties:
+        quotes:
+          type: array
+          items:
+            type: object
+            required: [carrierCode, serviceType, ratePaise, rateInr, etaDays, codAvailable]
+            properties:
+              carrierCode: { type: string, example: delhivery }
+              serviceType: { type: string, enum: [SURFACE, EXPRESS], example: SURFACE }
+              ratePaise:   { type: integer, example: 8400, description: Rate in paise (1/100 INR) }
+              rateInr:     { type: number,  example: 84.00, description: Convenience — same value in INR }
+              etaDays:     { type: integer, example: 4 }
+              codAvailable: { type: boolean, example: true }
+              breakdown:
+                type: object
+                nullable: true
+                properties:
+                  fuelPct:        { type: number, example: 12 }
+                  codChargePaise: { type: integer, example: 5000 }
+        totalCandidates: { type: integer, example: 7 }
