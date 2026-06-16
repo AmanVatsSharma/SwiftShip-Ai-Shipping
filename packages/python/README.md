@@ -9,6 +9,13 @@ time — the source of truth is the OpenAPI 3.0 spec at
 node scripts/build-sdks.mjs --only=python
 ```
 
+> **Requires Java ≥ 11.** The `@openapitools/openapi-generator-cli` Node
+> wrapper is a thin shell over the OpenAPI Generator JAR (`codegen.jar`),
+> which `exec`s a `java` binary. If `java` is missing, `build-sdks.mjs`
+> fails fast with a clear install hint — install [Adoptium Temurin 21](https://adoptium.net/)
+> (`winget install Microsoft.OpenJDK.21` on Windows, `brew install openjdk@21`
+> on macOS, `apt-get install -y openjdk-21-jdk` on Debian/Ubuntu).
+
 ## Install
 
 ```bash
@@ -23,8 +30,6 @@ cd packages/python
 python -m build
 pip install dist/swiftship-0.1.0-py3-none-any.whl
 ```
-
-)
 
 ## Usage
 
@@ -67,8 +72,10 @@ pytest tests/test_smoke.py
 packages/python/
 ├── pyproject.toml        # PEP 621 metadata (this file is the "owned" one; the
 │                         # generator will write its own pyproject.toml on
-│                         # `npm run build-sdks`, but the build script restores
-│                         # this version so the public surface is stable).
+│                         # the next `build-sdks.mjs --only=python` run, but
+│                         # the build script restores this version so the
+│                         # public surface — `urllib3` dep, version, classifiers
+│                         # — is stable).
 ├── swiftship/            # generated Python package (api_client, api/, ...)
 │                         #   api/orders_api.py  -> OrdersApi
 │                         #   configuration.py   -> Configuration
