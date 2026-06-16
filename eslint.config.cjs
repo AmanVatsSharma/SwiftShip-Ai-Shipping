@@ -7,7 +7,7 @@ const nx = require('@nx/eslint-plugin');
 
 module.exports = tseslint.config(
   {
-    ignores: ['eslint.config.cjs', 'dist/**', 'node_modules/**', '.nx/**', 'tmp/**'],
+    ignores: ['eslint.config.cjs', 'dist/**', 'node_modules/**', '.nx/**', 'tmp/**', 'packages/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

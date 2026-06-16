@@ -1,0 +1,73 @@
+{
+  "name": "api-public",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/api-public/src",
+  "projectType": "application",
+  "tags": ["scope:api-public", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/api-public",
+        "main": "apps/api-public/src/main.ts",
+        "tsConfig": "apps/api-public/tsconfig.app.json",
+        "target": "node",
+        "compiler": "tsc"
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "api-public:build"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/apps/api-public"],
+      "options": {
+        "jestConfig": "apps/api-public/jest.config.ts"
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "tsConfig": "apps/api-public/tsconfig.app.json"
+      }
+    },
+    "tsoa:gen": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsoa -c apps/api-public/tsoa.json",
+        "cwd": "."
+      }
+    },
+    "tsoa:spec": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsoa spec -c apps/api-public/tsoa.json",
+        "cwd": "."
+      }
+    },
+    "tsoa:routes": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsoa routes -c apps/api-public/tsoa.json",
+        "cwd": "."
+      }
+    },
+    "tsoa": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "tsoa -c apps/api-public/tsoa.json"
+        ]
+      }
+    }
+  }
+}

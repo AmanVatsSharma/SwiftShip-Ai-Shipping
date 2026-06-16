@@ -1,0 +1,21 @@
+{
+  "name": "@swiftship/api-public",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SwiftShip AI — public REST API (tsoa-generated) for merchant integrations and 3rd-party SDKs.",
+  "main": "src/main.ts",
+  "scripts": {
+    "tsoa:gen": "tsoa -c tsoa.json",
+    "tsoa:spec": "tsoa spec -c tsoa.json",
+    "tsoa:routes": "tsoa routes -c tsoa.json"
+  },
+  "dependencies": {
+    "@tsoa/runtime": "^6.6.0",
+    "express": "^4.21.0",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.13.0",
+    "tsoa": "^6.6.0"
+  }
+}
