@@ -13,7 +13,14 @@
         "main": "apps/api-public/src/main.ts",
         "tsConfig": "apps/api-public/tsconfig.app.json",
         "target": "node",
-        "compiler": "tsc"
+        "compiler": "tsc",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/api-public/public",
+            "output": "public"
+          }
+        ]
       }
     },
     "serve": {

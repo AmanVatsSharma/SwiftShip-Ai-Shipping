@@ -1,0 +1,6 @@
+
+[7m[1m[31m NX [39m[22m[27m  [31mJest: Failed to parse the TypeScript config file c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\apps\api-public\jest.config.ts[39m
+
+  ReferenceError: __dirname is not defined in ES module scope
+Pass --verbose to see the stacktrace.
+

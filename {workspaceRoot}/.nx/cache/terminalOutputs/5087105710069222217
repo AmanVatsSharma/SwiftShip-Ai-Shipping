@@ -1,0 +1,18 @@
+
+[7m[1m[31m NX [39m[22m[27m  [31mCan't find a root directory while resolving a config file path.[39m
+
+Provided path to resolve: c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\apps\api\jest.config.ts
+cwd: C:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend
+Error: Can't find a root directory while resolving a config file path.
+Provided path to resolve: c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\apps\api\jest.config.ts
+cwd: C:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend
+    at resolveConfigPath (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\@nx\jest\node_modules\jest-config\build\index.js:2539:11)
+    at readInitialOptions (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\@nx\jest\node_modules\jest-config\build\index.js:1190:53)
+    at readConfig (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\@nx\jest\node_modules\jest-config\build\index.js:956:13)
+    at parseJestConfig (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\@nx\jest\src\executors\jest\jest.impl.js:85:58)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async jestExecutor (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\@nx\jest\src\executors\jest\jest.impl.js:27:20)
+    at async promiseToIterator (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\nx\dist\src\command-line\run\run.js:37:11)
+    at async getLastValueFromAsyncIterableIterator (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\nx\dist\src\utils\async-iterator.js:15:19)
+    at async iteratorToProcessStatusCode (c:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\node_modules\nx\dist\src\command-line\run\run.js:40:25)
+

@@ -1,0 +1,1163 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SwiftShip Public API",
+    "version": "1.0.0",
+    "description": "Public REST surface for SwiftShip AI — orders, shipments, carriers, rate-shop, returns, tracking and webhooks. Auth: `X-Swiftship-Api-Key`.",
+    "contact": {
+      "name": "SwiftShip AI",
+      "url": "https://swiftship.ai"
+    },
+    "license": {
+      "name": "Proprietary"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.swiftship.ai",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local dev"
+    }
+  ],
+  "tags": [
+    { "name": "Orders" },
+    { "name": "Shipments" },
+    { "name": "Carriers" },
+    { "name": "Rate Shop" },
+    { "name": "Returns" },
+    { "name": "Shipping Rates" },
+    { "name": "Tracking" },
+    { "name": "Webhooks" }
+  ],
+  "security": [
+    { "api_key": [] }
+  ],
+  "components": {
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Swiftship-Api-Key"
+      }
+    },
+    "schemas": {
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "CONFIRMED",
+          "PROCESSING",
+          "PAID",
+          "SHIPPED",
+          "DELIVERED",
+          "CANCELLED",
+          "REFUNDED",
+          "RTO",
+          "LOST",
+          "EXCEPTION"
+        ]
+      },
+      "ShipmentStatus": {
+        "type": "string",
+        "enum": [
+          "CREATED",
+          "PICKUP_SCHEDULED",
+          "PICKED_UP",
+          "IN_TRANSIT",
+          "OUT_FOR_DELIVERY",
+          "DELIVERED",
+          "CANCELLED",
+          "RTO",
+          "LOST",
+          "EXCEPTION"
+        ]
+      },
+      "LabelStatus": {
+        "type": "string",
+        "enum": ["PENDING", "GENERATED", "FAILED", "VOIDED"]
+      },
+      "Order": {
+        "type": "object",
+        "required": ["id", "orderNumber", "total", "status", "userId", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "example": 1001 },
+          "orderNumber": { "type": "string", "example": "ORD-1001" },
+          "total": { "type": "number", "format": "double", "example": 1299.5 },
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "userId": { "type": "integer", "format": "int64" },
+          "carrierId": { "type": "integer", "format": "int64", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OrderListItem": {
+        "type": "object",
+        "required": ["id", "orderNumber", "total", "status", "userId", "createdAt"],
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "orderNumber": { "type": "string" },
+          "total": { "type": "number", "format": "double" },
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "userId": { "type": "integer", "format": "int64" },
+          "carrierId": { "type": "integer", "format": "int64", "nullable": true }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "required": ["total"],
+        "properties": {
+          "total": { "type": "integer" },
+          "offset": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      },
+      "FindOrdersResponse": {
+        "type": "object",
+        "required": ["orders"],
+        "properties": {
+          "orders": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrderListItem" }
+          },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        }
+      },
+      "CreateOrderRequest": {
+        "type": "object",
+        "required": ["orderNumber", "total", "userId"],
+        "properties": {
+          "orderNumber": { "type": "string" },
+          "total": { "type": "number", "minimum": 0 },
+          "userId": { "type": "integer", "minimum": 1 },
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "carrierId": { "type": "integer", "minimum": 1 },
+          "destinationPincode": { "type": "string" },
+          "packageWeightGrams": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "TotalSales": {
+        "type": "object",
+        "required": ["total"],
+        "properties": {
+          "total": { "type": "number", "format": "double", "example": 128493.5 }
+        }
+      },
+      "CountsByStatus": {
+        "type": "object",
+        "additionalProperties": { "type": "integer" },
+        "example": { "PENDING": 12, "SHIPPED": 304, "DELIVERED": 1098 }
+      },
+      "DeleteOk": {
+        "type": "object",
+        "required": ["id", "ok"],
+        "properties": {
+          "id": { "type": "integer" },
+          "ok": { "type": "boolean", "enum": [true] }
+        }
+      },
+      "Carrier": {
+        "type": "object",
+        "required": ["id", "name", "apiKey", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "apiKey": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateCarrierRequest": {
+        "type": "object",
+        "required": ["name", "apiKey"],
+        "properties": {
+          "name": { "type": "string" },
+          "apiKey": { "type": "string" }
+        }
+      },
+      "UpdateCarrierRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "apiKey": { "type": "string" }
+        }
+      },
+      "CarrierList": {
+        "type": "object",
+        "required": ["carriers"],
+        "properties": {
+          "carriers": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Carrier" }
+          }
+        }
+      },
+      "Shipment": {
+        "type": "object",
+        "required": ["id", "trackingNumber", "status", "orderId", "carrierId"],
+        "properties": {
+          "id": { "type": "integer" },
+          "trackingNumber": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/ShipmentStatus" },
+          "orderId": { "type": "integer" },
+          "carrierId": { "type": "integer" },
+          "warehouseId": { "type": "integer", "nullable": true },
+          "shippedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "FindShipmentsResponse": {
+        "type": "object",
+        "required": ["shipments"],
+        "properties": {
+          "shipments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Shipment" }
+          },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        }
+      },
+      "CreateShipmentRequest": {
+        "type": "object",
+        "required": ["trackingNumber", "orderId", "carrierId"],
+        "properties": {
+          "trackingNumber": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/ShipmentStatus" },
+          "orderId": { "type": "integer" },
+          "carrierId": { "type": "integer" },
+          "warehouseId": { "type": "integer" }
+        }
+      },
+      "UpdateShipmentRequest": {
+        "type": "object",
+        "properties": {
+          "trackingNumber": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/ShipmentStatus" },
+          "orderId": { "type": "integer" },
+          "carrierId": { "type": "integer" },
+          "warehouseId": { "type": "integer" }
+        }
+      },
+      "CreateLabelRequest": {
+        "type": "object",
+        "required": ["orderId", "carrierId"],
+        "properties": {
+          "orderId": { "type": "integer", "description": "Order id (controller maps to shipmentId internally)" },
+          "carrierId": { "type": "integer" },
+          "skipCarrierConfirmation": { "type": "boolean" }
+        }
+      },
+      "CreateLabelResponse": {
+        "type": "object",
+        "required": ["id", "trackingNumber", "status"],
+        "properties": {
+          "id": { "type": "integer" },
+          "trackingNumber": { "type": "string" },
+          "labelUrl": { "type": "string", "nullable": true },
+          "status": { "$ref": "#/components/schemas/LabelStatus" }
+        }
+      },
+      "RateShopRequest": {
+        "type": "object",
+        "required": ["originPincode", "destinationPincode", "weightGrams"],
+        "properties": {
+          "originPincode": { "type": "string" },
+          "destinationPincode": { "type": "string" },
+          "weightGrams": { "type": "integer", "minimum": 1 },
+          "cod": { "type": "boolean" },
+          "declaredValue": { "type": "number" }
+        }
+      },
+      "RateShopQuote": {
+        "type": "object",
+        "required": ["carrier", "service", "totalCost", "transitDays"],
+        "properties": {
+          "carrier": { "type": "string" },
+          "service": { "type": "string" },
+          "totalCost": { "type": "number" },
+          "transitDays": { "type": "integer" }
+        }
+      },
+      "RateShopResponse": {
+        "type": "object",
+        "required": ["quotes"],
+        "properties": {
+          "quotes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RateShopQuote" }
+          }
+        }
+      },
+      "ReturnOrder": {
+        "type": "object",
+        "required": ["id", "orderId", "status", "createdAt"],
+        "properties": {
+          "id": { "type": "integer" },
+          "orderId": { "type": "integer" },
+          "status": { "type": "string" },
+          "reason": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateReturnRequest": {
+        "type": "object",
+        "required": ["orderId"],
+        "properties": {
+          "orderId": { "type": "integer" },
+          "reason": { "type": "string" }
+        }
+      },
+      "UpdateReturnRequest": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      },
+      "ReturnList": {
+        "type": "object",
+        "required": ["returns"],
+        "properties": {
+          "returns": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ReturnOrder" }
+          }
+        }
+      },
+      "ShippingRate": {
+        "type": "object",
+        "required": ["id", "carrierId", "service", "amount"],
+        "properties": {
+          "id": { "type": "integer" },
+          "carrierId": { "type": "integer" },
+          "service": { "type": "string" },
+          "amount": { "type": "number" },
+          "transitDays": { "type": "integer" }
+        }
+      },
+      "ShippingRateList": {
+        "type": "object",
+        "required": ["rates"],
+        "properties": {
+          "rates": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ShippingRate" }
+          }
+        }
+      },
+      "CreateShippingRateRequest": {
+        "type": "object",
+        "required": ["carrierId", "service", "amount"],
+        "properties": {
+          "carrierId": { "type": "integer" },
+          "service": { "type": "string" },
+          "amount": { "type": "number" },
+          "transitDays": { "type": "integer" }
+        }
+      },
+      "UpdateShippingRateRequest": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string" },
+          "amount": { "type": "number" },
+          "transitDays": { "type": "integer" }
+        }
+      },
+      "TrackingEvent": {
+        "type": "object",
+        "required": ["status", "timestamp"],
+        "properties": {
+          "status": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "location": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "TrackingResponse": {
+        "type": "object",
+        "required": ["awb", "events"],
+        "properties": {
+          "awb": { "type": "string" },
+          "currentStatus": { "type": "string" },
+          "events": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrackingEvent" }
+          }
+        }
+      },
+      "TrackingWebhook": {
+        "type": "object",
+        "required": ["awb", "status", "timestamp"],
+        "properties": {
+          "awb": { "type": "string" },
+          "status": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "location": { "type": "string" }
+        }
+      },
+      "WebhookAck": {
+        "type": "object",
+        "required": ["ok"],
+        "properties": {
+          "ok": { "type": "boolean" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["statusCode", "message"],
+        "properties": {
+          "statusCode": { "type": "integer" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/v1/orders": {
+      "get": {
+        "tags": ["Orders"],
+        "operationId": "findOrders",
+        "summary": "List orders for the current tenant",
+        "parameters": [
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "orderNumber", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/OrderStatus" } },
+          { "name": "userId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "minCreatedAt", "in": "query", "schema": { "type": "string" } },
+          { "name": "maxCreatedAt", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FindOrdersResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Orders"],
+        "operationId": "createOrder",
+        "summary": "Create a new order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateOrderRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/orders/total-sales": {
+      "get": {
+        "tags": ["Orders"],
+        "operationId": "totalSales",
+        "summary": "Total sales across all PAID orders",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TotalSales" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders/counts-by-status": {
+      "get": {
+        "tags": ["Orders"],
+        "operationId": "countsByStatus",
+        "summary": "Count of orders grouped by status",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CountsByStatus" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "tags": ["Orders"],
+        "operationId": "findOrderById",
+        "summary": "Get a single order by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Orders"],
+        "operationId": "updateOrder",
+        "summary": "Update an order by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateOrderRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Orders"],
+        "operationId": "deleteOrder",
+        "summary": "Delete an order by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteOk" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/carriers": {
+      "get": {
+        "tags": ["Carriers"],
+        "operationId": "listCarriers",
+        "summary": "List all carriers (name ascending)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CarrierList" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Carriers"],
+        "operationId": "createCarrier",
+        "summary": "Create a new carrier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateCarrierRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Carrier" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/carriers/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "tags": ["Carriers"],
+        "operationId": "findCarrierById",
+        "summary": "Get a single carrier by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Carrier" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Carriers"],
+        "operationId": "updateCarrier",
+        "summary": "Update a carrier by id (partial)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateCarrierRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Carrier" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Carriers"],
+        "operationId": "deleteCarrier",
+        "summary": "Delete a carrier by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteOk" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/shipments": {
+      "get": {
+        "tags": ["Shipments"],
+        "operationId": "findShipments",
+        "summary": "List shipments for the current tenant",
+        "parameters": [
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/ShipmentStatus" } },
+          { "name": "orderId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "carrierId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "trackingNumber", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FindShipmentsResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Shipments"],
+        "operationId": "createShipment",
+        "summary": "Create a new shipment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateShipmentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Shipment" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/shipments/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "tags": ["Shipments"],
+        "operationId": "findShipmentById",
+        "summary": "Get a single shipment by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Shipment" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Shipments"],
+        "operationId": "updateShipment",
+        "summary": "Update a shipment by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateShipmentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Shipment" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Shipments"],
+        "operationId": "cancelShipment",
+        "summary": "Cancel a shipment by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Shipment" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/shipments/labels": {
+      "post": {
+        "tags": ["Shipments"],
+        "operationId": "createLabel",
+        "summary": "Generate a carrier shipping label for an order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLabelRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Label created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateLabelResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/rate-shop/rank": {
+      "post": {
+        "tags": ["Rate Shop"],
+        "operationId": "rankRates",
+        "summary": "Rank carrier+service quotes for a shipment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RateShopRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RateShopResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/returns": {
+      "get": {
+        "tags": ["Returns"],
+        "operationId": "listReturns",
+        "summary": "List returns",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReturnList" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Returns"],
+        "operationId": "createReturn",
+        "summary": "Create a return",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateReturnRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReturnOrder" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/returns/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "tags": ["Returns"],
+        "operationId": "findReturnById",
+        "summary": "Get a return by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReturnOrder" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Returns"],
+        "operationId": "updateReturn",
+        "summary": "Update a return by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateReturnRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReturnOrder" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Returns"],
+        "operationId": "deleteReturn",
+        "summary": "Delete a return by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteOk" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/shipping-rates": {
+      "get": {
+        "tags": ["Shipping Rates"],
+        "operationId": "listShippingRates",
+        "summary": "List shipping rates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRateList" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Shipping Rates"],
+        "operationId": "createShippingRate",
+        "summary": "Create a shipping rate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateShippingRateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRate" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/shipping-rates/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "tags": ["Shipping Rates"],
+        "operationId": "findShippingRateById",
+        "summary": "Get a shipping rate by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRate" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Shipping Rates"],
+        "operationId": "updateShippingRate",
+        "summary": "Update a shipping rate by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateShippingRateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRate" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Shipping Rates"],
+        "operationId": "deleteShippingRate",
+        "summary": "Delete a shipping rate by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteOk" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/shipping-rates/by-carrier/{carrierId}": {
+      "parameters": [
+        { "name": "carrierId", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "tags": ["Shipping Rates"],
+        "operationId": "shippingRatesByCarrier",
+        "summary": "List shipping rates for a carrier",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRateList" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/shipping-rates/cheapest": {
+      "get": {
+        "tags": ["Shipping Rates"],
+        "operationId": "cheapestShippingRate",
+        "summary": "Get the cheapest shipping rate",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRate" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/shipping-rates/fastest": {
+      "get": {
+        "tags": ["Shipping Rates"],
+        "operationId": "fastestShippingRate",
+        "summary": "Get the fastest shipping rate",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRate" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/shipping-rates/best-value": {
+      "get": {
+        "tags": ["Shipping Rates"],
+        "operationId": "bestValueShippingRate",
+        "summary": "Get the best-value shipping rate",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ShippingRate" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/track/{awb}": {
+      "parameters": [
+        { "name": "awb", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "get": {
+        "tags": ["Tracking"],
+        "operationId": "trackByAwb",
+        "summary": "Live tracking events for an AWB",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TrackingResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/tracking": {
+      "post": {
+        "tags": ["Webhooks"],
+        "operationId": "receiveTrackingWebhook",
+        "summary": "Receive a tracking webhook from a carrier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TrackingWebhook" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WebhookAck" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

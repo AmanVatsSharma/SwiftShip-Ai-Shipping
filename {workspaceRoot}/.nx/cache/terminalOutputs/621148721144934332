@@ -1,0 +1,5 @@
+[2m> [22mtsc --noEmit -p chaos/tsconfig.json --outputFile=dist/chaos/typecheck.txt --no-cache
+
+error TS5023: Unknown compiler option '--outputFile=dist/chaos/typecheck.txt'.
+error TS5023: Unknown compiler option '--no-cache'.
+Warning: command "tsc --noEmit -p chaos/tsconfig.json --outputFile=dist/chaos/typecheck.txt --no-cache" exited with non-zero status code

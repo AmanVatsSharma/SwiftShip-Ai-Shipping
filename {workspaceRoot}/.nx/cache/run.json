@@ -1,0 +1,21 @@
+{
+  "run": {
+    "command": "nx run api-public:tsoa:spec",
+    "startTime": "2026-06-16T20:36:40.736Z",
+    "endTime": "2026-06-16T20:36:40.987Z",
+    "inner": false
+  },
+  "tasks": [
+    {
+      "taskId": "api-public:tsoa:spec",
+      "target": "tsoa:spec",
+      "projectName": "api-public",
+      "hash": "9766258537284739937",
+      "startTime": "2026-06-16T20:36:40.770Z",
+      "endTime": "2026-06-16T20:36:40.986Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 1
+    }
+  ]
+}

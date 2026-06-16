@@ -1,0 +1,26 @@
+{
+  "name": "@swiftship/node",
+  "version": "0.1.0",
+  "description": "SwiftShip AI Node.js SDK — auto-generated from the OpenAPI 3.0 spec at apps/api-public/src/generated/openapi.json using the typescript-fetch openapi-generator template.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-sdks.mjs --only=node",
+    "regenerate": "node ../../scripts/build-sdks.mjs --only=node"
+  },
+  "keywords": [
+    "swiftship",
+    "shipping",
+    "logistics",
+    "sdk",
+    "openapi",
+    "typescript-fetch"
+  ],
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  }
+}

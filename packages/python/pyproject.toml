@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "swiftship"
+version = "0.1.0"
+description = "Official Python SDK for the SwiftShip AI public REST API."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Proprietary" }
+authors = [
+    { name = "SwiftShip AI", email = "sdk@swiftship.ai" },
+]
+keywords = ["swiftship", "shipping", "logistics", "sdk", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "urllib3 >= 1.25.3, < 2.1.0",
+    "python-dateutil >= 2.8.2",
+    "pydantic >= 2",
+    "aenum >= 3.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest >= 7.0",
+    "pytest-cov >= 4.0",
+]
+
+[project.urls]
+Homepage = "https://swiftship.ai"
+Documentation = "https://docs.swiftship.ai"
+Repository = "https://github.com/AmanVatsSharma/SwiftShip-Ai-Shipping-NestJs-Backend"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["swiftship*"]
+exclude = ["tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

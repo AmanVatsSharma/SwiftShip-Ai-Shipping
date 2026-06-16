@@ -7,7 +7,10 @@
   "spec": {
     "outputDirectory": "apps/api-public/src/generated",
     "specVersion": 3,
-    "specFile": "openapi.json"
+    "specFile": "openapi.json",
+    "name": "SwiftShip AI",
+    "description": "Multi-carrier shipping API for Indian merchants",
+    "version": "1.0.0"
   },
   "routes": {
     "routesDir": "apps/api-public/src/generated",

@@ -83,6 +83,24 @@ async function bootstrap() {
   expressApp.get('/v1/openapi.json', (_req: Request, res: Response) => {
     res.type('application/json').send(openapiJson);
   });
+  // SS-027e — serve the spec verbatim at the versioned docs URL too.
+  expressApp.get('/docs/v1/openapi.json', (_req: Request, res: Response) => {
+    res.type('application/json').send(openapiJson);
+  });
+
+  // -- SS-027e — static landing page (Quick start) ---------------------
+  // `apps/api-public/public/index.html` is the "Quick start" page
+  // merchants land on at `/`. It links to /docs/v1/, the 3 SDK
+  // READMEs, and the GraphQL playground. We mount express.static
+  // with `index: 'index.html'` so visiting `/` returns the page
+  // directly. tsc does not include the public/ dir (see
+  // tsconfig.app.json), so this is purely a runtime asset.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require('path') as typeof import('path');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const expressStatic = require('express') as typeof import('express');
+  const publicDir = path.join(__dirname, '..', 'public');
+  expressApp.use(expressStatic.static(publicDir, { index: 'index.html' }));
 
   // -- Liveness / readiness (matches apps/api/src/health.controller.ts) -
   expressApp.get('/health', (_req: Request, res: Response) => {
@@ -97,8 +115,9 @@ async function bootstrap() {
   const port = Number(process.env.API_REST_PORT ?? 3001);
   await app.listen(port);
   logger.log(`SwiftShip REST API listening on http://localhost:${port}`);
-  logger.log(`Swagger UI  →  http://localhost:${port}/docs`);
-  logger.log(`OpenAPI     →  http://localhost:${port}/v1/openapi.json`);
+  logger.log(`Quick start →  http://localhost:${port}/`);
+  logger.log(`Swagger UI  →  http://localhost:${port}/docs/v1/`);
+  logger.log(`OpenAPI     →  http://localhost:${port}/docs/v1/openapi.json`);
 }
 
 bootstrap();
