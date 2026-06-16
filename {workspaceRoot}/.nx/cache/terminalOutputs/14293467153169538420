@@ -1,5 +1,0 @@
-[2m> [22mtsc --noEmit -p loadtest/tsconfig.json --outputFile=dist/loadtest/typecheck.txt --no-cache
-
-error TS5023: Unknown compiler option '--outputFile=dist/loadtest/typecheck.txt'.
-error TS5023: Unknown compiler option '--no-cache'.
-Warning: command "tsc --noEmit -p loadtest/tsconfig.json --outputFile=dist/loadtest/typecheck.txt --no-cache" exited with non-zero status code
