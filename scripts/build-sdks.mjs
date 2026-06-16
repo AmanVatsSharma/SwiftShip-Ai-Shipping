@@ -15,15 +15,17 @@
  * Idempotent: re-running regenerates the SDKs in place.
  *
  * SS-027a shipped this file with three placeholder log-and-return paths
- * (Node, Python, PHP). SS-027b (Node) and SS-027c (Python) replaced
- * their placeholders with real `execFileSync` calls. This commit
- * (SS-027d) replaces the PHP placeholder with the same shape.
+ * (Node, Python, PHP). SS-027b (Node), SS-027c (Python), and SS-027d
+ * (PHP) replaced their placeholders with real `execFileSync` calls.
+ * SS-027c also adds a `javaOnPath()` preflight so the build fails fast
+ * with a clear "install a JDK" message instead of the opaque
+ * "'java' is not recognized" error the OpenAPI Generator JAR emits.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
@@ -135,6 +137,20 @@ function buildTarget(target, specPath) {
     );
   }
 
+  // SS-027c: the OpenAPI Generator is a thin Node wrapper around a Java JAR
+  // (`org.openapitools.codegen.OpenAPIGenerator`). It shells out to `java`,
+  // so we fail fast with a clear message if Java is missing — that path
+  // is otherwise surfaced as an opaque "Error: 'java' is not recognized".
+  if (!javaOnPath()) {
+    throw new Error(
+      `[build-sdks] Java is required to run the OpenAPI Generator JAR used by ${target.label}, ` +
+        `but \`java\` is not on PATH. Install a JDK (>= 11) and retry. ` +
+        `On Windows: winget install Microsoft.OpenJDK.21, or download from ` +
+        `https://adoptium.net. On macOS: brew install openjdk@21. ` +
+        `On Debian/Ubuntu: apt-get install -y openjdk-21-jdk.`,
+    );
+  }
+
   console.log(`[build-sdks] ${target.label}`);
   console.log(`  spec:    ${specPath}`);
   console.log(`  dir:     ${target.dir}`);
@@ -201,6 +217,24 @@ function formatOpts(opts) {
   return Object.entries(opts)
     .map(([k, v]) => `${k}=${v}`)
     .join(',');
+}
+
+/**
+ * Return true iff `java` is on PATH (the OpenAPI Generator JAR needs it).
+ * Cheap probe — runs `java -version` and looks for exit code 0.
+ */
+function javaOnPath() {
+  const probe = spawnSync(
+    process.platform === 'win32' ? 'java.exe' : 'java',
+    ['-version'],
+    { stdio: 'ignore' },
+  );
+  if (probe.status === 0) return true;
+  if (probe.error) {
+    // ENOENT on Linux/macOS — `java` binary not on PATH.
+    return probe.error.code !== 'ENOENT' ? true : false;
+  }
+  return false;
 }
 
 function main() {
