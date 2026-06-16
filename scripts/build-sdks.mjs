@@ -7,18 +7,20 @@
  * Usage:
  *   node scripts/build-sdks.mjs                       # build all
  *   node scripts/build-sdks.mjs --only=node           # build one
+ *   node scripts/build-sdks.mjs --only=php            # build the PHP SDK
  *   node scripts/build-sdks.mjs --spec=path/to/openapi.json
  *
- * This file ships with SS-027a as the **foundation** — the
- * `buildNode`, `buildPython`, `buildPhp` functions are placeholders
- * that will be filled in by the SS-027b/c/d agents. Each placeholder
- * just verifies the OpenAPI spec exists and that the target dir is
- * clean, so the agents have a working test surface from day 1.
- *
+ * Each target runs `npx --no-install @openapitools/openapi-generator-cli
+ * generate` with the right `-g` template and `--additional-properties`.
  * Idempotent: re-running regenerates the SDKs in place.
+ *
+ * SS-027a shipped this file with three placeholder log-and-return paths
+ * (Node, Python, PHP). SS-027b (Node) and SS-027c (Python) replaced
+ * their placeholders with real `execFileSync` calls. This commit
+ * (SS-027d) replaces the PHP placeholder with the same shape.
  */
 
-import { existsSync, mkdirSync, rmSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -81,7 +83,7 @@ function parseArgs(argv) {
 function ensureSpec(specPath) {
   if (!existsSync(specPath)) {
     console.error(`[build-sdks] OpenAPI spec not found at: ${specPath}`);
-    console.error('[build-sdks] Run \`npx nx run api-public:tsoa:spec\` first.');
+    console.error('[build-sdks] Run `npx nx run api-public:tsoa:spec` first.');
     process.exit(1);
   }
   // Sanity-check: should be valid JSON with an `openapi` field.
@@ -95,33 +97,110 @@ function ensureSpec(specPath) {
   return doc;
 }
 
-function runOpenapiGenerator(target, specPath) {
-  // Real implementation lands in SS-027b/c/d. For now we log intent
-  // and validate that the target dir is set up.
+function ensureDir(dir) {
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+}
+
+/**
+ * Build one target by shelling out to `@openapitools/openapi-generator-cli`.
+ * Throws (with stderr on failure) so the caller can decide whether to
+ * bubble up the error.
+ */
+function buildTarget(target, specPath) {
+  // SS-027b: the openapi-generator-cli lives as a devDep of apps/api-public
+  // (see apps/api-public/package.json). It is intentionally NOT a root
+  // devDep, so we look in apps/api-public/node_modules/.bin/ first.
+  const candidates = [
+    resolve(repoRoot, 'apps/api-public/node_modules/.bin/openapi-generator-cli'),
+    resolve(repoRoot, 'node_modules/.bin/openapi-generator-cli'),
+  ];
+  const cli = candidates.find((p) => existsSync(p));
+
+  const cliArgs = [
+    'generate',
+    '-g', target.generator,
+    '-i', specPath,
+    '-o', target.dir,
+    '--additional-properties=' + formatOpts(target.opts),
+  ];
+
+  if (!cli) {
+    throw new Error(
+      `[build-sdks] @openapitools/openapi-generator-cli not found in any of:\n` +
+        candidates.map((p) => '  ' + p).join('\n') +
+        `\nIt is a devDep of apps/api-public; run \`npm install --prefix apps/api-public\`. ` +
+        `Per SS-027b constraints, do NOT add it to the root devDependencies.`,
+    );
+  }
+
   console.log(`[build-sdks] ${target.label}`);
   console.log(`  spec:    ${specPath}`);
   console.log(`  dir:     ${target.dir}`);
   console.log(`  gen:     ${target.generator}`);
-  console.log(
-    `  cmd:     npx --no-install @openapitools/openapi-generator-cli generate \\`,
-  );
-  console.log(`             -g ${target.generator} \\`);
-  console.log(`             -i ${specPath} \\`);
-  console.log(`             -o ${target.dir} \\`);
-  console.log(`             --additional-properties=${formatOpts(target.opts)}`);
-  console.log(`  status:  PENDING (SS-027${target === TARGETS.node ? 'b' : target === TARGETS.python ? 'c' : 'd'})`);
+  console.log(`  cli:     ${cli}`);
+
+  // Use `npx` on Windows so the .cmd shim runs correctly through the
+  // shell (avoids the EINVAL/space-in-path issues from spawning the
+  // .cmd file directly via execFileSync). On Linux/macOS, exec the
+  // binary directly — no shell quoting needed.
+  if (process.platform === 'win32') {
+    // Quote the .cmd path to survive spaces in `C:\Users\ASUS TUF A15\...`.
+    const quoted = `"${cli}.cmd"`;
+    execFileSync(quoted, cliArgs, {
+      cwd: repoRoot,
+      stdio: 'inherit',
+      shell: true,
+    });
+  } else {
+    execFileSync(cli, cliArgs, {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    });
+  }
+
+  console.log(`[build-sdks] ${target.label} generated.`);
+}
+
+/**
+ * SS-027b — Node-specific build path.
+ *
+ * The openapi-generator-cli `typescript-fetch` template clobbers the
+ * entire target directory, including our hand-rolled `src/index.ts`
+ * wrapper that re-exports `Configuration` and exposes `createClient()`.
+ * To make regeneration idempotent we:
+ *   1. Snapshot the hand-rolled files into memory
+ *   2. Run the generic `buildTarget`
+ *   3. Restore the hand-rolled files
+ */
+function buildNode(target, specPath) {
+  // Snapshot wrapper files that must survive regeneration.
+  const wrapperFiles = ['src/index.ts', 'src/index.test.ts', 'README.md', 'tsconfig.json', 'package.json'];
+  const snapshot = {};
+  for (const rel of wrapperFiles) {
+    const p = join(target.dir, rel);
+    if (existsSync(p)) snapshot[rel] = readFileSync(p, 'utf8');
+  }
+
+  buildTarget(target, specPath);
+
+  // Restore hand-rolled files (the generator wrote its own package.json,
+  // tsconfig.json, README.md, etc — ours take precedence for the public
+  // surface of @swiftship/node).
+  for (const [rel, content] of Object.entries(snapshot)) {
+    const p = join(target.dir, rel);
+    writeFileSync(p, content, 'utf8');
+    console.log(`[build-sdks] restored hand-rolled ${rel}`);
+  }
+
+  console.log(`[build-sdks] ${target.label} generated (SS-027b).`);
 }
 
 function formatOpts(opts) {
   return Object.entries(opts)
     .map(([k, v]) => `${k}=${v}`)
     .join(',');
-}
-
-function ensureDir(dir) {
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
 }
 
 function main() {
@@ -139,11 +218,23 @@ function main() {
 
   console.log(`[build-sdks] spec: ${args.spec} (openapi ${doc.openapi})`);
   console.log(`[build-sdks] ${targets.length} target(s)`);
+
   for (const [name, t] of targets) {
     ensureDir(t.dir);
-    runOpenapiGenerator(t, args.spec);
+    try {
+      // SS-027b: the Node SDK needs wrapper-file preservation; the
+      // Python and PHP targets go through the generic path.
+      if (name === 'node') {
+        buildNode(t, args.spec);
+      } else {
+        buildTarget(t, args.spec);
+      }
+    } catch (err) {
+      console.error(`[build-sdks] ${name} generation FAILED: ${err.message}`);
+      process.exit(1);
+    }
   }
-  console.log('[build-sdks] All targets listed. Implement each target in SS-027b/c/d.');
+  console.log('[build-sdks] All targets generated.');
 }
 
 main();
