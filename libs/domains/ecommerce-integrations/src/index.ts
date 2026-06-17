@@ -24,3 +24,34 @@ export { WooCommerceResolver } from '../../../../src/ecommerce-integrations/plat
 // Common contracts
 export * from '../../../../src/ecommerce-integrations/common/interfaces/ecommerce-platform.interface';
 export { EcommercePlatformFactory } from '../../../../src/ecommerce-integrations/common/factories/ecommerce-platform.factory';
+
+// SS-026 — channel-agnostic sync stack re-exports.
+// The Shopify + WooCommerce adapters now live in `@swiftship/domains-channels`
+// (see `libs/domains/channels/src/lib/sync/adapters/`). The legacy services
+// above continue to work; this re-export bridges callers that have already
+// imported them via the ecommerce-integrations barrel.
+export {
+  ShopifyChannelAdapter,
+  WooCommerceChannelAdapter,
+  ChannelSyncModule,
+  ChannelSyncService,
+  ChannelSyncResolver,
+  ChannelSyncScheduler,
+  ChannelConnectionEntity,
+  ChannelSyncJobEntity,
+} from '../../../../domains/channels/src';
+export type {
+  EcomChannelAdapter,
+  ChannelPlatform,
+  ChannelConnectionStatus,
+  ChannelSyncType,
+  ChannelSyncStatus,
+  ChannelConnectionStatusReport,
+  PulledProduct,
+  PulledOrder,
+  ShipmentPushPayload,
+  TrackingPushPayload,
+  ChannelPushResult,
+  ChannelWebhookRegistration,
+  ChannelSettings,
+} from '../../../../domains/channels/src/lib/sync/channel-sync.types';

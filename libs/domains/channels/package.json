@@ -7,10 +7,16 @@
   "types": "./src/index.d.ts",
   "dependencies": {
     "aws4": "^1.13.2",
+    "bullmq": "*",
     "tslib": "^2.3.0"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
-    "@swiftship/observability": "*"
+    "@nestjs/graphql": "^13.0.0",
+    "@nestjs/typeorm": "^11.0.0",
+    "@swiftship/observability": "*",
+    "@swiftship/platform-typeorm": "*",
+    "class-validator": "^0.14.1",
+    "typeorm": "^0.3.20"
   }
 }

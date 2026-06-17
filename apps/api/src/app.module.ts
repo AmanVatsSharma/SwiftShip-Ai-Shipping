@@ -37,6 +37,12 @@ import { CodRemittanceModule } from '@swiftship/domains-billing';
 // SS-032: GST invoicing + E-way bill (ClearTax sandbox adapter).
 import { GstModule } from '../../libs/domains/billing/src/lib/gst/gst.module';
 
+// SS-026: channel-agnostic sync stack (Shopify, WooCommerce, Amazon Seller,
+// Flipkart Seller, Myntra). Adds `channelConnections`, `connectChannel`,
+// `triggerChannelSync`, etc. to the GraphQL surface and registers BullMQ
+// recurring jobs for product + order pulls.
+import { ChannelSyncModule } from '../../libs/domains/channels/src/lib/sync/channel-sync.module';
+
 // Domain libs — every feature is now an importable Nx lib.
 import { OrdersLibModule } from '../../libs/domains/orders/src/lib/orders.module';
 import { ShipmentsLibModule } from '../../libs/domains/shipments/src/lib/shipments.module';
@@ -106,6 +112,9 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
         SENTRY_RELEASE: Joi.string().optional(),
         OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().uri().optional(),
         OTEL_SERVICE_NAME: Joi.string().optional(),
+        // SS-026: per-tenant encryption key for channel connection credentials.
+        // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+        CHANNEL_ENCRYPTION_KEY: Joi.string().min(16).optional(),
       }),
     }),
     // Per-tenant throttler (SS-003b). Replaces the previous global
@@ -145,6 +154,8 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     GstModule,
     // SS-033: COD remittance + bank reconciliation + dispute queue.
     CodRemittanceModule,
+    // SS-026: channel-agnostic sync stack — connections, GraphQL, BullMQ.
+    ChannelSyncModule,
   ],
   controllers: [AppController, HealthController, MetricsController],
   providers: [

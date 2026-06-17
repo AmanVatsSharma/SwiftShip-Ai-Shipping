@@ -12,3 +12,4 @@ export * from './warehouse.entities';
 export * from './billing.entities';
 export * from './ecom.entities';
 export * from './dashboard.entities';
+export * from './channel-sync.entities';

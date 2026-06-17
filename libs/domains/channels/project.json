@@ -27,12 +27,21 @@
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/libs/domains/channels",
-        "tsConfig": "libs/domains/channels/tsconfig.lib.json"
+        "tsConfig": "libs/domains/channels/tsconfig.lib.json",
+        "packageJson": "libs/domains/channels/package.json",
+        "main": "libs/domains/channels/src/index.ts"
       }
     },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/domains/channels/jest.config.ts"
+      }
     }
   }
 }

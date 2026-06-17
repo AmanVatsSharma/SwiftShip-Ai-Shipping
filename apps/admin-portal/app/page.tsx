@@ -9,6 +9,7 @@ const NAV = [
   { href: '/billing',    label: 'Billing',    desc: 'Invoices & GST' },
   { href: '/dashboard',  label: 'Dashboard',  desc: 'Revenue, SLA, trends' },
   { href: '/webhooks',   label: 'Webhooks',   desc: 'Outgoing subscriptions' },
+  { href: '/channels',   label: 'Channels',   desc: 'Sync Shopify, WooCommerce, marketplaces' },
   { href: '/settings',   label: 'Settings',   desc: 'Users, roles, plugins' },
 ];
 
