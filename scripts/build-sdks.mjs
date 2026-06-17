@@ -15,11 +15,16 @@
  * Idempotent: re-running regenerates the SDKs in place.
  *
  * SS-027a shipped this file with three placeholder log-and-return paths
- * (Node, Python, PHP). SS-027b (Node), SS-027c (Python), and SS-027d
- * (PHP) replaced their placeholders with real `execFileSync` calls.
- * SS-027c also adds a `javaOnPath()` preflight so the build fails fast
- * with a clear "install a JDK" message instead of the opaque
- * "'java' is not recognized" error the OpenAPI Generator JAR emits.
+ * (Node, Python, PHP). SS-027b (Node) and SS-027c (Python) replaced
+ * their placeholders with real `execFileSync` calls. SS-027d (PHP) does
+ * the same AND introduces a dedicated `buildPHP()` wrapper that
+ * snapshots the hand-rolled composer.json / README.md / src/Client.php
+ * / tests/* files, runs the generic generator, then restores the
+ * hand-rolled files on top of the generated `lib/` — same pattern as
+ * `buildNode()`. SS-027c also adds a `javaOnPath()` preflight so the
+ * build fails fast with a clear "install a JDK" message instead of the
+ * opaque "'java' is not recognized" error the OpenAPI Generator JAR
+ * emits.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -62,13 +67,22 @@ const TARGETS = {
     },
   },
   php: {
-    label: 'PHP SDK (swiftship/swiftship)',
+    label: 'PHP SDK (swiftship/sdk-php)',
     dir: join(repoRoot, 'packages/php'),
     generator: 'php',
     opts: {
-      composerPackageName: 'swiftship/swiftship',
+      // SS-027d: the canonical composer package name on Packagist is
+      // `swiftship/sdk-php` (kept in sync with the hand-authored
+      // composer.json + the `--composerPackageName` flag the generator
+      // uses to write its OWN `composer.json` under lib/). The
+      // invokerPackage stays under `Swiftship\\Sdk\\` so the public
+      // PHP namespace for the hand-rolled Client wrapper is
+      // `Swiftship\Sdk\Client` (matches the bead spec).
+      composerPackageName: 'swiftship/sdk-php',
+      packageName: 'swiftship-sdk',
       packageVersion: '0.1.0',
-      invokerPackage: 'SwiftShip\\Sdk',
+      invokerPackage: 'Swiftship\\Sdk',
+      sinksPackage: 'Swiftship\\Sinks',
     },
   },
 };
@@ -213,6 +227,52 @@ function buildNode(target, specPath) {
   console.log(`[build-sdks] ${target.label} generated (SS-027b).`);
 }
 
+/**
+ * SS-027d — PHP-specific build path.
+ *
+ * Same idempotency problem as buildNode(): the openapi-generator-cli
+ * `php` template clobbers the entire target directory, including
+ * the hand-rolled files that make up the publishable surface of
+ * `swiftship/sdk-php`:
+ *   - composer.json  (the canonical publish artefact, NOT the
+ *                     generator's lib/composer.json)
+ *   - README.md      (human-facing install + usage)
+ *   - phpunit.xml.dist
+ *   - .gitignore
+ *   - src/Client.php (hand-rolled wrapper around OpenAPI\Client\*)
+ *   - tests/SmokeTest.php + tests/TrackingSmokeTest.php
+ *
+ * Snapshot those files into memory, run the generic buildTarget(),
+ * then restore so the generated `lib/` lands alongside the hand-rolled
+ * `src/`/`tests/` and the public composer.json stays in control.
+ */
+function buildPHP(target, specPath) {
+  const wrapperFiles = [
+    'composer.json',
+    'README.md',
+    'phpunit.xml.dist',
+    '.gitignore',
+    'src/Client.php',
+    'tests/SmokeTest.php',
+    'tests/TrackingSmokeTest.php',
+  ];
+  const snapshot = {};
+  for (const rel of wrapperFiles) {
+    const p = join(target.dir, rel);
+    if (existsSync(p)) snapshot[rel] = readFileSync(p, 'utf8');
+  }
+
+  buildTarget(target, specPath);
+
+  for (const [rel, content] of Object.entries(snapshot)) {
+    const p = join(target.dir, rel);
+    writeFileSync(p, content, 'utf8');
+    console.log(`[build-sdks] restored hand-rolled ${rel}`);
+  }
+
+  console.log(`[build-sdks] ${target.label} generated (SS-027d).`);
+}
+
 function formatOpts(opts) {
   return Object.entries(opts)
     .map(([k, v]) => `${k}=${v}`)
@@ -256,10 +316,12 @@ function main() {
   for (const [name, t] of targets) {
     ensureDir(t.dir);
     try {
-      // SS-027b: the Node SDK needs wrapper-file preservation; the
-      // Python and PHP targets go through the generic path.
+      // SS-027b (Node) + SS-027d (PHP): both need wrapper-file
+      // preservation. Python goes through the generic path.
       if (name === 'node') {
         buildNode(t, args.spec);
+      } else if (name === 'php') {
+        buildPHP(t, args.spec);
       } else {
         buildTarget(t, args.spec);
       }

@@ -1,0 +1,19 @@
+# Composer dependencies. Regenerated on every `composer install`.
+# We DO commit composer.lock (the canonical lock file for application
+# packages per https://getcomposer.org/doc/01-basic-usage.md#commit-your-composer-lock-file).
+/vendor/
+
+# PHP_CodeSniffer cache (in case anyone adds phpcs later).
+/.phpcs.cache
+
+# PHPUnit generated artefacts (coverage, log, etc.).
+/.phpunit.result.cache
+/coverage/
+/build/
+
+# OS / editor cruft.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

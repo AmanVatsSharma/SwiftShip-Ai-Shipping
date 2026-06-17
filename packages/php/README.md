@@ -1,72 +1,58 @@
-# swiftship/swiftship — official PHP SDK for the SwiftShip AI public REST API
+# swiftship/sdk-php
 
-[![Packagist](https://img.shields.io/packagist/v/swiftship/swiftship)](https://packagist.org/packages/swiftship/swiftship)
-[![PHP](https://img.shields.io/badge/PHP-7.4%20%7C%208.0%2B-777bb4)](https://www.php.net)
+[![Packagist](https://img.shields.io/packagist/v/swiftship/sdk-php)](https://packagist.org/packages/swiftship/sdk-php)
+[![PHP](https://img.shields.io/badge/PHP-%5E8.1-777bb4)](https://www.php.net)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+Official PHP SDK for the [SwiftShip AI](https://swiftship.ai) shipping API.
 Auto-generated from the SwiftShip AI OpenAPI 3.0 spec by the official
 `@openapitools/openapi-generator-cli` `php` template. Ships with a
-hand-authored `SwiftShip\Sdk\Client` wrapper that gives you a single
+hand-authored `\Swiftship\Sdk\Client` wrapper that gives you a single
 entry point to every generated `OpenAPI\Client\Api\*` class.
 
-> This package is part of SS-027d (Public REST API & 3 official SDKs).
-> Source of truth: `apps/api-public/src/generated/openapi.json` in the
-> [swiftship/backend](https://github.com/swiftship/backend) monorepo.
+> Part of **SS-027d** (Public REST API & 3 official SDKs). Source of
+> truth: `apps/api-public/src/generated/openapi.json` in the
+> [swiftship/backend](https://github.com/swiftship/swiftship-php) monorepo.
 
 ## Installation
 
 ```bash
-composer require swiftship/swiftship
+composer require swiftship/sdk-php
 ```
 
 ## Quick start
+
+End-to-end example: construct a `\Swiftship\Sdk\Configuration`, build a
+client, and call `trackByAwb()` on the `\Swiftship\Sdk\Api\TrackingApi`
+to fetch live tracking events for an AWB.
 
 ```php
 <?php
 require_once 'vendor/autoload.php';
 
-use SwiftShip\Sdk\Client;
+use Swiftship\Sdk\Client;
+use OpenAPI\Client\Api\TrackingApi;
 
 $client = new Client('sk_live_your_api_key');
 
-// 1) Rate-shop an order.
-$quotes = $client->rateShop()->rankRates([
-    'originPincode'      => '560001',
-    'destinationPincode' => '110001',
-    'weightGrams'        => 500,
-    'paymentMethod'      => 'COD',
-    'declaredValuePaise' => 99900,
-]);
+/** @var TrackingApi $tracking */
+$tracking = $client->tracking();
+$events   = $tracking->trackByAwb('AWB123456789');
 
-// 2) Create an order.
-$order = $client->orders()->createOrder([
-    'externalId' => 'shopify-12345',
-    'customerName' => 'Priya Sharma',
-    'customerPhone' => '+919876543210',
-    'shippingAddress' => [
-        'line1' => '14 MG Road',
-        'city'  => 'Bengaluru',
-        'state' => 'KA',
-        'pincode' => '560001',
-    ],
-    'items' => [
-        ['sku' => 'SKU-1', 'name' => 'T-shirt', 'qty' => 1, 'unitPricePaise' => 99900],
-    ],
-    'paymentMethod' => 'COD',
-]);
-
-// 3) Track a shipment.
-$status = $client->tracking()->trackShipment(['awb' => $order['awb']]);
+echo $events->getCurrentStatus(), PHP_EOL;       // e.g. "IN_TRANSIT"
+foreach ($events->getEvents() as $e) {
+    echo $e->getStatus(), ' @ ', $e->getTimestamp(), PHP_EOL;
+}
 ```
 
 ## Configuration
 
 `Client::__construct(string $apiKey, string $baseUrl = Client::DEFAULT_BASE_URL)`.
 
-| Argument   | Default                       | Notes                                                            |
-| ---------- | ----------------------------- | ---------------------------------------------------------------- |
-| `$apiKey`  | (required)                    | The `X-Swiftship-Api-Key` value. Get one from the admin portal. |
-| `$baseUrl` | `https://api.swiftship.ai/v1` | Override to point at staging or a private deployment.           |
+| Argument   | Default                       | Notes                                                              |
+| ---------- | ----------------------------- | ------------------------------------------------------------------ |
+| `$apiKey`  | (required)                    | The `X-Swiftship-Api-Key` value. Get one from the admin portal.   |
+| `$baseUrl` | `https://api.swiftship.ai/v1` | Override to point at staging or a private deployment.             |
 
 The base URL + bearer token are applied to the shared
 `OpenAPI\Client\Configuration` and are used by every generated API
@@ -105,19 +91,30 @@ node scripts/build-sdks.mjs --only=php
 
 The generator writes the API + model classes into `lib/` (the
 `OpenAPI\Client\` PSR-4 prefix). This package only hand-authors
-`src/Client.php` + `tests/SmokeTest.php` + `phpunit.xml.dist` +
-`composer.json` + this README — every other PHP file is regenerated.
+`src/Client.php` + `tests/SmokeTest.php` + `tests/TrackingSmokeTest.php`
++ `phpunit.xml.dist` + `composer.json` + this README — every other
+PHP file is regenerated.
 
-## Running the smoke tests
+## Running the tests
 
 ```bash
 composer install
 composer test            # or: ./vendor/bin/phpunit
 ```
 
-The smoke test (`SwiftShip\Sdk\Tests\SmokeTest`) only verifies that
-the wrapper class instantiates and the generated API classes are
-discoverable through it. It does not make any HTTP calls.
+- `SmokeTest` (`Swiftship\Sdk\Tests\SmokeTest`) verifies that the
+  wrapper class instantiates and the generated API classes are
+  discoverable through it. It does NOT make any HTTP calls.
+- `TrackingSmokeTest` (`Swiftship\Sdk\Tests\TrackingSmokeTest`)
+  wires a mocked Guzzle `MockHandler` into the generated
+  `TrackingApi`, calls `trackByAwb()` against the canned JSON,
+  and asserts the deserialised `TrackingResponse` shape.
+
+## Links
+
+- **OpenAPI spec** (source of truth): [`apps/api-public/src/generated/openapi.json`](https://github.com/swiftship/swiftship-php/blob/main/apps/api-public/src/generated/openapi.json)
+- **Main project repo**: [swiftship/swiftship-php](https://github.com/swiftship/swiftship-php)
+- **Generator**: [@openapitools/openapi-generator-cli](https://openapi-generator.tech)
 
 ## Publishing
 
@@ -125,7 +122,7 @@ Packagist is fed by a GitHub webhook on the
 `swiftship/swiftship-php` repo. Tag the release:
 
 ```bash
-git tag swiftship-php-v0.1.0
+git tag sdk-php-v0.1.0
 git push --tags
 ```
 

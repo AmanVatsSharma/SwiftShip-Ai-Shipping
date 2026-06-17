@@ -1,6 +1,6 @@
 <?php
 /**
- * SS-027d — SwiftShip\Sdk\Client
+ * SS-027d — Swiftship\Sdk\Client
  *
  * Thin, hand-authored wrapper around the auto-generated
  * `OpenAPI\Client\Api\*` classes produced by the OpenAPI Generator
@@ -16,18 +16,21 @@
  * is run by `scripts/build-sdks.mjs --only=php`.
  *
  * Design notes:
- *   - The constructor signature is `(string $apiKey, string $baseUrl = '')`
+ *   - Namespace is `Swiftship\Sdk\` (NOT `SwiftShip\Sdk\`) to match
+ *     the canonical composer package name `swiftship/sdk-php` (case
+ *     is significant in PHP namespace identifiers).
+ *   - The constructor signature is `(string $apiKey, string $baseUrl = self::DEFAULT_BASE_URL)`
  *     so the SS-027d acceptance command
- *     `php -r 'new SwiftShip\Sdk\Client("test")'` works (baseUrl
+ *     `php -r 'new Swiftship\Sdk\Client("test")'` works (baseUrl
  *     defaults to the live production endpoint).
- *   - The Configuration object uses the SDK's own `Configuration` so
- *     the same bearer token + base URL are applied to every generated
+ *   - The Configuration object is the SDK's own `Configuration` so the
+ *     same bearer token + base URL are applied to every generated
  *     `Api\*` class — callers never have to set them per call.
  *   - This wrapper is the only file in `src/` we hand-author. The
- *     generator writes everything else.
+ *     generator writes everything else (into `lib/`).
  */
 
-namespace SwiftShip\Sdk;
+namespace Swiftship\Sdk;
 
 use OpenAPI\Client\Configuration;
 use OpenAPI\Client\Api\OrdersApi;

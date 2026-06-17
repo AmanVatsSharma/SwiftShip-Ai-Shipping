@@ -2,9 +2,9 @@
 /**
  * SS-027d — SmokeTest
  *
- * Verifies the `SwiftShip\Sdk\Client` class:
+ * Verifies the `Swiftship\Sdk\Client` class:
  *   1. Construct with just an API key (acceptance: `php -r 'new
- *      SwiftShip\Sdk\Client("test")'` exits 0).
+ *      Swiftship\Sdk\Client("test")'` exits 0).
  *   2. Construct with an explicit base URL.
  *   3. `getApiKey()` / `getBaseUrl()` / `getConfiguration()` round-trip.
  *   4. Each `->orders()`, `->shipments()`, `->tracking()`, `->rateShop()`,
@@ -16,11 +16,11 @@
  * criterion "phpunit smoke passes" — it does NOT need the live API.
  */
 
-namespace SwiftShip\Sdk\Tests;
+namespace Swiftship\Sdk\Tests;
 
 use OpenAPI\Client\Configuration;
 use PHPUnit\Framework\TestCase;
-use SwiftShip\Sdk\Client;
+use Swiftship\Sdk\Client;
 
 class SmokeTest extends TestCase
 {

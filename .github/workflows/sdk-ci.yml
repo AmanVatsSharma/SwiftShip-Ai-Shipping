@@ -1,0 +1,130 @@
+name: SDK CI
+
+# SS-027d — CI for the 3 generated SDKs (packages/node, packages/python,
+# packages/php). Each job regenerates the SDK from the tsoa-emitted
+# OpenAPI spec at apps/api-public/src/generated/openapi.json, then
+# installs its deps and runs its test suite. Runs in parallel; no
+# cross-job dependencies.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+# Cancel in-progress runs of the same branch / PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node-sdk:
+    name: Node SDK (@swiftship/node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: 'npm' }
+
+      # openapi-generator-cli (devDep of apps/api-public) needs a JDK.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Install at the root so scripts/build-sdks.mjs can find
+      # @openapitools/openapi-generator-cli via apps/api-public.
+      - run: npm ci
+
+      # Build only the Node SDK. Idempotent: re-running regenerates in place.
+      - name: Generate SDK
+        run: node scripts/build-sdks.mjs --only=node
+
+      - name: Install SDK deps
+        working-directory: packages/node
+        run: npm install
+
+      - name: Build SDK
+        working-directory: packages/node
+        run: npm run build
+
+      - name: Test SDK
+        working-directory: packages/node
+        run: npm test
+
+  python-sdk:
+    name: Python SDK (swiftship)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: 'npm' }
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - run: npm ci
+
+      - name: Generate SDK
+        run: node scripts/build-sdks.mjs --only=python
+
+      - name: Install SDK + test extras
+        working-directory: packages/python
+        run: pip install -e '.[test]'
+
+      - name: Test SDK
+        working-directory: packages/python
+        run: pytest
+
+  php-sdk:
+    name: PHP SDK (swiftship/sdk-php)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: 'npm' }
+
+      # openapi-generator-cli (devDep of apps/api-public) needs a JDK.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - run: npm ci
+
+      # Build only the PHP SDK. buildPHP() in scripts/build-sdks.mjs
+      # snapshots the hand-rolled composer.json / README.md / src/
+      # Client.php / tests/* files, runs the generic generator, then
+      # restores the hand-rolled files on top of the generated `lib/`.
+      - name: Generate SDK
+        run: node scripts/build-sdks.mjs --only=php
+
+      - name: Install SDK deps
+        working-directory: packages/php
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Validate composer.json
+        working-directory: packages/php
+        run: composer validate --strict
+
+      - name: Test SDK
+        working-directory: packages/php
+        run: composer test
