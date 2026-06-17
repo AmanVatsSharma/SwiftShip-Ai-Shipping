@@ -27,7 +27,15 @@
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/libs/observability",
-        "tsConfig": "libs/observability/tsconfig.lib.json"
+        "tsConfig": "libs/observability/tsconfig.lib.json",
+        "main": "libs/observability/src/index.ts"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/libs/observability"],
+      "options": {
+        "jestConfig": "libs/observability/jest.config.ts"
       }
     }
   }

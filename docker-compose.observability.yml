@@ -1,4 +1,24 @@
 services:
+  # SS-028 — OpenTelemetry Collector. Receives OTLP/HTTP traces
+  # from the api (and any future instrumented service) and forwards
+  # to a configurable backend. The default exporter is `logging`
+  # (writes spans to stdout for dev); set `OTEL_EXPORTER` in the
+  # collector config to `otlp/<backend>` (e.g. otlp/honeycomb,
+  # otlp/datadog, otlp/jaeger) to ship spans to your tracing SaaS.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    container_name: swiftship-otel-collector
+    restart: unless-stopped
+    command:
+      - '--config=/etc/otelcol/config.yaml'
+    volumes:
+      - ./deploy/otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4318:4318"   # OTLP HTTP receiver
+      - "4317:4317"   # OTLP gRPC receiver (optional)
+    networks:
+      - swiftship-obs
+
   prometheus:
     image: prom/prometheus:v2.52.0
     container_name: swiftship-prometheus

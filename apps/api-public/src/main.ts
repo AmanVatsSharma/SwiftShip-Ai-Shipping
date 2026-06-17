@@ -31,6 +31,11 @@ import { tenantContextBindMiddleware } from './auth/tenant-context-bind.middlewa
 import { TenantThrottlerMiddleware } from './rate-limit/tenant-throttler.middleware';
 import { structuredLogger } from './common/structured-logger';
 import openapiJson from './generated/openapi.json';
+// SS-028 — thin correlation-id shim for the public REST surface.
+// No Sentry / OTel in this app by default; correlation id alone is
+// enough to correlate a request with the structured logs of the
+// downstream services it invokes.
+import { CorrelationIdMiddleware } from '../../libs/observability/src/lib/correlation/correlation-id.middleware';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -46,12 +51,18 @@ async function bootstrap() {
   );
 
   // -- Order matters -----------------------------------------------------
+  // 0. SS-028 — correlation-id middleware (FIRST, so every response
+  //    carries the X-Request-Id header even on rejected preflight).
   // 1. tenant-key resolution (sets req.tenantId) before throttler + ctx
   // 2. tenant-context binding (ALS slot) so repositories can scope
   // 3. tenant throttler (per-tier bucket) — runs after identity is known
   // 4. tsoa routes — handlers + DTO validation
   // 5. swagger UI + openapi.json (mounted on the underlying express app)
   const expressApp = app.getHttpAdapter().getInstance() as import('express').Express;
+
+  expressApp.use((req, res, next) =>
+    new CorrelationIdMiddleware().use(req as any, res as any, next),
+  );
 
   // Mount identity and throttling middleware only on /v1/* so the
   // public tracking endpoint (/v1/track/:awb) — which is

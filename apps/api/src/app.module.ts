@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { join } from 'path';
 
 // Platform libs (TypeORM, auth, queues, carriers, graphql, config, throttler)
@@ -23,6 +23,10 @@ import {
 // Observability lib
 import { ObservabilityModule } from '../../libs/observability/src/lib/observability.module';
 import { MetricsController } from '../../libs/observability/src/lib/metrics.controller';
+// SS-028 — Sentry filter + audit interceptor (wired globally via APP_* tokens below)
+import { SentryExceptionFilter } from '../../libs/observability/src/lib/sentry/sentry-exception.filter';
+import { SentryGraphqlInterceptor } from '../../libs/observability/src/lib/sentry/sentry.interceptor';
+import { AuditInterceptor } from '../../libs/observability/src/lib/audit/audit.interceptor';
 
 // SS-031: KYC module (PAN + GSTIN + bank with BullMQ async verify).
 // Lives under the onboarding domain; registered directly so it can
@@ -96,6 +100,12 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
         S3_ACCESS_KEY_ID: Joi.string().optional(),
         S3_SECRET_ACCESS_KEY: Joi.string().optional(),
         S3_FORCE_PATH_STYLE: Joi.string().optional(),
+        // SS-028 — observability env vars. Optional; features are no-ops
+        // when the relevant var is unset.
+        SENTRY_DSN: Joi.string().optional(),
+        SENTRY_RELEASE: Joi.string().optional(),
+        OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().uri().optional(),
+        OTEL_SERVICE_NAME: Joi.string().optional(),
       }),
     }),
     // Per-tenant throttler (SS-003b). Replaces the previous global
@@ -145,6 +155,17 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     // the per-tier bucket. Replaces the previous IP-based `ThrottlerGuard`
     // which used an in-memory store.
     { provide: APP_GUARD, useClass: TenantThrottlerGuard },
+    // SS-028 — global exception filter. Captures 5xx to Sentry (no-op when
+    // SENTRY_DSN is unset); leaves 4xx alone.
+    { provide: APP_FILTER, useClass: SentryExceptionFilter },
+    // SS-028 — global GraphQL interceptors. Order matters:
+    //   1. SentryGraphqlInterceptor — enriches scope with tenant/user tags
+    //      BEFORE the audit interceptor writes the row (so the breadcrumb
+    //      is in place if captureException fires).
+    //   2. AuditInterceptor — reads @Auditable() metadata and writes
+    //      one audit_logs row per decorated mutation.
+    { provide: APP_INTERCEPTOR, useClass: SentryGraphqlInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule implements NestModule, OnModuleInit {

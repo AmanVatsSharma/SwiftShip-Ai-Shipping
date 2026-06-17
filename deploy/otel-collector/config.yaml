@@ -1,0 +1,62 @@
+# SS-028 — OpenTelemetry Collector configuration.
+#
+# Receives OTLP/HTTP (and OTLP/gRPC) traces from the swiftship-api
+# container and from any future instrumented service. The default
+# exporter is `logging` so dev sees the spans in stdout. Override
+# `exporters:` for production tracing (Honeycomb, Datadog, Jaeger,
+# Tempo, New Relic, etc.).
+#
+# Resource processor attaches `service.namespace=swiftship` and
+# `deployment.environment=$NODE_ENV` to every span so backends
+# can split traffic cleanly.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  resource:
+    attributes:
+      - key: service.namespace
+        value: swiftship
+        action: upsert
+      - key: deployment.environment
+        from_attribute: deployment.environment
+        action: insert
+
+exporters:
+  # Default: log every span to stdout. Cheap; works in dev with no
+  # external dependency. Replace with one of the otlp/* exporters
+  # below to ship traces to a real backend.
+  logging:
+    verbosity: basic
+
+  # Uncomment + set env vars on the collector to ship to Honeycomb:
+  # otlp/honeycomb:
+  #   endpoint: "api.honeycomb.io:443"
+  #   headers:
+  #     "x-honeycomb-team": "${HONEYCOMB_API_KEY}"
+  #
+  # otlp/datadog:
+  #   endpoint: "trace.agent.datadoghq.com:443"
+  #   headers:
+  #     "DD-API-KEY": "${DD_API_KEY}"
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [logging]
