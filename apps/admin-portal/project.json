@@ -3,11 +3,17 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/admin-portal",
   "projectType": "application",
-  "tags": ["scope:admin-portal", "type:app", "type:nextjs"],
+  "tags": [
+    "scope:admin-portal",
+    "type:app",
+    "type:nextjs"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/next:build",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/admin-portal"
       }
@@ -27,21 +33,17 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"]
+      "outputs": [
+        "{options.outputFile}"
+      ]
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/apps/admin-portal"],
+      "outputs": [
+        "{workspaceRoot}/coverage/apps/admin-portal"
+      ],
       "options": {
         "jestConfig": "apps/admin-portal/jest.config.ts"
-      }
-    },
-    "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
-      "options": {
-        "outputPath": "dist/apps/admin-portal",
-        "tsConfig": "apps/admin-portal/tsconfig.app.json"
       }
     }
   }

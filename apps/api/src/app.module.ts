@@ -79,7 +79,13 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
         SHOPIFY_API_SECRET: Joi.string().optional(),
         SHOPIFY_APP_URL: Joi.string().uri().optional(),
         SHOPIFY_SCOPES: Joi.string().optional(),
-        JWT_SECRET: Joi.string().default('dev-secret'),
+        // SS-104: dev/test may use the default, production MUST set a real
+        // secret (>= 32 chars) — the dev default must never ship.
+        JWT_SECRET: Joi.string().when('NODE_ENV', {
+          is: Joi.valid('development', 'test'),
+          then: Joi.string().default('dev-secret'),
+          otherwise: Joi.string().min(32).required(),
+        }),
         JWT_EXPIRES_IN: Joi.string().default('15m'),
         DELHIVERY_TOKEN: Joi.string().optional(),
         REDIS_URL: Joi.string().uri().optional(),

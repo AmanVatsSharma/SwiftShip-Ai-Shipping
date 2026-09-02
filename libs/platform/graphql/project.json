@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/platform/graphql",
-        "tsConfig": "libs/platform/graphql/tsconfig.lib.json"
+        "tsConfig": "libs/platform/graphql/tsconfig.lib.json",
+        "main": "libs/platform/graphql/src/index.ts",
+        "packageJson": "libs/platform/graphql/package.json"
       }
     },
     "lint": {

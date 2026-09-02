@@ -71,6 +71,7 @@
     "bullmq": "^5.61.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "clsx": "^2.1.1",
     "graphql": "^16.10.0",
     "handlebars": "^4.7.8",
     "helmet": "8.1.0",
@@ -87,6 +88,7 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "stripe": "^20.0.0",
+    "tailwind-merge": "^3.6.0",
     "typeorm": "^0.3.30",
     "uuid": "^13.0.0"
   },
@@ -103,6 +105,7 @@
     "@nx/next": "^22.7.5",
     "@nx/node": "^22.7.5",
     "@nx/react": "^22.7.5",
+    "@openapitools/openapi-generator-cli": "^2.41.0",
     "@swc-node/register": "~1.11.1",
     "@swc/cli": "^0.6.0",
     "@swc/core": "~1.15.5",

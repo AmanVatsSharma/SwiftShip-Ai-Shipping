@@ -3,7 +3,6 @@ import {
   ThrottlerModule as NestThrottlerModule,
   ThrottlerModuleOptions,
 } from '@nestjs/throttler';
-import { TenantModule } from '@swiftship/domains-tenants';
 import { PostgresThrottlerStorage } from './postgres-storage.service';
 import { TenantThrottlerGuard } from './tenant-throttler.guard';
 
@@ -40,7 +39,6 @@ export class ThrottlerStorageModule {}
  */
 @Module({
   imports: [
-    TenantModule,
     NestThrottlerModule.forRootAsync({
       imports: [ThrottlerStorageModule],
       useFactory: (storage: PostgresThrottlerStorage): ThrottlerModuleOptions => ({

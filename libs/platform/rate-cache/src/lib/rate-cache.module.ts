@@ -6,7 +6,6 @@ import { RateCacheService } from './rate-cache.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { RateShopService } from './rate-shop.service';
 import { PlatformCarriersModule } from '@swiftship/platform-carriers';
-import { TenantModule } from '@swiftship/domains-tenants';
 
 /**
  * Factory for the shared ioredis client. Reads `REDIS_URL` from env
@@ -27,7 +26,7 @@ const redisProvider: Provider = {
 };
 
 @Module({
-  imports: [ConfigModule, PlatformCarriersModule, TenantModule],
+  imports: [ConfigModule, PlatformCarriersModule],
   providers: [redisProvider, RateCacheService, CircuitBreakerService, RateShopService],
   exports: [RateCacheService, CircuitBreakerService, RateShopService],
 })

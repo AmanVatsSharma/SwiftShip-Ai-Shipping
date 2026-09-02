@@ -40,7 +40,7 @@ export function configureE2eEnv(): void {
   process.env.DATABASE_URL =
     process.env.DATABASE_URL_TEST ||
     process.env.DATABASE_URL ||
-    'postgres://swiftship:swiftship@localhost:5432/swiftship_test';
+    'postgres://postgres:postgres@localhost:5432/swiftship_test';
 }
 
 /** Boot the full AppModule (same shape as health.e2e-spec.ts). */

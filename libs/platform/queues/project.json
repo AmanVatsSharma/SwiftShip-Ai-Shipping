@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/platform/queues",
-        "tsConfig": "libs/platform/queues/tsconfig.lib.json"
+        "tsConfig": "libs/platform/queues/tsconfig.lib.json",
+        "main": "libs/platform/queues/src/index.ts",
+        "packageJson": "libs/platform/queues/package.json"
       }
     },
     "lint": {

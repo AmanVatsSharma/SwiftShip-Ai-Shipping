@@ -33,6 +33,23 @@ jobs:
         # 1 lib/week — see MIGRATION.md §7 for the migration runbook.
         run: npm run audit:prisma
 
+  security:
+    # SS-104: dependency-audit summary + gitleaks secret scan.
+    name: Security (audit + secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: 'npm' }
+      - run: npm ci
+      - name: gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: npm audit (report only, non-blocking)
+        run: npm audit --audit-level=critical || true
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -118,7 +135,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: 'npm' }
       - run: npm ci
+      # SS-102: the service container uses postgres:postgres creds and the
+      # harness validates DATABASE_URL via Joi before the app compiles.
       - run: npx nx run api-e2e:e2e
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/swiftship_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: e2e-ci-secret
 
   build:
     name: Build

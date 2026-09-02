@@ -36,6 +36,26 @@ type MessageResponse {
   verificationToken: String
 }
 
+type AuditEvent {
+  id: ID!
+  tenantId: ID
+  actorUserId: ID
+  actorType: String!
+  action: String!
+  resourceType: String!
+  resourceId: String
+
+  """JSON snapshot before the mutation."""
+  before: String
+
+  """JSON snapshot after the mutation."""
+  after: String
+  ipAddress: String
+  userAgent: String
+  correlationId: String
+  createdAt: DateTime!
+}
+
 type Tenant {
   id: ID!
   slug: String!
@@ -102,26 +122,6 @@ type WalletLedgerEntry {
   reason: String!
   idempotencyKey: String
   metadata: String
-  createdAt: DateTime!
-}
-
-type AuditEvent {
-  id: ID!
-  tenantId: ID
-  actorUserId: ID
-  actorType: String!
-  action: String!
-  resourceType: String!
-  resourceId: String
-
-  """JSON snapshot before the mutation."""
-  before: String
-
-  """JSON snapshot after the mutation."""
-  after: String
-  ipAddress: String
-  userAgent: String
-  correlationId: String
   createdAt: DateTime!
 }
 
@@ -762,10 +762,6 @@ type HealthInfo {
 
 type Query {
   apiInfo: HealthInfo!
-  tenant(id: ID!): Tenant
-  tenants(status: String, tier: String, search: String, limit: Float = 50, offset: Float = 0): [Tenant!]!
-  wallet(tenantId: ID!): Wallet
-  walletStatement(filter: WalletStatementFilterInput!): [WalletLedgerEntry!]!
 
   """Get all orders (newest first)"""
   orders: [Order!]!
@@ -774,6 +770,10 @@ type Query {
   ordersByStatus(status: OrderStatus!): [Order!]!
   filterOrders(filter: OrdersFilterInput!): [Order!]!
   totalSales: String!
+  tenant(id: ID!): Tenant
+  tenants(status: String, tier: String, search: String, limit: Float = 50, offset: Float = 0): [Tenant!]!
+  wallet(tenantId: ID!): Wallet
+  walletStatement(filter: WalletStatementFilterInput!): [WalletLedgerEntry!]!
 
   """Current authenticated user"""
   me: UserAuth!
@@ -893,6 +893,14 @@ type Query {
   channelSyncJobs(tenantId: Int!, channelId: ID!, status: String, limit: Int = 50): [ChannelSyncJob!]!
 }
 
+input OrdersFilterInput {
+  status: OrderStatus
+  userId: Int
+  carrierId: Int
+  orderNumber: String
+  warehouseId: Int
+}
+
 input WalletStatementFilterInput {
   tenantId: ID!
   fromDate: DateTime
@@ -901,14 +909,6 @@ input WalletStatementFilterInput {
   reason: String
   limit: Int = 100
   offset: Int = 0
-}
-
-input OrdersFilterInput {
-  status: OrderStatus
-  userId: Int
-  carrierId: Int
-  orderNumber: String
-  warehouseId: Int
 }
 
 input RankedRateShopInput {
@@ -992,6 +992,9 @@ input DateRangeInput {
 }
 
 type Mutation {
+  createOrder(input: CreateOrderInput!): Order!
+  updateOrder(input: UpdateOrderInput!): Order!
+  deleteOrder(id: Int!): Boolean!
   createTenant(input: CreateTenantInput!): Tenant!
   updateTenant(input: UpdateTenantInput!): Tenant!
   suspendTenant(id: ID!): Tenant!
@@ -1005,9 +1008,6 @@ type Mutation {
   transferBetweenWallets(fromTenantId: ID!, toTenantId: ID!, amount: Int!, reason: String!, idempotencyKey: String!): Boolean!
   lockFunds(input: LockFundsInput!): Wallet!
   releaseFunds(input: ReleaseFundsInput!): Wallet!
-  createOrder(input: CreateOrderInput!): Order!
-  updateOrder(input: UpdateOrderInput!): Order!
-  deleteOrder(id: Int!): Boolean!
 
   """Register a new user and sign them in"""
   register(email: String!, password: String!, name: String): AuthPayload!
@@ -1105,6 +1105,61 @@ type Mutation {
   updateChannelSettings(tenantId: Int!, channelId: ID!, settingsJson: String!): ChannelConnection!
 }
 
+input CreateOrderInput {
+  orderNumber: String!
+  total: Float!
+  userId: Int!
+  status: OrderStatus
+  carrierId: Int
+  warehouseId: Int
+  destinationName: String
+  destinationPhone: String
+  destinationAddressLine1: String
+  destinationAddressLine2: String
+  destinationCity: String
+  destinationState: String
+  destinationCountry: String
+  destinationPincode: String!
+  packageWeightGrams: Int!
+  packageLengthCm: Float
+  packageWidthCm: Float
+  packageHeightCm: Float
+
+  """
+  If true, the rate-engine picks the best carrier; if false, use the merchant-supplied carrierId
+  """
+  rankRate: Boolean! = true
+
+  """
+  Strategy for the rate-engine to use; defaults to the tenant-level setting
+  """
+  rateStrategy: RateRankingStrategy
+
+  """PREPAID | COD — COD orders require tenant KYC VERIFIED"""
+  paymentMethod: String = "PREPAID"
+}
+
+input UpdateOrderInput {
+  id: Int!
+  orderNumber: String
+  total: Float
+  status: OrderStatus
+  carrierId: Int
+  warehouseId: Int
+  destinationName: String
+  destinationPhone: String
+  destinationAddressLine1: String
+  destinationAddressLine2: String
+  destinationCity: String
+  destinationState: String
+  destinationCountry: String
+  destinationPincode: String
+  packageWeightGrams: Int
+  packageLengthCm: Float
+  packageWidthCm: Float
+  packageHeightCm: Float
+}
+
 input CreateTenantInput {
   slug: String!
   name: String!
@@ -1168,61 +1223,6 @@ input ReleaseFundsInput {
   reason: String!
   idempotencyKey: String
   metadata: String
-}
-
-input CreateOrderInput {
-  orderNumber: String!
-  total: Float!
-  userId: Int!
-  status: OrderStatus
-  carrierId: Int
-  warehouseId: Int
-  destinationName: String
-  destinationPhone: String
-  destinationAddressLine1: String
-  destinationAddressLine2: String
-  destinationCity: String
-  destinationState: String
-  destinationCountry: String
-  destinationPincode: String!
-  packageWeightGrams: Int!
-  packageLengthCm: Float
-  packageWidthCm: Float
-  packageHeightCm: Float
-
-  """
-  If true, the rate-engine picks the best carrier; if false, use the merchant-supplied carrierId
-  """
-  rankRate: Boolean! = true
-
-  """
-  Strategy for the rate-engine to use; defaults to the tenant-level setting
-  """
-  rateStrategy: RateRankingStrategy
-
-  """PREPAID | COD — COD orders require tenant KYC VERIFIED"""
-  paymentMethod: String = "PREPAID"
-}
-
-input UpdateOrderInput {
-  id: Int!
-  orderNumber: String
-  total: Float
-  status: OrderStatus
-  carrierId: Int
-  warehouseId: Int
-  destinationName: String
-  destinationPhone: String
-  destinationAddressLine1: String
-  destinationAddressLine2: String
-  destinationCity: String
-  destinationState: String
-  destinationCountry: String
-  destinationPincode: String
-  packageWeightGrams: Int
-  packageLengthCm: Float
-  packageWidthCm: Float
-  packageHeightCm: Float
 }
 
 input SubmitKycInput {

@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/platform/rate-math",
-        "tsConfig": "libs/platform/rate-math/tsconfig.lib.json"
+        "tsConfig": "libs/platform/rate-math/tsconfig.lib.json",
+        "main": "libs/platform/rate-math/src/index.ts",
+        "packageJson": "libs/platform/rate-math/package.json"
       }
     },
     "lint": {

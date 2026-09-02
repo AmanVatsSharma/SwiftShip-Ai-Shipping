@@ -3,11 +3,17 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/observability/src",
   "projectType": "library",
-  "tags": ["scope:shared", "layer:observability", "type:feature"],
+  "tags": [
+    "scope:shared",
+    "layer:observability",
+    "type:feature"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/libs/observability",
         "tsConfig": "libs/observability/tsconfig.lib.json",
@@ -20,20 +26,27 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"]
+      "outputs": [
+        "{options.outputFile}"
+      ]
     },
     "typecheck": {
       "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/libs/observability",
         "tsConfig": "libs/observability/tsconfig.lib.json",
-        "main": "libs/observability/src/index.ts"
+        "main": "libs/observability/src/index.ts",
+        "packageJson": "libs/observability/package.json"
       }
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/libs/observability"],
+      "outputs": [
+        "{workspaceRoot}/coverage/libs/observability"
+      ],
       "options": {
         "jestConfig": "libs/observability/jest.config.ts"
       }

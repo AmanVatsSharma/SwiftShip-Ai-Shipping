@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/platform/carriers",
-        "tsConfig": "libs/platform/carriers/tsconfig.lib.json"
+        "tsConfig": "libs/platform/carriers/tsconfig.lib.json",
+        "main": "libs/platform/carriers/src/index.ts",
+        "packageJson": "libs/platform/carriers/package.json"
       }
     },
     "lint": {

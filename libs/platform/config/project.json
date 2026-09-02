@@ -19,7 +19,8 @@
       ],
       "options": {
         "outputPath": "dist/libs/platform/config",
-        "tsConfig": "libs/platform/config/tsconfig.lib.json"
+        "tsConfig": "libs/platform/config/tsconfig.lib.json",
+        "main": "libs/platform/config/src/index.ts"
       }
     },
     "lint": {

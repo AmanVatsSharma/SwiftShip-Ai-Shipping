@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type Redis from 'ioredis';
 import { REDIS_CLIENT } from './rate-cache.tokens';
-import { TenantContext } from '@swiftship/domains-tenants';
+import { getCurrentTenantId } from '@swiftship/platform-typeorm';
 import type { CachedRateQuote, RateCacheKey } from './rate-cache.types';
 
 /**
@@ -31,7 +31,6 @@ export const RATE_CACHE_TTL_SECONDS = 600;
 export class RateCacheService {
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-    private readonly tenantContext: TenantContext,
   ) {}
 
   /**
@@ -78,7 +77,7 @@ export class RateCacheService {
    * code base relies on.
    */
   buildKey(k: RateCacheKey): string {
-    const tenantId = this.tenantContext.getTenantId() ?? 1;
+    const tenantId = getCurrentTenantId() ?? 1;
     const carrier = k.carrierCode ?? 'all';
     return `rate:${tenantId}:${k.originPincode}:${k.destinationPincode}:${k.weightGrams}:${k.paymentMethod}:${carrier}`;
   }

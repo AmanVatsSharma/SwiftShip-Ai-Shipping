@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/dashboard",
-        "tsConfig": "libs/domains/dashboard/tsconfig.lib.json"
+        "tsConfig": "libs/domains/dashboard/tsconfig.lib.json",
+        "main": "libs/domains/dashboard/src/index.ts",
+        "packageJson": "libs/domains/dashboard/package.json"
       }
     },
     "lint": {

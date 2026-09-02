@@ -12,6 +12,8 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/graphql": "^13.0.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@swiftship/domains-onboarding": "*",
+    "@swiftship/domains-tenants": "*",
     "@swiftship/platform-auth": "*",
     "@swiftship/platform-typeorm": "*",
     "class-validator": "^0.14.1",

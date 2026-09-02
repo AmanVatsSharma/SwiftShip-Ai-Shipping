@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/cod",
-        "tsConfig": "libs/domains/cod/tsconfig.lib.json"
+        "tsConfig": "libs/domains/cod/tsconfig.lib.json",
+        "main": "libs/domains/cod/src/index.ts",
+        "packageJson": "libs/domains/cod/package.json"
       }
     },
     "lint": {

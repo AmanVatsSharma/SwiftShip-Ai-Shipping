@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/notifications",
-        "tsConfig": "libs/domains/notifications/tsconfig.lib.json"
+        "tsConfig": "libs/domains/notifications/tsconfig.lib.json",
+        "main": "libs/domains/notifications/src/index.ts",
+        "packageJson": "libs/domains/notifications/package.json"
       }
     },
     "lint": {

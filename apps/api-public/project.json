@@ -3,11 +3,16 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/api-public/src",
   "projectType": "application",
-  "tags": ["scope:api-public", "type:app"],
+  "tags": [
+    "scope:api-public",
+    "type:app"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/webpack:webpack",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/api-public",
         "main": "apps/api-public/src/main.ts",
@@ -31,20 +36,24 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"]
+      "outputs": [
+        "{options.outputFile}"
+      ]
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/apps/api-public"],
+      "outputs": [
+        "{workspaceRoot}/coverage/apps/api-public"
+      ],
       "options": {
         "jestConfig": "apps/api-public/jest.config.ts"
       }
     },
     "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
       "options": {
-        "tsConfig": "apps/api-public/tsconfig.app.json"
+        "command": "npx tsc --noEmit -p tsconfig.json",
+        "cwd": "apps/api-public"
       }
     },
     "tsoa:gen": {

@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/warehouses",
-        "tsConfig": "libs/domains/warehouses/tsconfig.lib.json"
+        "tsConfig": "libs/domains/warehouses/tsconfig.lib.json",
+        "main": "libs/domains/warehouses/src/index.ts",
+        "packageJson": "libs/domains/warehouses/package.json"
       }
     },
     "lint": {

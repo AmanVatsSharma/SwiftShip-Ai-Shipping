@@ -13,7 +13,13 @@
     "@nestjs/graphql": "^13.0.0",
     "@nestjs/schedule": "^4.0.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@swiftship/domains-onboarding": "*",
+    "@swiftship/domains-payments": "*",
+    "@swiftship/domains-storage": "*",
+    "@swiftship/domains-tenants": "*",
+    "@swiftship/domains-warehouses": "*",
     "@swiftship/platform-auth": "*",
+    "@swiftship/platform-queues": "*",
     "@swiftship/platform-typeorm": "*",
     "class-validator": "^0.14.1",
     "typeorm": "^0.3.20"

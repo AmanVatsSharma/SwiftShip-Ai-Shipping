@@ -11,7 +11,15 @@ import {
   ThrottlerRequest,
   ThrottlerStorage,
 } from '@nestjs/throttler';
-import type { TenantContext, TenantTier } from '@swiftship/domains-tenants';
+
+// Local structural types — platform libs must not import from domains/
+// (layering rule enforced by scripts/check-nx-graph.mjs). The request
+// carries the real TenantContext; we only touch its two accessors.
+type TenantTier = 'STARTER' | 'GROWTH' | 'PRO' | 'ENTERPRISE';
+interface TenantContextLike {
+  getTenantId?(): number | undefined;
+  getTier?(): TenantTier | undefined;
+}
 
 /**
  * Per-tenant rate limits. Bucket sizes are picked from `tenantTier`:
@@ -109,7 +117,7 @@ export class TenantThrottlerGuard extends ThrottlerGuard {
   protected async getTracker(
     req: Record<string, any>,
   ): Promise<string> {
-    const tenantContext = req?.tenantContext as TenantContext | undefined;
+    const tenantContext = req?.tenantContext as TenantContextLike | undefined;
     const contextTenantId = tenantContext?.getTenantId?.();
     const tenantId: number | string | undefined =
       contextTenantId ??
@@ -130,7 +138,7 @@ export class TenantThrottlerGuard extends ThrottlerGuard {
    * always defined.
    */
   private resolveTenantTier(req: Record<string, any>): TenantTier {
-    const tenantContext = req?.tenantContext as TenantContext | undefined;
+    const tenantContext = req?.tenantContext as TenantContextLike | undefined;
     const contextTier = tenantContext?.getTier?.();
     if (contextTier) {
       return contextTier;

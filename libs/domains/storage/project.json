@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/storage",
-        "tsConfig": "libs/domains/storage/tsconfig.lib.json"
+        "tsConfig": "libs/domains/storage/tsconfig.lib.json",
+        "main": "libs/domains/storage/src/index.ts",
+        "packageJson": "libs/domains/storage/package.json"
       }
     },
     "lint": {

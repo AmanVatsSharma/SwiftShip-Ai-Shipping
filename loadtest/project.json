@@ -13,17 +13,21 @@
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["loadtest/**/*.js", "loadtest/**/*.mjs"]
+        "lintFilePatterns": [
+          "loadtest/**/*.js",
+          "loadtest/**/*.mjs"
+        ]
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
-      "outputs": ["{options.outputFile}"],
       "options": {
         "command": "tsc --noEmit -p loadtest/tsconfig.json",
-        "outputFile": "dist/loadtest/typecheck.txt"
+        "forwardAllArgs": false
       }
     }
   }

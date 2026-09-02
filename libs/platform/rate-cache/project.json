@@ -32,7 +32,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/platform/rate-cache",
-        "tsConfig": "libs/platform/rate-cache/tsconfig.lib.json"
+        "tsConfig": "libs/platform/rate-cache/tsconfig.lib.json",
+        "main": "libs/platform/rate-cache/src/index.ts",
+        "packageJson": "libs/platform/rate-cache/package.json"
       }
     },
     "lint": {

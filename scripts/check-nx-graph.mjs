@@ -185,13 +185,18 @@ for (const [name, project] of Object.entries(nodes)) {
   }
 
   if (isApp) {
-    // App entry points vary: main.ts for NestJS, other frameworks (Next.js)
-    // use custom paths. The crucial check is that sourceDir exists.
-    const sourceDir = join(ROOT, root, 'src');
-    if (!existsSync(sourceDir)) {
-      violations.push(`${name} (app): missing src directory at ${root}/src`);
+    // App entry points vary: `src/` for NestJS, `app/` (App Router) or
+    // `pages/` for Next.js. Any of the three satisfies the source check.
+    const candidates = ['src', 'app', 'pages'];
+    const found = candidates.some((d) => existsSync(join(ROOT, root, d)));
+    if (!found) {
+      violations.push(
+        `${name} (app): missing src/app/pages directory at ${root}`,
+      );
     }
-  } else {
+  } else if (root.startsWith('libs/')) {
+    // Lib artifact checks apply to libs/ only — root-level script projects
+    // (chaos/, loadtest/) have no barrels by design.
     const libTs = join(ROOT, root, 'tsconfig.lib.json');
     if (!existsSync(libTs)) {
       violations.push(`${name} (lib): missing tsconfig.lib.json`);
