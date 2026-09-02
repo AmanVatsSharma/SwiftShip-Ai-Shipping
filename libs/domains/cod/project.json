@@ -27,15 +27,10 @@
       }
     },
     "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/libs/domains/cod",
-        "tsConfig": "libs/domains/cod/tsconfig.lib.json",
-        "main": "libs/domains/cod/src/index.ts",
-        "packageJson": "libs/domains/cod/package.json"
+        "command": "npx tsc --noEmit -p libs/domains/cod/tsconfig.lib.json",
+        "forwardAllArgs": false
       }
     },
     "lint": {

@@ -53,4 +53,4 @@ export interface Plugin {
    * Called when the plugin is disabled
    */
   onDisable?(): Promise<void> | void;
-} 
+}

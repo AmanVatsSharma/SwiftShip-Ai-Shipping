@@ -18,6 +18,11 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*", "libs/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "libs/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

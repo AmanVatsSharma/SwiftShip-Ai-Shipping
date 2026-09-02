@@ -36,7 +36,9 @@ export class PluginManagerService {
 
     const pluginsPath = candidates.find((p) => fs.existsSync(p));
     if (!pluginsPath) {
-      this.logger.warn(`Plugins directory not found in candidates: ${candidates.join(', ')}`);
+      this.logger.warn(
+        `Plugins directory not found in candidates: ${candidates.join(', ')}`,
+      );
       return;
     }
 
@@ -51,12 +53,16 @@ export class PluginManagerService {
 
       const pluginPath = path.join(pluginsPath, file);
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const pluginModule = require(pluginPath);
+        // Runtime plugin loading — CommonJS `require` is the loading
+        // mechanism for compiled .plugin.js files in this CommonJS app.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const pluginModule = require(pluginPath) as {
+          default?: Plugin;
+        } & Plugin;
         const plugin: Plugin = pluginModule.default || pluginModule;
         if (plugin && plugin.name && plugin.version) {
           this.plugins.push(plugin);
-          plugin.onRegister?.();
+          void plugin.onRegister?.();
           this.logger.log(`Loaded plugin: ${plugin.name} v${plugin.version}`);
         } else {
           this.logger.warn(`Invalid plugin file: ${file}`);
@@ -78,11 +84,13 @@ export class PluginManagerService {
    * Check if a plugin's dependencies are met
    */
   getPluginDependencyStatus(name: string): PluginDependencyStatus {
-    const plugin = this.plugins.find(p => p.name === name);
+    const plugin = this.plugins.find((p) => p.name === name);
     if (!plugin) {
       return { name, dependenciesMet: false, missingDependencies: [] };
     }
-    const missing = (plugin.dependencies || []).filter(dep => !this.plugins.some(p => p.name === dep));
+    const missing = (plugin.dependencies || []).filter(
+      (dep) => !this.plugins.some((p) => p.name === dep),
+    );
     return {
       name,
       dependenciesMet: missing.length === 0,
@@ -96,10 +104,12 @@ export class PluginManagerService {
   async enablePlugin(name: string): Promise<boolean> {
     const depStatus = this.getPluginDependencyStatus(name);
     if (!depStatus.dependenciesMet) {
-      this.logger.warn(`Cannot enable plugin ${name}: missing dependencies: ${depStatus.missingDependencies.join(', ')}`);
+      this.logger.warn(
+        `Cannot enable plugin ${name}: missing dependencies: ${depStatus.missingDependencies.join(', ')}`,
+      );
       return false;
     }
-    const plugin = this.plugins.find(p => p.name === name);
+    const plugin = this.plugins.find((p) => p.name === name);
     if (plugin && plugin.onEnable) {
       await plugin.onEnable();
       this.logger.log(`Enabled plugin: ${plugin.name}`);
@@ -112,7 +122,7 @@ export class PluginManagerService {
    * Disable a plugin by name
    */
   async disablePlugin(name: string): Promise<boolean> {
-    const plugin = this.plugins.find(p => p.name === name);
+    const plugin = this.plugins.find((p) => p.name === name);
     if (plugin && plugin.onDisable) {
       await plugin.onDisable();
       this.logger.log(`Disabled plugin: ${plugin.name}`);
@@ -120,4 +130,4 @@ export class PluginManagerService {
     }
     return false;
   }
-} 
+}

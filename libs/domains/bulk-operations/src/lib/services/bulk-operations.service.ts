@@ -4,19 +4,29 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ShipmentsService } from '../../shipments/shipments.service';
-import { PickupsService } from '../../pickups/pickups.service';
-import { ManifestsService } from '../../manifests/manifests.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { OrderEntity } from '@swiftship/platform-typeorm';
+import {
+  ShipmentsService,
+  ShipmentStatus,
+  CreateShipmentInput,
+  CreateLabelInput,
+} from '@swiftship/domains-shipments';
+import { PickupsService } from '@swiftship/domains-pickups';
+import { ManifestsService } from '@swiftship/domains-manifests';
 import { BulkLabelGenerationInput } from '../dto/bulk-label-generation.input';
 import { BulkPickupInput } from '../dto/bulk-pickup.input';
 import { BatchOrderProcessingInput } from '../dto/batch-order-processing.input';
 import { BulkOperationResult, BulkLabelResult } from '../bulk-operations.model';
-import { CreateLabelInput } from '../../shipments/create-label.input';
-import { ShipmentStatus } from '../../shipments/shipment.model';
+
+/** Narrow an unknown thrown value to an Error for safe reporting. */
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 /**
- * Bulk Operations Service
+ * Bulk Operations Service (TypeORM-backed, SS-101 decommission port)
  *
  * Handles bulk operations for shipping:
  * - Bulk label generation
@@ -35,7 +45,8 @@ export class BulkOperationsService {
   private readonly logger = new Logger(BulkOperationsService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(OrderEntity)
+    private readonly orders: Repository<OrderEntity>,
     private readonly shipmentsService: ShipmentsService,
     private readonly pickupsService: PickupsService,
     private readonly manifestsService: ManifestsService,
@@ -53,7 +64,7 @@ export class BulkOperationsService {
   async generateBulkLabels(
     input: BulkLabelGenerationInput,
   ): Promise<BulkLabelResult> {
-    console.log('[BulkOperationsService] generateBulkLabels', {
+    this.logger.log('generateBulkLabels', {
       shipmentCount: input.shipmentIds.length,
       format: input.format,
     });
@@ -79,15 +90,13 @@ export class BulkOperationsService {
       const batch = input.shipmentIds.slice(i, i + batchSize);
 
       // Process batch in parallel
-      const results = await Promise.allSettled(
+      await Promise.allSettled(
         batch.map(async (shipmentId) => {
           try {
-            // Get shipment
-            const shipment =
-              await this.shipmentsService.getShipment(shipmentId);
+            // Get shipment (validates it exists)
+            await this.shipmentsService.getShipment(shipmentId);
 
-            // Generate label (this should call the actual label generation service)
-            // For now, we'll simulate it
+            // Generate label via the shipments service label generator
             const labelUrl = await this.generateLabelForShipment(
               shipmentId,
               input.format || 'PDF',
@@ -95,11 +104,10 @@ export class BulkOperationsService {
 
             successfulIds.push(shipmentId);
             labelUrls.push(labelUrl);
-
-            return { shipmentId, labelUrl };
-          } catch (error: any) {
+          } catch (error) {
+            const err = toError(error);
             failedIds.push(shipmentId);
-            errors.push(`Shipment ${shipmentId}: ${error.message}`);
+            errors.push(`Shipment ${shipmentId}: ${err.message}`);
             throw error;
           }
         }),
@@ -130,14 +138,15 @@ export class BulkOperationsService {
   }
 
   /**
-   * Generate label for a single shipment
-   * This should integrate with the actual label generation service
+   * Generate label for a single shipment via the ShipmentsService
+   * (SS-101: the legacy shipmentsService.createLabel call became
+   * generateLabel, which enqueues the label-generator worker).
    */
   private async generateLabelForShipment(
     shipmentId: number,
     format: string,
   ): Promise<string> {
-    const label = await this.shipmentsService.createLabel({
+    const label = await this.shipmentsService.generateLabel({
       shipmentId,
       format,
     } as CreateLabelInput);
@@ -155,7 +164,7 @@ export class BulkOperationsService {
   async scheduleBulkPickups(
     input: BulkPickupInput,
   ): Promise<BulkOperationResult> {
-    console.log('[BulkOperationsService] scheduleBulkPickups', {
+    this.logger.log('scheduleBulkPickups', {
       shipmentCount: input.shipmentIds.length,
       scheduledAt: input.scheduledAt,
     });
@@ -179,7 +188,7 @@ export class BulkOperationsService {
     for (let i = 0; i < input.shipmentIds.length; i += batchSize) {
       const batch = input.shipmentIds.slice(i, i + batchSize);
 
-      const results = await Promise.allSettled(
+      await Promise.allSettled(
         batch.map(async (shipmentId) => {
           try {
             // Verify shipment exists
@@ -192,9 +201,10 @@ export class BulkOperationsService {
             );
 
             successfulIds.push(shipmentId);
-          } catch (error: any) {
+          } catch (error) {
+            const err = toError(error);
             failedIds.push(shipmentId);
-            errors.push(`Shipment ${shipmentId}: ${error.message}`);
+            errors.push(`Shipment ${shipmentId}: ${err.message}`);
           }
         }),
       );
@@ -228,7 +238,7 @@ export class BulkOperationsService {
   async processBatchOrders(
     input: BatchOrderProcessingInput,
   ): Promise<BulkOperationResult> {
-    console.log('[BulkOperationsService] processBatchOrders', {
+    this.logger.log('processBatchOrders', {
       orderCount: input.orderIds.length,
       carrierId: input.carrierId,
       autoGenerateLabels: input.autoGenerateLabels,
@@ -249,10 +259,8 @@ export class BulkOperationsService {
     // Process orders sequentially to avoid database conflicts
     for (const orderId of input.orderIds) {
       try {
-        // Verify order exists
-        const order = await this.prisma.order.findUnique({
-          where: { id: orderId },
-        });
+        // Verify order exists (SS-101: prisma.order.findUnique → repo.findOne)
+        const order = await this.orders.findOne({ where: { id: orderId } });
 
         if (!order) {
           throw new NotFoundException(`Order with ID ${orderId} not found`);
@@ -261,12 +269,12 @@ export class BulkOperationsService {
         // Create shipment
         // TODO: This should integrate with actual shipment creation logic
         // For now, we'll simulate it
-        const shipment = await this.shipmentsService.createShipment({
+        await this.shipmentsService.createShipment({
           orderId,
           carrierId: input.carrierId || order.carrierId || 1, // Default carrier
           trackingNumber: `TRK${Date.now()}${orderId}`,
           status: ShipmentStatus.PENDING,
-        });
+        } as CreateShipmentInput);
 
         // Optionally generate label
         if (input.autoGenerateLabels) {
@@ -274,9 +282,10 @@ export class BulkOperationsService {
         }
 
         successfulIds.push(orderId);
-      } catch (error: any) {
+      } catch (error) {
+        const err = toError(error);
         failedIds.push(orderId);
-        errors.push(`Order ${orderId}: ${error.message}`);
+        errors.push(`Order ${orderId}: ${err.message}`);
       }
     }
 
@@ -302,7 +311,7 @@ export class BulkOperationsService {
   async generateBulkManifest(
     shipmentIds: number[],
   ): Promise<{ manifestId: number; manifestUrl?: string }> {
-    console.log('[BulkOperationsService] generateBulkManifest', {
+    this.logger.log('generateBulkManifest', {
       shipmentCount: shipmentIds.length,
     });
 

@@ -27,15 +27,10 @@
       }
     },
     "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/libs/domains/notifications",
-        "tsConfig": "libs/domains/notifications/tsconfig.lib.json",
-        "main": "libs/domains/notifications/src/index.ts",
-        "packageJson": "libs/domains/notifications/package.json"
+        "command": "npx tsc --noEmit -p libs/domains/notifications/tsconfig.lib.json",
+        "forwardAllArgs": false
       }
     },
     "lint": {

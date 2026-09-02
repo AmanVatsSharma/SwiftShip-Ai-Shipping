@@ -11,12 +11,33 @@
     "type:domain"
   ],
   "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/domains/plugins",
+        "tsConfig": "libs/domains/plugins/tsconfig.lib.json",
+        "packageJson": "libs/domains/plugins/package.json",
+        "main": "libs/domains/plugins/src/index.ts",
+        "assets": [
+          "libs/domains/plugins/*.md"
+        ]
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsc --noEmit -p libs/domains/plugins/tsconfig.lib.json",
+        "forwardAllArgs": false
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": [
         "{options.outputFile}"
       ]
     }
-  },
-  "//": "typecheck/build targets removed 2026-09: barrel re-exports the legacy src/ tree (SS-101 decommission pending). Restore when the lib is ported."
+  }
 }

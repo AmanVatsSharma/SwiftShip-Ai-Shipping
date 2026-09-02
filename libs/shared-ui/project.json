@@ -14,12 +14,10 @@
       "executor": "@nx/eslint:lint"
     },
     "typecheck": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/libs/shared-ui",
-        "tsConfig": "libs/shared-ui/tsconfig.lib.json",
-        "main": "libs/shared-ui/src/index.ts",
-        "packageJson": "libs/shared-ui/package.json"
+        "command": "npx tsc --noEmit -p libs/shared-ui/tsconfig.lib.json",
+        "forwardAllArgs": false
       }
     }
   }

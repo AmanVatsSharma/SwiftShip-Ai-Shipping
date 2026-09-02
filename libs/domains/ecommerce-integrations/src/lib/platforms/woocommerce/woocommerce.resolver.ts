@@ -1,13 +1,20 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import { GqlAuthGuard, CurrentUser } from '@swiftship/platform-auth';
 import { WooCommerceIntegrationService } from './services/woocommerce-integration.service';
 import { WooCommerceOrdersService } from './services/woocommerce-orders.service';
-import { GqlAuthGuard } from '../../../auth/gql-auth.guard';
-import { CurrentUser } from '../../../auth/current-user.decorator';
+
+/**
+ * JWT payload attached by the GqlAuthGuard (req.user). Only the id is
+ * consumed here.
+ */
+interface AuthUser {
+  id: number;
+}
 
 /**
  * WooCommerce Resolver
- * 
+ *
  * GraphQL resolver for WooCommerce integration.
  */
 @Resolver()
@@ -23,7 +30,7 @@ export class WooCommerceResolver {
     @Args('storeUrl') storeUrl: string,
     @Args('consumerKey') consumerKey: string,
     @Args('consumerSecret') consumerSecret: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ): Promise<string> {
     const store = await this.integrationService.connectStore(
       user.id,
@@ -36,7 +43,7 @@ export class WooCommerceResolver {
 
   @Query(() => [Object], { description: 'Get all WooCommerce stores' })
   @UseGuards(GqlAuthGuard)
-  async woocommerceStores(@CurrentUser() user: any) {
+  async woocommerceStores(@CurrentUser() user: AuthUser) {
     return this.integrationService.getStoresByUser(user.id);
   }
 
@@ -44,7 +51,7 @@ export class WooCommerceResolver {
   @UseGuards(GqlAuthGuard)
   async disconnectWooCommerceStore(
     @Args('storeId') storeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ): Promise<boolean> {
     await this.integrationService.disconnectStore(storeId, user.id);
     return true;
@@ -54,8 +61,9 @@ export class WooCommerceResolver {
   @UseGuards(GqlAuthGuard)
   async syncWooCommerceOrders(
     @Args('storeId') storeId: string,
-    @Args('limit', { type: () => Int, nullable: true, defaultValue: 100 }) limit: number,
-    @CurrentUser() user: any,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 100 })
+    limit: number,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.ordersService.syncOrders(storeId, user.id, limit);
   }
@@ -64,7 +72,7 @@ export class WooCommerceResolver {
   @UseGuards(GqlAuthGuard)
   async woocommerceOrders(
     @Args('storeId') storeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.ordersService.getOrdersByStore(storeId, user.id);
   }

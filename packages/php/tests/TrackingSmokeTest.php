@@ -8,9 +8,10 @@
  *   1. Construct a Guzzle `Client` whose handler stack contains a
  *      `MockHandler` that returns the canned `TrackingResponse` JSON
  *      that the openapi-generator `php` template expects.
- *   2. Inject that Guzzle client into a fresh `OpenAPI\Client\ApiClient`.
- *   3. Pass the ApiClient to `TrackingApi` (the generated class).
- *   4. Call `trackByAwb($awb)` and assert the deserialised model has
+ *   2. Pass that Guzzle client (plus a `Configuration`) straight to
+ *      `TrackingApi` — the generated constructors take
+ *      `(?ClientInterface $client, ?Configuration $config, ...)`.
+ *   3. Call `trackByAwb($awb)` and assert the deserialised model has
  *      the expected `awb`, `currentStatus`, and `events[0].status`.
  *
  * This proves the auto-generated `TrackingApi`, the auto-generated
@@ -31,7 +32,6 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use OpenAPI\Client\Api\TrackingApi;
-use OpenAPI\Client\ApiClient;
 use OpenAPI\Client\Configuration;
 use PHPUnit\Framework\TestCase;
 use Swiftship\Sdk\Client;
@@ -40,7 +40,7 @@ class TrackingSmokeTest extends TestCase
 {
     /**
      * Build a `TrackingApi` whose Guzzle layer is replaced by a
-     * `MockHandler` returning the canned JSON in `self::$cannedBody`.
+     * `MockHandler` returning the canned JSON body.
      */
     private function buildTrackingApiWithMock(MockHandler $mock): TrackingApi
     {
@@ -50,17 +50,13 @@ class TrackingSmokeTest extends TestCase
             'base_uri' => Client::DEFAULT_BASE_URL,
         ]);
 
-        // The generator's ApiClient accepts an optional Guzzle Client
-        // as its 2nd ctor arg. Sharing a Configuration with our
-        // hand-rolled wrapper is also fine — the bearer token is the
-        // same in both cases.
+        // Sharing a Configuration with our hand-rolled wrapper is
+        // fine — the bearer token is the same in both cases.
         $config = (new Configuration())
             ->setHost(Client::DEFAULT_BASE_URL)
             ->setAccessToken('sk_test_fake');
 
-        $apiClient = new ApiClient($guzzle, $config);
-
-        return new TrackingApi($apiClient);
+        return new TrackingApi($guzzle, $config);
     }
 
     /**
@@ -113,7 +109,11 @@ class TrackingSmokeTest extends TestCase
         $this->assertCount(2, $events);
         $this->assertSame('PICKED_UP', $events[0]->getStatus());
         $this->assertSame('Bengaluru hub', $events[0]->getLocation());
-        $this->assertSame('2026-06-15T10:30:00Z', $events[0]->getTimestamp());
+        // `timestamp` is typed date-time in the spec, so the generated
+        // model deserialises it into a \DateTime.
+        $timestamp = $events[0]->getTimestamp();
+        $this->assertInstanceOf(\DateTime::class, $timestamp);
+        $this->assertSame('2026-06-15T10:30:00', $timestamp->format('Y-m-d\TH:i:s'));
     }
 
     public function testTrackingApiGoesThroughHandRolledClientWrapper(): void
@@ -130,7 +130,9 @@ class TrackingSmokeTest extends TestCase
         // We have to swap the Guzzle layer AFTER constructing the
         // wrapper, since the wrapper constructs TrackingApi itself.
         // Reflection is the cleanest way to do that without modifying
-        // the public surface of Swiftship\Sdk\Client.
+        // the public surface of Swiftship\Sdk\Client. The generated
+        // Api classes keep the Guzzle client in a protected `$client`
+        // property.
         $client = new Client('sk_test_fake');
         $trackingApi = $client->tracking();
 
@@ -138,16 +140,12 @@ class TrackingSmokeTest extends TestCase
         $prop = $reflect->getProperty('client');
         $prop->setAccessible(true);
 
-        /** @var ApiClient $existingApiClient */
-        $existingApiClient = $prop->getValue($trackingApi);
-        $existingConfig = $existingApiClient->getConfig();
-
         $handlerStack = HandlerStack::create($mock);
         $guzzle = new GuzzleClient([
             'handler' => $handlerStack,
             'base_uri' => Client::DEFAULT_BASE_URL,
         ]);
-        $prop->setValue($trackingApi, new ApiClient($guzzle, $existingConfig));
+        $prop->setValue($trackingApi, $guzzle);
 
         $response = $trackingApi->trackByAwb(self::CANNED_AWB);
 

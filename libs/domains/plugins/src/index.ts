@@ -1,4 +1,18 @@
-export { PluginsModule, PluginsModule as PluginsLibModule } from '../../../../src/plugins/plugins.module';
-export { PluginsResolver, PluginsResolver as PluginsLibResolver } from '../../../../src/plugins/plugins.resolver';
-export { PluginManagerService, PluginManagerService as PluginManagerLibService } from '../../../../src/plugins/plugin-manager.service';
-export { Plugin, PluginDependencyStatus } from '../../../../src/plugins/plugin.interface';
+// Re-export barrel for the Plugins lib.
+// SS-101: points at the local implementation only — the legacy root
+// `src/plugins` re-exports are gone (see STATUS.md §3).
+
+export {
+  PluginsModule,
+  PluginsModule as PluginsLibModule,
+} from './lib/plugins.module';
+export {
+  PluginsResolver,
+  PluginsResolver as PluginsLibResolver,
+} from './lib/plugins.resolver';
+export {
+  PluginManagerService,
+  PluginManagerService as PluginManagerLibService,
+} from './lib/plugin-manager.service';
+export type { PluginDependencyStatus } from './lib/plugin-manager.service';
+export type { Plugin } from './lib/plugin.interface';

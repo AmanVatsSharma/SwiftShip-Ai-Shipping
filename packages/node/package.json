@@ -8,8 +8,13 @@
     "dist/"
   ],
   "scripts": {
-    "build": "node ../../scripts/build-sdks.mjs --only=node",
-    "regenerate": "node ../../scripts/build-sdks.mjs --only=node"
+    "build": "node ../../scripts/build-sdks.mjs --only=node && tsc -p tsconfig.json",
+    "regenerate": "node ../../scripts/build-sdks.mjs --only=node",
+    "test": "node --test dist/index.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
   },
   "keywords": [
     "swiftship",

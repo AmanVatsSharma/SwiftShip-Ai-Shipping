@@ -6,13 +6,13 @@ import { ObjectType, Field, Int } from '@nestjs/graphql';
 @ObjectType()
 export class BulkOperationResult {
   @Field(() => Int)
-  total: number;
+  total!: number;
 
   @Field(() => Int)
-  successful: number;
+  successful!: number;
 
   @Field(() => Int)
-  failed: number;
+  failed!: number;
 
   @Field(() => [Int], { nullable: true })
   successfulIds?: number[];

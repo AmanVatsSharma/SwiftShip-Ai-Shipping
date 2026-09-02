@@ -1,4 +1,11 @@
-import { Resolver, Query, Mutation, Args, ObjectType, Field } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ObjectType,
+  Field,
+} from '@nestjs/graphql';
 import { PluginManagerService } from './plugin-manager.service';
 import { Plugin } from './plugin.interface';
 import { PluginDependencyStatus } from './plugin-manager.service';
@@ -6,13 +13,13 @@ import { PluginDependencyStatus } from './plugin-manager.service';
 @ObjectType()
 class PluginInfo {
   @Field()
-  name: string;
+  name!: string;
 
   @Field()
-  version: string;
+  version!: string;
 
   @Field()
-  author: string;
+  author!: string;
 
   @Field({ nullable: true })
   description?: string;
@@ -33,23 +40,23 @@ class PluginInfo {
 @ObjectType()
 class PluginUIComponent {
   @Field()
-  id: string;
+  id!: string;
   @Field()
-  name: string;
+  name!: string;
   @Field({ nullable: true })
   description?: string;
   @Field()
-  route: string;
+  route!: string;
 }
 
 @ObjectType()
 class PluginDependencyStatusType {
   @Field()
-  name: string;
+  name!: string;
   @Field()
-  dependenciesMet: boolean;
+  dependenciesMet!: boolean;
   @Field(() => [String])
-  missingDependencies: string[];
+  missingDependencies!: string[];
 }
 
 @Resolver(() => PluginInfo)
@@ -58,16 +65,25 @@ export class PluginsResolver {
 
   constructor(private readonly pluginManager: PluginManagerService) {}
 
-  @Query(() => [PluginInfo], { name: 'plugins', description: 'List all loaded plugins' })
+  @Query(() => [PluginInfo], {
+    name: 'plugins',
+    description: 'List all loaded plugins',
+  })
   getPlugins(): (Plugin & { enabled?: boolean })[] {
-    return this.pluginManager.getPlugins().map(p => ({ ...p, enabled: this.enabledPlugins.has(p.name) }));
+    return this.pluginManager
+      .getPlugins()
+      .map((p) => ({ ...p, enabled: this.enabledPlugins.has(p.name) }));
   }
 
-  @Query(() => [PluginInfo], { name: 'enabledPlugins', description: 'List all enabled plugins' })
+  @Query(() => [PluginInfo], {
+    name: 'enabledPlugins',
+    description: 'List all enabled plugins',
+  })
   getEnabledPlugins(): (Plugin & { enabled?: boolean })[] {
-    return this.pluginManager.getPlugins()
-      .filter(p => this.enabledPlugins.has(p.name))
-      .map(p => ({ ...p, enabled: true }));
+    return this.pluginManager
+      .getPlugins()
+      .filter((p) => this.enabledPlugins.has(p.name))
+      .map((p) => ({ ...p, enabled: true }));
   }
 
   @Mutation(() => Boolean, { description: 'Enable a plugin by name' })
@@ -84,15 +100,26 @@ export class PluginsResolver {
     return result;
   }
 
-  @Query(() => [PluginUIComponent], { name: 'uiPluginComponents', description: 'List all UI plugin components from enabled plugins' })
+  @Query(() => [PluginUIComponent], {
+    name: 'uiPluginComponents',
+    description: 'List all UI plugin components from enabled plugins',
+  })
   getUIPluginComponents(): PluginUIComponent[] {
-    return this.pluginManager.getPlugins()
-      .filter(p => this.enabledPlugins.has(p.name) && Array.isArray(p.uiComponents))
-      .flatMap(p => p.uiComponents || []);
+    return this.pluginManager
+      .getPlugins()
+      .filter(
+        (p) => this.enabledPlugins.has(p.name) && Array.isArray(p.uiComponents),
+      )
+      .flatMap((p) => p.uiComponents || []);
   }
 
-  @Query(() => PluginDependencyStatusType, { name: 'pluginDependencyStatus', description: 'Get dependency status for a plugin' })
-  getPluginDependencyStatus(@Args('name') name: string): PluginDependencyStatus {
+  @Query(() => PluginDependencyStatusType, {
+    name: 'pluginDependencyStatus',
+    description: 'Get dependency status for a plugin',
+  })
+  getPluginDependencyStatus(
+    @Args('name') name: string,
+  ): PluginDependencyStatus {
     return this.pluginManager.getPluginDependencyStatus(name);
   }
-} 
+}

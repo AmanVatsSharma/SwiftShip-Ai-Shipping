@@ -1,14 +1,21 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  WebhookSubscriptionEntity,
+  TrackingEventEntity,
+} from '@swiftship/platform-typeorm';
+import { QueuesModule } from '@swiftship/platform-queues';
 import { WebhooksService } from './webhooks.service';
 import { WebhooksResolver } from './webhooks.resolver';
 import { WebhooksController } from './webhooks.controller';
-import { QueuesModule } from '../queues/queues.module';
 
 @Module({
-  imports: [QueuesModule],
+  imports: [
+    QueuesModule,
+    TypeOrmModule.forFeature([WebhookSubscriptionEntity, TrackingEventEntity]),
+  ],
   controllers: [WebhooksController],
-  providers: [PrismaService, WebhooksService, WebhooksResolver],
+  providers: [WebhooksService, WebhooksResolver],
   exports: [WebhooksService],
 })
 export class WebhooksModule {}

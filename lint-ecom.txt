@@ -1,0 +1,139 @@
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\common\interfaces\ecommerce-platform.interface.ts[24m[0m
+[0m  [2m10:3[22m  [31merror[39m  'TOrder' is defined but never used  [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\dto\connect-store.input.ts[24m[0m
+[0m  [2m2:32[22m  [31merror[39m  'IsUrl' is defined but never used  [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\models\shopify-order.model.ts[24m[0m
+[0m  [2m2:10[22m  [31merror[39m  'ShopifyOrderStatus' is defined but never used  [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\resolvers\shopify-integration.resolver.ts[24m[0m
+[0m   [2m2:10[22m  [31merror[39m  'UseGuards' is defined but never used       [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m  [2m63:5[22m   [31merror[39m  Unsafe return of a value of type `any[]`    [2m@typescript-eslint/no-unsafe-return[22m[0m
+[0m  [2m63:34[22m  [31merror[39m  Unsafe return of a value of type `any`      [2m@typescript-eslint/no-unsafe-return[22m[0m
+[0m  [2m63:40[22m  [31merror[39m  Unsafe member access .id on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\services\shopify-integration.service.spec.ts[24m[0m
+[0m   [2m25:7[22m   [31merror[39m    'storesRepo' is assigned a value but never used                                                                                                                                                                 [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m   [2m26:7[22m   [31merror[39m    'ordersRepo' is assigned a value but never used                                                                                                                                                                 [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m   [2m27:7[22m   [31merror[39m    'httpService' is assigned a value but never used                                                                                                                                                                [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m   [2m28:7[22m   [31merror[39m    'configService' is assigned a value but never used                                                                                                                                                              [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m   [2m71:39[22m  [33mwarning[39m  Unsafe argument of type error typed assigned to a parameter of type `EntityClassOrSchema`                                                                                                                       [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m   [2m75:39[22m  [33mwarning[39m  Unsafe argument of type error typed assigned to a parameter of type `EntityClassOrSchema`                                                                                                                       [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m   [2m85:26[22m  [33mwarning[39m  Unsafe argument of type error typed assigned to a parameter of type `EntityClassOrSchema`                                                                                                                       [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m   [2m88:26[22m  [33mwarning[39m  Unsafe argument of type error typed assigned to a parameter of type `EntityClassOrSchema`                                                                                                                       [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m126:14[22m  [31merror[39m    Avoid referencing unbound methods which may cause unintentional scoping of `this`.[0m
+[0mIf your function does not access `this`, you can annotate it with `this: void`, or consider using an arrow function instead  [2m@typescript-eslint/unbound-method[22m[0m
+[0m  [2m281:11[22m  [31merror[39m    Unsafe assignment of an `any` value                                                                                                                                                                             [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m316:11[22m  [31merror[39m    Unsafe assignment of an `any` value                                                                                                                                                                             [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\services\shopify-integration.service.ts[24m[0m
+[0m   [2m84:58[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m111:51[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m112:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m118:51[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m129:48[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m130:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m133:48[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m149:53[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m150:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m156:47[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m185:60[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m186:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m195:54[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m205:13[22m  [31merror[39m  'store' is assigned a value but never used       [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m  [2m214:62[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m215:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m218:41[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m228:13[22m  [31merror[39m  'store' is assigned a value but never used       [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m  [2m237:65[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m238:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m241:44[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m269:56[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m270:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\services\shopify-orders.service.spec.ts[24m[0m
+[0m    [2m4:3[22m   [31merror[39m    'BadRequestException' is defined but never used                                            [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m   [2m22:7[22m   [31merror[39m    'ordersRepo' is assigned a value but never used                                            [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m   [2m23:7[22m   [31merror[39m    'shopifyIntegrationService' is assigned a value but never used                             [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m   [2m51:39[22m  [33mwarning[39m  Unsafe argument of type error typed assigned to a parameter of type `EntityClassOrSchema`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m   [2m63:26[22m  [33mwarning[39m  Unsafe argument of type error typed assigned to a parameter of type `EntityClassOrSchema`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m272:13[22m  [31merror[39m    'updatedOrder' is assigned a value but never used                                          [2m@typescript-eslint/no-unused-vars[22m[0m
+[0m  [2m274:60[22m  [31merror[39m    Async arrow function has no 'await' expression                                             [2m@typescript-eslint/require-await[22m[0m
+[0m  [2m274:63[22m  [31merror[39m    Unsafe return of a value of type `any`                                                     [2m@typescript-eslint/no-unsafe-return[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\services\shopify-orders.service.ts[24m[0m
+[0m   [2m45:68[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m   [2m68:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m   [2m71:55[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m   [2m89:65[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m   [2m91:44[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m119:50[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m120:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m123:50[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m149:49[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m150:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m153:49[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m175:42[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m176:15[22m  [31merror[39m  Unsafe member access .stack on an `any` value    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m178:70[22m  [31merror[39m  Unsafe member access .message on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\shopify.controller.ts[24m[0m
+[0m  [2m70:41[22m  [31merror[39m  Unsafe member access .access_token on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\shopify\shopify.webhook.controller.ts[24m[0m
+[0m  [2m33:11[22m  [31merror[39m    Unsafe assignment of an `any` value                                                                                                                                         [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m33:34[22m  [31merror[39m    Unsafe member access .rawBody on an `any` value                                                                                                                             [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m36:15[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `string`                                                                                                      [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m44:7[22m   [31merror[39m    Invalid operand for a '+' operation. Operands must each be a number or string, allowing a string + any of: `any`, `boolean`, `null`, `RegExp`, `undefined`. Got `string[]`  [2m@typescript-eslint/restrict-plus-operands[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\woocommerce\services\woocommerce-integration.service.ts[24m[0m
+[0m  [2m182:9[22m   [31merror[39m  Unsafe assignment of an `any` value               [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m182:23[22m  [31merror[39m  Unsafe member access .response on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m182:48[22m  [31merror[39m  Unsafe member access .message on an `any` value   [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m185:18[22m  [31merror[39m  Unsafe member access .response on an `any` value  [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\woocommerce\services\woocommerce-orders.service.ts[24m[0m
+[0m   [2m95:13[22m  [31merror[39m    Unsafe assignment of an `any` value                                                     [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m   [2m95:32[22m  [31merror[39m    Unsafe member access .number on an `any` value                                          [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m187:7[22m   [31merror[39m    Unsafe return of a value of type `any`                                                  [2m@typescript-eslint/no-unsafe-return[22m[0m
+[0m  [2m191:9[22m   [31merror[39m    Unsafe assignment of an `any` value                                                     [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m191:23[22m  [31merror[39m    Unsafe member access .response on an `any` value                                        [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m191:48[22m  [31merror[39m    Unsafe member access .message on an `any` value                                         [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m204:11[22m  [31merror[39m    Unsafe assignment of an `any` value                                                     [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m205:7[22m   [31merror[39m    Unsafe call of a(n) `any` typed value                                                   [2m@typescript-eslint/no-unsafe-call[22m[0m
+[0m  [2m205:24[22m  [31merror[39m    Unsafe member access .number on an `any` value                                          [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m205:46[22m  [31merror[39m    Unsafe call of a(n) `any` typed value                                                   [2m@typescript-eslint/no-unsafe-call[22m[0m
+[0m  [2m205:63[22m  [31merror[39m    Unsafe member access .id on an `any` value                                              [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m212:64[22m  [31merror[39m    Unsafe assignment of an `any` value                                                     [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m215:7[22m   [31merror[39m    Unsafe assignment of an `any` value                                                     [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m216:25[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `string`                  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m216:42[22m  [31merror[39m    Unsafe member access .total on an `any` value                                           [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m217:41[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `string`                  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m217:58[22m  [31merror[39m    Unsafe member access .status on an `any` value                                          [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m219:46[22m  [31merror[39m    Unsafe member access .date_created on an `any` value                                    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m220:20[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `string | number | Date`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m220:37[22m  [31merror[39m    Unsafe member access .date_created on an `any` value                                    [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m222:7[22m   [31merror[39m    Unsafe assignment of an `any` value                                                     [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m222:34[22m  [31merror[39m    Unsafe member access .currency on an `any` value                                        [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m223:7[22m   [31merror[39m    Unsafe assignment of an `any` value                                                     [2m@typescript-eslint/no-unsafe-assignment[22m[0m
+[0m  [2m223:39[22m  [31merror[39m    Unsafe member access .billing on an `any` value                                         [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m224:38[22m  [31merror[39m    Unsafe member access .billing on an `any` value                                         [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m225:31[22m  [31merror[39m    Unsafe member access .billing on an `any` value                                         [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m225:76[22m  [31merror[39m    Unsafe member access .billing on an `any` value                                         [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m[0m
+[0m[4mC:\Users\ASUS TUF A15\Desktop\DevOPS\Workspace\SwiftShip-Ai-Shipping-NestJs-Backend\libs\domains\ecommerce-integrations\src\lib\platforms\woocommerce\woocommerce.resolver.ts[24m[0m
+[0m  [2m28:7[22m   [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `number`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m28:12[22m  [31merror[39m    Unsafe member access .id on an `any` value                              [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m39:52[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `number`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m39:57[22m  [31merror[39m    Unsafe member access .id on an `any` value                              [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m48:60[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `number`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m48:65[22m  [31merror[39m    Unsafe member access .id on an `any` value                              [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m60:51[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `number`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m60:56[22m  [31merror[39m    Unsafe member access .id on an `any` value                              [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m  [2m69:57[22m  [33mwarning[39m  Unsafe argument of type `any` assigned to a parameter of type `number`  [2m@typescript-eslint/no-unsafe-argument[22m[0m
+[0m  [2m69:62[22m  [31merror[39m    Unsafe member access .id on an `any` value                              [2m@typescript-eslint/no-unsafe-member-access[22m[0m
+[0m[0m
+[0m[31m[1m✖ 109 problems (94 errors, 15 warnings)[22m[39m[0m
+[0m[31m[1m[22m[39m[0m

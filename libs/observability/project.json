@@ -31,15 +31,10 @@
       ]
     },
     "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/libs/observability",
-        "tsConfig": "libs/observability/tsconfig.lib.json",
-        "main": "libs/observability/src/index.ts",
-        "packageJson": "libs/observability/package.json"
+        "command": "npx tsc --noEmit -p libs/observability/tsconfig.lib.json",
+        "forwardAllArgs": false
       }
     },
     "test": {

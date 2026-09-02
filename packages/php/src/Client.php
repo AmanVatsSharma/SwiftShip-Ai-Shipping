@@ -92,7 +92,11 @@ class Client
     /**
      * Lazy-instantiate a generated API class. The generator produces
      * one class per tsoa controller; the canonical names are
-     * `OpenAPI\Client\Api\{ControllerName}Api`.
+     * `OpenAPI\Client\Api\{ControllerName}Api`. The generated
+     * constructors take `(?ClientInterface $client, ?Configuration
+     * $config, ?HeaderSelector $selector, int $hostIndex)` — we pass
+     * our shared Configuration as the second argument and let the
+     * API class build its own default Guzzle client.
      *
      * @template T of object
      * @param class-string<T> $fqcn
@@ -102,6 +106,7 @@ class Client
     {
         if (!isset($this->apiCache[$fqcn])) {
             $this->apiCache[$fqcn] = new $fqcn(
+                null,
                 $this->config,
             );
         }

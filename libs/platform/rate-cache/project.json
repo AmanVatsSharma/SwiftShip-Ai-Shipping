@@ -26,15 +26,10 @@
       }
     },
     "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/libs/platform/rate-cache",
-        "tsConfig": "libs/platform/rate-cache/tsconfig.lib.json",
-        "main": "libs/platform/rate-cache/src/index.ts",
-        "packageJson": "libs/platform/rate-cache/package.json"
+        "command": "npx tsc --noEmit -p libs/platform/rate-cache/tsconfig.lib.json",
+        "forwardAllArgs": false
       }
     },
     "lint": {

@@ -1,23 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { ShopifyOrderEntity } from '@swiftship/platform-typeorm';
 import { ShopifyOrdersService } from './shopify-orders.service';
-import { PrismaService } from '../../../../prisma/prisma.service';
 import { ShopifyIntegrationService } from './shopify-integration.service';
-import { CreateShopifyOrderInput, ShopifyOrderStatus } from '../dto/create-shopify-order.input';
+import {
+  CreateShopifyOrderInput,
+  ShopifyOrderStatus,
+} from '../dto/create-shopify-order.input';
 
+/**
+ * SS-101 — ShopifyOrdersService spec, ported from PrismaService mocks to
+ * TypeORM repository mocks.
+ */
 describe('ShopifyOrdersService', () => {
   let service: ShopifyOrdersService;
-  let prismaService: PrismaService;
-  let shopifyIntegrationService: ShopifyIntegrationService;
 
-  const mockPrismaService = {
-    shopifyOrder: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
+  type RepositoryType = {
+    create: jest.Mock;
+    save: jest.Mock;
+    find: jest.Mock;
+    findOne: jest.Mock;
+    remove: jest.Mock;
+  };
+
+  const mockOrdersRepo: RepositoryType = {
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+    findOne: jest.fn(),
+    remove: jest.fn(),
   };
 
   const mockShopifyIntegrationService = {
@@ -25,17 +40,22 @@ describe('ShopifyOrdersService', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ShopifyOrdersService,
-        { provide: PrismaService, useValue: mockPrismaService },
-        { provide: ShopifyIntegrationService, useValue: mockShopifyIntegrationService },
+        {
+          provide: getRepositoryToken(ShopifyOrderEntity),
+          useValue: mockOrdersRepo,
+        },
+        {
+          provide: ShopifyIntegrationService,
+          useValue: mockShopifyIntegrationService,
+        },
       ],
     }).compile();
 
     service = module.get<ShopifyOrdersService>(ShopifyOrdersService);
-    prismaService = module.get<PrismaService>(PrismaService);
-    shopifyIntegrationService = module.get<ShopifyIntegrationService>(ShopifyIntegrationService);
   });
 
   afterEach(() => {
@@ -69,21 +89,23 @@ describe('ShopifyOrdersService', () => {
     ];
 
     it('should return all orders', async () => {
-      mockPrismaService.shopifyOrder.findMany.mockResolvedValue(mockOrders);
+      mockOrdersRepo.find.mockResolvedValue(mockOrders);
 
       const result = await service.getShopifyOrders();
 
-      expect(mockPrismaService.shopifyOrder.findMany).toHaveBeenCalledWith({
-        orderBy: { createdAt: 'desc' }
+      expect(mockOrdersRepo.find).toHaveBeenCalledWith({
+        order: { createdAt: 'DESC' },
       });
-      expect(result).toEqual(mockOrders);
       expect(result.length).toBe(2);
+      expect(result[0]).toMatchObject({ id: 'order-1', orderNumber: '1001' });
     });
 
     it('should throw InternalServerErrorException if database query fails', async () => {
-      mockPrismaService.shopifyOrder.findMany.mockRejectedValue(new Error('Database error'));
+      mockOrdersRepo.find.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.getShopifyOrders()).rejects.toThrow(InternalServerErrorException);
+      await expect(service.getShopifyOrders()).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -115,26 +137,29 @@ describe('ShopifyOrdersService', () => {
         id: storeId,
         shopDomain: 'test-store.myshopify.com',
       });
-      mockPrismaService.shopifyOrder.findMany.mockResolvedValue(mockOrders);
+      mockOrdersRepo.find.mockResolvedValue(mockOrders);
 
       const result = await service.getOrdersByStore(storeId);
 
-      expect(mockShopifyIntegrationService.getStoreById).toHaveBeenCalledWith(storeId);
-      expect(mockPrismaService.shopifyOrder.findMany).toHaveBeenCalledWith({
+      expect(mockShopifyIntegrationService.getStoreById).toHaveBeenCalledWith(
+        storeId,
+      );
+      expect(mockOrdersRepo.find).toHaveBeenCalledWith({
         where: { storeId },
-        orderBy: { createdAt: 'desc' }
+        order: { createdAt: 'DESC' },
       });
-      expect(result).toEqual(mockOrders);
       expect(result.length).toBe(2);
     });
 
     it('should throw NotFoundException if store does not exist', async () => {
       mockShopifyIntegrationService.getStoreById.mockRejectedValue(
-        new NotFoundException(`Shopify store with ID ${storeId} not found`)
+        new NotFoundException(`Shopify store with ID ${storeId} not found`),
       );
 
-      await expect(service.getOrdersByStore(storeId)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.shopifyOrder.findMany).not.toHaveBeenCalled();
+      await expect(service.getOrdersByStore(storeId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockOrdersRepo.find).not.toHaveBeenCalled();
     });
   });
 
@@ -151,20 +176,22 @@ describe('ShopifyOrdersService', () => {
     };
 
     it('should return an order if found', async () => {
-      mockPrismaService.shopifyOrder.findUnique.mockResolvedValue(mockOrder);
+      mockOrdersRepo.findOne.mockResolvedValue(mockOrder);
 
       const result = await service.getOrderById(orderId);
 
-      expect(mockPrismaService.shopifyOrder.findUnique).toHaveBeenCalledWith({
-        where: { id: orderId }
+      expect(mockOrdersRepo.findOne).toHaveBeenCalledWith({
+        where: { id: orderId },
       });
-      expect(result).toEqual(mockOrder);
+      expect(result.id).toEqual(orderId);
     });
 
     it('should throw NotFoundException if order not found', async () => {
-      mockPrismaService.shopifyOrder.findUnique.mockResolvedValue(null);
+      mockOrdersRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.getOrderById(orderId)).rejects.toThrow(NotFoundException);
+      await expect(service.getOrderById(orderId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -189,31 +216,33 @@ describe('ShopifyOrdersService', () => {
         id: storeId,
         shopDomain: 'test-store.myshopify.com',
       });
-      mockPrismaService.shopifyOrder.create.mockResolvedValue(mockOrder);
+      mockOrdersRepo.create.mockReturnValue(mockOrder);
+      mockOrdersRepo.save.mockResolvedValue(mockOrder);
 
       const result = await service.createOrder(createOrderInput);
 
-      expect(mockShopifyIntegrationService.getStoreById).toHaveBeenCalledWith(storeId);
-      expect(mockPrismaService.shopifyOrder.create).toHaveBeenCalledWith({
-        data: {
-          orderNumber: createOrderInput.orderNumber,
-          total: createOrderInput.total,
-          status: createOrderInput.status,
-          storeId: createOrderInput.storeId,
-          createdAt: expect.any(Date),
-          updatedAt: expect.any(Date),
-        }
+      expect(mockShopifyIntegrationService.getStoreById).toHaveBeenCalledWith(
+        storeId,
+      );
+      expect(mockOrdersRepo.create).toHaveBeenCalledWith({
+        orderNumber: createOrderInput.orderNumber,
+        total: createOrderInput.total,
+        status: createOrderInput.status,
+        storeId: createOrderInput.storeId,
       });
-      expect(result).toEqual(mockOrder);
+      expect(mockOrdersRepo.save).toHaveBeenCalled();
+      expect(result.orderNumber).toEqual('1001');
     });
 
     it('should throw NotFoundException if store does not exist', async () => {
       mockShopifyIntegrationService.getStoreById.mockRejectedValue(
-        new NotFoundException(`Shopify store with ID ${storeId} not found`)
+        new NotFoundException(`Shopify store with ID ${storeId} not found`),
       );
 
-      await expect(service.createOrder(createOrderInput)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.shopifyOrder.create).not.toHaveBeenCalled();
+      await expect(service.createOrder(createOrderInput)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockOrdersRepo.save).not.toHaveBeenCalled();
     });
   });
 
@@ -230,33 +259,27 @@ describe('ShopifyOrdersService', () => {
       updatedAt: new Date(),
     };
 
-    const updatedOrder = {
-      ...mockOrder,
-      status: newStatus,
-      updatedAt: new Date(),
-    };
-
     it('should update an order status successfully', async () => {
-      mockPrismaService.shopifyOrder.findUnique.mockResolvedValue(mockOrder);
-      mockPrismaService.shopifyOrder.update.mockResolvedValue(updatedOrder);
+      mockOrdersRepo.findOne.mockResolvedValue(mockOrder);
+      mockOrdersRepo.save.mockImplementation((order: unknown) => order);
 
       const result = await service.updateOrderStatus(orderId, newStatus);
 
-      expect(mockPrismaService.shopifyOrder.update).toHaveBeenCalledWith({
+      expect(mockOrdersRepo.findOne).toHaveBeenCalledWith({
         where: { id: orderId },
-        data: {
-          status: newStatus,
-          updatedAt: expect.any(Date),
-        }
       });
-      expect(result).toEqual(updatedOrder);
+      expect(mockOrder.status as any).toEqual(newStatus);
+      expect(result.status as any).toEqual(newStatus);
+      expect(mockOrdersRepo.save).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if order does not exist', async () => {
-      mockPrismaService.shopifyOrder.findUnique.mockResolvedValue(null);
+      mockOrdersRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.updateOrderStatus(orderId, newStatus)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.shopifyOrder.update).not.toHaveBeenCalled();
+      await expect(
+        service.updateOrderStatus(orderId, newStatus),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockOrdersRepo.save).not.toHaveBeenCalled();
     });
   });
 
@@ -273,25 +296,25 @@ describe('ShopifyOrdersService', () => {
     };
 
     it('should delete an order successfully', async () => {
-      mockPrismaService.shopifyOrder.findUnique.mockResolvedValue(mockOrder);
-      mockPrismaService.shopifyOrder.delete.mockResolvedValue(mockOrder);
+      mockOrdersRepo.findOne.mockResolvedValue(mockOrder);
+      mockOrdersRepo.remove.mockResolvedValue(mockOrder);
 
       const result = await service.deleteOrder(orderId);
 
-      expect(mockPrismaService.shopifyOrder.findUnique).toHaveBeenCalledWith({
-        where: { id: orderId }
+      expect(mockOrdersRepo.findOne).toHaveBeenCalledWith({
+        where: { id: orderId },
       });
-      expect(mockPrismaService.shopifyOrder.delete).toHaveBeenCalledWith({
-        where: { id: orderId }
-      });
-      expect(result).toEqual(mockOrder);
+      expect(mockOrdersRepo.remove).toHaveBeenCalledWith(mockOrder);
+      expect(result.id).toEqual(orderId);
     });
 
     it('should throw NotFoundException if order does not exist', async () => {
-      mockPrismaService.shopifyOrder.findUnique.mockResolvedValue(null);
+      mockOrdersRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.deleteOrder(orderId)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.shopifyOrder.delete).not.toHaveBeenCalled();
+      await expect(service.deleteOrder(orderId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockOrdersRepo.remove).not.toHaveBeenCalled();
     });
   });
-}); 
+});

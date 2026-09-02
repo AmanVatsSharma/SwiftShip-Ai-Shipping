@@ -28,7 +28,11 @@
     "psr-4": {
       "Swiftship\\Sdk\\": "src/",
       "OpenAPI\\Client\\": "lib/"
-    }
+    },
+    "classmap": [
+      "lib/",
+      "src/"
+    ]
   },
   "autoload-dev": {
     "psr-4": {

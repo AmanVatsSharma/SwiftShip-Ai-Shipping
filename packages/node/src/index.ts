@@ -3,9 +3,10 @@
  *
  * This file is the public entry point. The real SDK body is generated
  * by `scripts/build-sdks.mjs` (openapi-generator-cli, typescript-fetch
- * template) into `dist/`. This wrapper re-exports the generated
- * `Configuration` class plus a hand-rolled `createClient()` factory
- * that pre-configures the base URL and bearer token.
+ * template) into `src/` alongside this wrapper (src/runtime.ts,
+ * src/apis/, src/models/). `npm run build` regenerates those files and
+ * then compiles everything (this wrapper included) to CommonJS `dist/`
+ * via `tsc -p tsconfig.json`.
  *
  * Generation contract (see `scripts/build-sdks.mjs`):
  *   npx @openapitools/openapi-generator-cli generate
@@ -18,10 +19,14 @@
  * Re-generate by running `npm run build` from this package directory.
  */
 
-export * from './generated';
+export * from './runtime';
+export * from './apis';
+export * from './models';
 
-// `Configuration` is exported by the generated runtime/api.ts module.
-import { Configuration } from './generated/runtime';
+// `Configuration` is exported by the generated runtime module; keep an
+// explicit re-export so the name survives even if the star-exports
+// change shape.
+import { Configuration } from './runtime';
 export { Configuration };
 
 /**

@@ -1,3 +1,16 @@
-export { MetricsModule, MetricsModule as MetricsLibModule } from '../../../../src/metrics/metrics.module';
-export { MetricsService, MetricsService as MetricsLibService } from '../../../../src/metrics/metrics.service';
-export { MetricsController, MetricsController as MetricsLibController } from '../../../../src/metrics/metrics.controller';
+// Re-export barrel for the Metrics lib.
+// SS-101: points at the local implementation only — the legacy root
+// `src/metrics` re-exports are gone (see STATUS.md §3).
+
+export {
+  MetricsModule,
+  MetricsModule as MetricsLibModule,
+} from './lib/metrics.module';
+export {
+  MetricsService,
+  MetricsService as MetricsLibService,
+} from './lib/metrics.service';
+export {
+  MetricsController,
+  MetricsController as MetricsLibController,
+} from './lib/metrics.controller';

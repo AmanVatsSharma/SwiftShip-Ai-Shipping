@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
-import { PrismaModule } from '../../../prisma/prisma.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  ShopifyStoreEntity,
+  ShopifyOrderEntity,
+  ShopifyWebhookEventEntity,
+} from '@swiftship/platform-typeorm';
 
 import { ShopifyIntegrationService } from './services/shopify-integration.service';
 import { ShopifyOrdersService } from './services/shopify-orders.service';
@@ -12,7 +17,7 @@ import { ShopifyWebhookController } from './shopify.webhook.controller';
 
 /**
  * Shopify Integration Module
- * 
+ *
  * This module provides all services and resolvers needed for Shopify integration,
  * including store connection management, order synchronization, and product retrieval.
  */
@@ -20,7 +25,11 @@ import { ShopifyWebhookController } from './shopify.webhook.controller';
   imports: [
     HttpModule,
     ConfigModule,
-    PrismaModule,
+    TypeOrmModule.forFeature([
+      ShopifyStoreEntity,
+      ShopifyOrderEntity,
+      ShopifyWebhookEventEntity,
+    ]),
   ],
   providers: [
     ShopifyIntegrationService,
@@ -28,10 +37,7 @@ import { ShopifyWebhookController } from './shopify.webhook.controller';
     ShopifyIntegrationResolver,
     ShopifyOrdersResolver,
   ],
-  exports: [
-    ShopifyIntegrationService,
-    ShopifyOrdersService,
-  ],
+  exports: [ShopifyIntegrationService, ShopifyOrdersService],
   controllers: [ShopifyController, ShopifyWebhookController],
 })
-export class ShopifyModule {} 
+export class ShopifyModule {}

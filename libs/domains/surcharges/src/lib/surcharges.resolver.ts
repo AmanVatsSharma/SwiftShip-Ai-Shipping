@@ -1,26 +1,40 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { PrismaService } from '../prisma/prisma.service';
 import { UseGuards } from '@nestjs/common';
-import { Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Roles, RolesGuard } from '@swiftship/platform-auth';
+import { RateSurchargeEntity } from '@swiftship/platform-typeorm';
 import { RateSurchargeModel } from './rate-surcharge.model';
 import { CreateRateSurchargeInput } from './create-rate-surcharge.input';
 import { UpdateRateSurchargeInput } from './update-rate-surcharge.input';
 
+/**
+ * Surcharges resolver (TypeORM-backed, SS-101 decommission port).
+ *
+ * Prisma → TypeORM call-site mapping (see MIGRATION.md §7):
+ *   prisma.rateSurcharge.findMany()  → repo.find()
+ *   prisma.rateSurcharge.create(...)  → repo.create + repo.save
+ *   prisma.rateSurcharge.update(...)  → repo.findOne + Object.assign + repo.save
+ *   prisma.rateSurcharge.delete(...)  → repo.remove
+ */
 @Resolver(() => RateSurchargeModel)
 export class SurchargesResolver {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(RateSurchargeEntity)
+    private readonly surcharges: Repository<RateSurchargeEntity>,
+  ) {}
 
   @Query(() => [RateSurchargeModel])
   async rateSurcharges() {
-    return this.prisma.rateSurcharge.findMany();
+    return this.surcharges.find();
   }
 
   @Mutation(() => RateSurchargeModel)
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   async createRateSurcharge(@Args('input') input: CreateRateSurchargeInput) {
-    return this.prisma.rateSurcharge.create({ data: input });
+    const surcharge = this.surcharges.create({ ...input });
+    return this.surcharges.save(surcharge);
   }
 
   @Mutation(() => RateSurchargeModel)
@@ -28,13 +42,22 @@ export class SurchargesResolver {
   @Roles('ADMIN')
   async updateRateSurcharge(@Args('input') input: UpdateRateSurchargeInput) {
     const { id, ...data } = input;
-    return this.prisma.rateSurcharge.update({ where: { id }, data });
+    const surcharge = await this.surcharges.findOne({ where: { id } });
+    if (!surcharge) {
+      throw new Error(`Rate surcharge with ID ${id} not found`);
+    }
+    Object.assign(surcharge, data);
+    return this.surcharges.save(surcharge);
   }
 
   @Mutation(() => RateSurchargeModel)
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   async deleteRateSurcharge(@Args('id', { type: () => Int }) id: number) {
-    return this.prisma.rateSurcharge.delete({ where: { id } });
+    const surcharge = await this.surcharges.findOne({ where: { id } });
+    if (!surcharge) {
+      throw new Error(`Rate surcharge with ID ${id} not found`);
+    }
+    return this.surcharges.remove(surcharge);
   }
 }

@@ -27,15 +27,10 @@
       }
     },
     "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/libs/platform/typeorm",
-        "tsConfig": "libs/platform/typeorm/tsconfig.lib.json",
-        "main": "libs/platform/typeorm/src/index.ts",
-        "packageJson": "libs/platform/typeorm/package.json"
+        "command": "npx tsc --noEmit -p libs/platform/typeorm/tsconfig.lib.json",
+        "forwardAllArgs": false
       }
     },
     "lint": {

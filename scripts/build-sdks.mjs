@@ -27,8 +27,8 @@
  * emits.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
@@ -73,16 +73,20 @@ const TARGETS = {
     opts: {
       // SS-027d: the canonical composer package name on Packagist is
       // `swiftship/sdk-php` (kept in sync with the hand-authored
-      // composer.json + the `--composerPackageName` flag the generator
-      // uses to write its OWN `composer.json` under lib/). The
-      // invokerPackage stays under `Swiftship\\Sdk\\` so the public
-      // PHP namespace for the hand-rolled Client wrapper is
-      // `Swiftship\Sdk\Client` (matches the bead spec).
+      // composer.json). DO NOT set `invokerPackage` here:
+      //
+      //   1. The generator CLI's --additional-properties parser strips
+      //      raw backslashes (CI run 33597537086: `Swiftship\\Sdk` came
+      //      out as namespace `SwiftshipSdk`), which silently breaks
+      //      the composer autoload mapping.
+      //   2. The hand-rolled composer.json maps `OpenAPI\Client\` (the
+      //      generator's DEFAULT invokerPackage) onto `lib/`, and
+      //      src/Client.php + tests/* import `OpenAPI\Client\*`. Keeping
+      //      the default keeps generated namespace, composer psr-4 and
+      //      the hand wrapper coherent with ONE namespace per directory.
       composerPackageName: 'swiftship/sdk-php',
       packageName: 'swiftship-sdk',
       packageVersion: '0.1.0',
-      invokerPackage: 'Swiftship\\Sdk',
-      sinksPackage: 'Swiftship\\Sinks',
     },
   },
 };
@@ -134,11 +138,19 @@ function buildTarget(target, specPath) {
   ];
   const cli = candidates.find((p) => existsSync(p));
 
+  // Pass the spec + output dir as repo-relative paths. The generator
+  // CLI re-serialises its argv when it spawns `java`, and absolute
+  // Windows repo paths here contain spaces (`C:\Users\ASUS TUF
+  // A15\...`) that get split into stray parameters. Relative paths
+  // dodge that entirely on every platform (cwd is repoRoot).
+  const specArg = relative(repoRoot, specPath);
+  const dirArg = relative(repoRoot, target.dir);
+
   const cliArgs = [
     'generate',
     '-g', target.generator,
-    '-i', specPath,
-    '-o', target.dir,
+    '-i', specArg,
+    '-o', dirArg,
     '--additional-properties=' + formatOpts(target.opts),
   ];
 
@@ -171,18 +183,34 @@ function buildTarget(target, specPath) {
   console.log(`  gen:     ${target.generator}`);
   console.log(`  cli:     ${cli}`);
 
-  // Use `npx` on Windows so the .cmd shim runs correctly through the
-  // shell (avoids the EINVAL/space-in-path issues from spawning the
-  // .cmd file directly via execFileSync). On Linux/macOS, exec the
-  // binary directly — no shell quoting needed.
+  // Windows: never go through a shell. cmd.exe's `/s /c` heuristics
+  // strip quotes from a pre-quoted command line, which splits every
+  // argument containing a space (repo path: `C:\Users\ASUS TUF
+  // A15\...`). Instead, invoke the CLI's Node entrypoint directly
+  // with the current Node binary — argv is passed through CreateProcess
+  // untouched. Fall back to a fully-quoted cmd.exe invocation if the
+  // package layout ever changes. On Linux/macOS, exec the .bin shim
+  // directly.
   if (process.platform === 'win32') {
-    // Quote the .cmd path to survive spaces in `C:\Users\ASUS TUF A15\...`.
-    const quoted = `"${cli}.cmd"`;
-    execFileSync(quoted, cliArgs, {
-      cwd: repoRoot,
-      stdio: 'inherit',
-      shell: true,
-    });
+    const modulePath = resolve(
+      cli,
+      '../../@openapitools/openapi-generator-cli/main.js',
+    );
+    if (existsSync(modulePath)) {
+      execFileSync(process.execPath, [modulePath, ...cliArgs], {
+        cwd: repoRoot,
+        stdio: 'inherit',
+      });
+    } else {
+      const cmdline = [`${cli}.cmd`, ...cliArgs]
+        .map((a) => `"${a}"`)
+        .join(' ');
+      execFileSync(
+        process.env.ComSpec || 'cmd.exe',
+        ['/d', '/s', '/c', cmdline],
+        { cwd: repoRoot, stdio: 'inherit' },
+      );
+    }
   } else {
     execFileSync(cli, cliArgs, {
       cwd: repoRoot,
@@ -273,6 +301,105 @@ function buildPHP(target, specPath) {
   console.log(`[build-sdks] ${target.label} generated (SS-027d).`);
 }
 
+/**
+ * Recursively snapshot every file under `dir` into a map of
+ * `<path relative to root>` -> contents, so a whole directory (e.g.
+ * `tests/`) can be restored verbatim after generation clobbers it.
+ */
+function snapshotDir(root, dir, out) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      snapshotDir(root, p, out);
+    } else {
+      out[relative(root, p).split('\\').join('/')] = readFileSync(p, 'utf8');
+    }
+  }
+  return out;
+}
+
+/**
+ * SS-027c/e — Python-specific build path.
+ *
+ * Same idempotency problem as buildNode()/buildPHP(): the generic
+ * `python` generator template rewrites the ENTIRE target directory,
+ * including files that make up the hand-rolled publish surface:
+ *   - pyproject.toml (ours carries the PEP 621 metadata, the `test`
+ *     extra that CI's `pip install -e '.[test]'` relies on, and the
+ *     `[tool.pytest.ini_options]` testpaths=["tests"] config; the
+ *     generated one is a Poetry-style file with NO `test` extra —
+ *     CI run 33597537086 failed with "pytest: command not found"
+ *     because of exactly this clobber)
+ *   - README.md
+ *   - tests/ (hand-rolled pytest smoke tests)
+ *
+ * The generator ALSO drops a pile of files we deliberately do NOT
+ * ship (its own setup.py/setup.cfg/tox.ini, its own `test/` pytest
+ * tree, CI configs like .travis.yml/.github/.gitlab-ci.yml,
+ * requirements files, git_push.sh, ...). Those are removed after
+ * generation so the package tree matches the committed snapshot:
+ * `swiftship/` (generated), `pyproject.toml`, `README.md`, `tests/`.
+ */
+function buildPython(target, specPath) {
+  const wrapperFiles = ['pyproject.toml', 'README.md'];
+  const snapshot = {};
+  for (const rel of wrapperFiles) {
+    const p = join(target.dir, rel);
+    if (existsSync(p)) snapshot[rel] = readFileSync(p, 'utf8');
+  }
+
+  const testsDir = join(target.dir, 'tests');
+  const testsSnapshot = existsSync(testsDir)
+    ? snapshotDir(testsDir, testsDir, {})
+    : {};
+
+  buildTarget(target, specPath);
+
+  for (const rel of wrapperFiles) {
+    if (!snapshot[rel]) continue;
+    writeFileSync(join(target.dir, rel), snapshot[rel], 'utf8');
+    console.log(`[build-sdks] restored hand-rolled ${rel}`);
+  }
+  for (const [rel, content] of Object.entries(testsSnapshot)) {
+    const p = join(testsDir, rel);
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p, content, 'utf8');
+  }
+  if (Object.keys(testsSnapshot).length) {
+    console.log('[build-sdks] restored hand-rolled tests/');
+  }
+
+  // Generated files that are NOT part of the publish surface. They
+  // would otherwise sit in the tree (and on CI) as dead weight, and
+  // setup.py/setup.cfg could even fight the hand-rolled pyproject.toml
+  // during `pip install -e`.
+  const generatedCruft = [
+    '.github',
+    '.gitignore',
+    '.gitlab-ci.yml',
+    '.openapi-generator',
+    '.openapi-generator-ignore',
+    '.travis.yml',
+    'docs',
+    'git_push.sh',
+    'requirements.txt',
+    'setup.cfg',
+    'setup.py',
+    'test',
+    'test-requirements.txt',
+    'tox.ini',
+  ];
+  for (const rel of generatedCruft) {
+    const p = join(target.dir, rel);
+    if (existsSync(p)) {
+      rmSync(p, { recursive: true, force: true });
+      console.log(`[build-sdks] removed generated ${rel}`);
+    }
+  }
+
+  console.log(`[build-sdks] ${target.label} generated.`);
+}
+
 function formatOpts(opts) {
   return Object.entries(opts)
     .map(([k, v]) => `${k}=${v}`)
@@ -316,12 +443,15 @@ function main() {
   for (const [name, t] of targets) {
     ensureDir(t.dir);
     try {
-      // SS-027b (Node) + SS-027d (PHP): both need wrapper-file
-      // preservation. Python goes through the generic path.
+      // SS-027b (Node) + SS-027d (PHP) + the Python path: all three
+      // need wrapper-file preservation, each with its own flavor of
+      // post-generation cleanup.
       if (name === 'node') {
         buildNode(t, args.spec);
       } else if (name === 'php') {
         buildPHP(t, args.spec);
+      } else if (name === 'python') {
+        buildPython(t, args.spec);
       } else {
         buildTarget(t, args.spec);
       }

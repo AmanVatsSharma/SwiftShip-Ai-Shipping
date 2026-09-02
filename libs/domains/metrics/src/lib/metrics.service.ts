@@ -10,6 +10,9 @@ export class MetricsService {
   }
 
   snapshot() {
-    return Array.from(this.counters.entries()).reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {} as Record<string, number>);
+    return Array.from(this.counters.entries()).reduce(
+      (acc, [k, v]) => ({ ...acc, [k]: v }),
+      {} as Record<string, number>,
+    );
   }
 }

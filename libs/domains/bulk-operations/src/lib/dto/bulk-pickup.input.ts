@@ -6,8 +6,8 @@ import { InputType, Field, Int } from '@nestjs/graphql';
 @InputType()
 export class BulkPickupInput {
   @Field(() => [Int], { description: 'Array of shipment IDs' })
-  shipmentIds: number[];
+  shipmentIds!: number[];
 
   @Field(() => Date, { description: 'Scheduled pickup date and time' })
-  scheduledAt: Date;
+  scheduledAt!: Date;
 }

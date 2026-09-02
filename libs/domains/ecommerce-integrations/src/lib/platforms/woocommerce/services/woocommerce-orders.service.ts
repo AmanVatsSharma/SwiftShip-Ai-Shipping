@@ -1,37 +1,83 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../../prisma/prisma.service';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AxiosError } from 'axios';
 import { firstValueFrom } from 'rxjs';
-import * as crypto from 'crypto';
+import {
+  WooCommerceOrderEntity,
+  WooCommerceStoreEntity,
+} from '@swiftship/platform-typeorm';
 
 /**
- * WooCommerce Orders Service
- * 
+ * Minimal shape of a WooCommerce REST v3 order payload — only the fields the
+ * sync consumes. The upstream API returns far more; this keeps the sync
+ * type-safe without modeling the whole contract.
+ */
+interface WooCommerceRemoteOrder {
+  id?: number | string;
+  number?: number | string;
+  total?: string;
+  status?: string;
+  currency?: string;
+  date_created?: string;
+  billing?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  };
+}
+
+/** Describe an unknown thrown value for structured logging. */
+function describeError(error: unknown): unknown {
+  if (error instanceof AxiosError) {
+    return error.response?.data || error.message || 'Unknown error';
+  }
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
+/**
+ * WooCommerce Orders Service (TypeORM-backed, SS-101 decommission port)
+ *
  * Handles WooCommerce order synchronization.
- * 
+ *
  * Features:
  * - Fetch orders from WooCommerce
  * - Sync orders to local database
  * - Map WooCommerce order format to internal format
- * 
+ *
  * Flow:
  * 1. Fetch orders from WooCommerce API
  * 2. Map order data to internal format
  * 3. Create/update order records
  * 4. Handle order status updates
- * 
+ *
  * Error Handling:
  * - Validates store connection
  * - Handles API errors
  * - Skips duplicate orders
  * - Comprehensive logging
+ *
+ * Prisma → TypeORM call-site mapping (see MIGRATION.md §7):
+ *   prisma.wooCommerceOrder.findUnique({ include }) → repo.findOne({ where, relations })
+ *   prisma.wooCommerceOrder.findMany(...)           → repo.find({ where, order })
+ *   prisma.wooCommerceOrder.create(...)             → repo.create + repo.save
+ *   prisma.wooCommerceOrder.update(...)             → Object.assign + repo.save
  */
 @Injectable()
 export class WooCommerceOrdersService {
   private readonly logger = new Logger(WooCommerceOrdersService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(WooCommerceOrderEntity)
+    private readonly orders: Repository<WooCommerceOrderEntity>,
+    @InjectRepository(WooCommerceStoreEntity)
+    private readonly stores: Repository<WooCommerceStoreEntity>,
     private readonly httpService: HttpService,
   ) {}
 
@@ -50,9 +96,7 @@ export class WooCommerceOrdersService {
     });
 
     // Get store
-    const store = await this.prisma.wooCommerceStore.findUnique({
-      where: { id: storeId },
-    });
+    const store = await this.stores.findOne({ where: { id: storeId } });
 
     if (!store) {
       throw new NotFoundException(`Store with ID ${storeId} not found`);
@@ -77,7 +121,7 @@ export class WooCommerceOrdersService {
           this.logger.error('Failed to sync order', {
             storeId,
             orderNumber: order.number,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: describeError(error),
           });
         }
       }
@@ -92,7 +136,7 @@ export class WooCommerceOrdersService {
     } catch (error) {
       this.logger.error('Failed to sync WooCommerce orders', {
         storeId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: describeError(error),
       });
       throw error;
     }
@@ -102,9 +146,7 @@ export class WooCommerceOrdersService {
    * Get orders from store
    */
   async getOrdersByStore(storeId: string, userId: number) {
-    const store = await this.prisma.wooCommerceStore.findUnique({
-      where: { id: storeId },
-    });
+    const store = await this.stores.findOne({ where: { id: storeId } });
 
     if (!store) {
       throw new NotFoundException(`Store with ID ${storeId} not found`);
@@ -114,9 +156,9 @@ export class WooCommerceOrdersService {
       throw new BadRequestException('Store does not belong to user');
     }
 
-    return this.prisma.wooCommerceOrder.findMany({
+    return this.orders.find({
       where: { storeId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -124,16 +166,16 @@ export class WooCommerceOrdersService {
    * Get order by ID
    */
   async getOrder(orderId: string, userId: number) {
-    const order = await this.prisma.wooCommerceOrder.findUnique({
+    const order = await this.orders.findOne({
       where: { id: orderId },
-      include: { store: true },
+      relations: { store: true },
     });
 
     if (!order) {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    if (order.store.userId !== userId) {
+    if (order.store?.userId !== userId) {
       throw new BadRequestException('Order does not belong to user');
     }
 
@@ -143,9 +185,17 @@ export class WooCommerceOrdersService {
   /**
    * Fetch orders from WooCommerce API
    */
-  private async fetchOrdersFromWooCommerce(store: any, limit: number): Promise<any[]> {
+  private async fetchOrdersFromWooCommerce(
+    store: Pick<
+      WooCommerceStoreEntity,
+      'storeUrl' | 'consumerKey' | 'consumerSecret'
+    >,
+    limit: number,
+  ): Promise<WooCommerceRemoteOrder[]> {
     const apiUrl = `${store.storeUrl}/wp-json/wc/v3/orders`;
-    const auth = Buffer.from(`${store.consumerKey}:${store.consumerSecret}`).toString('base64');
+    const auth = Buffer.from(
+      `${store.consumerKey}:${store.consumerSecret}`,
+    ).toString('base64');
 
     try {
       const response = await firstValueFrom(
@@ -159,14 +209,14 @@ export class WooCommerceOrdersService {
             order: 'desc',
           },
           timeout: 30000,
-        })
+        }),
       );
 
-      return response.data || [];
-    } catch (error: any) {
+      return (response.data as WooCommerceRemoteOrder[]) || [];
+    } catch (error) {
       this.logger.error('Failed to fetch orders from WooCommerce', {
         storeUrl: store.storeUrl,
-        error: error?.response?.data || error?.message || 'Unknown error',
+        error: describeError(error),
       });
       throw new Error('Failed to fetch orders from WooCommerce');
     }
@@ -175,22 +225,24 @@ export class WooCommerceOrdersService {
   /**
    * Sync a single order
    */
-  private async syncOrder(storeId: string, woocommerceOrder: any): Promise<void> {
-    const orderNumber = woocommerceOrder.number?.toString() || woocommerceOrder.id?.toString();
+  private async syncOrder(
+    storeId: string,
+    woocommerceOrder: WooCommerceRemoteOrder,
+  ): Promise<void> {
+    const orderNumber =
+      woocommerceOrder.number?.toString() || woocommerceOrder.id?.toString();
 
     if (!orderNumber) {
       throw new Error('Order number is required');
     }
 
     // Check if order already exists
-    const existingOrder = await this.prisma.wooCommerceOrder.findUnique({
-      where: { orderNumber },
-    });
+    const existingOrder = await this.orders.findOne({ where: { orderNumber } });
 
     const orderData = {
       orderNumber,
       total: parseFloat(woocommerceOrder.total || '0'),
-      status: this.mapWooCommerceStatus(woocommerceOrder.status),
+      status: this.mapWooCommerceStatus(woocommerceOrder.status ?? ''),
       storeId,
       woocommerceCreatedAt: woocommerceOrder.date_created
         ? new Date(woocommerceOrder.date_created)
@@ -204,21 +256,11 @@ export class WooCommerceOrdersService {
 
     if (existingOrder) {
       // Update existing order
-      await this.prisma.wooCommerceOrder.update({
-        where: { id: existingOrder.id },
-        data: {
-          ...orderData,
-          updatedAt: new Date(),
-        },
-      });
+      Object.assign(existingOrder, orderData);
+      await this.orders.save(existingOrder);
     } else {
       // Create new order
-      await this.prisma.wooCommerceOrder.create({
-        data: {
-          id: crypto.randomUUID(),
-          ...orderData,
-        },
-      });
+      await this.orders.save(this.orders.create(orderData));
     }
   }
 

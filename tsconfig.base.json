@@ -170,9 +170,6 @@
       ],
       "carriers": [
         "./libs/platform/carriers/src/index.ts"
-      ],
-      "graphql": [
-        "./libs/platform/graphql/src/index.ts"
       ]
     }
   },

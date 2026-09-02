@@ -1,25 +1,37 @@
-import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Response } from 'express';
 import * as crypto from 'crypto';
 import axios from 'axios';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { ShopifyStoreEntity } from '@swiftship/platform-typeorm';
 import { ShopifyIntegrationService } from './services/shopify-integration.service';
 
 @Controller('shopify')
 export class ShopifyController {
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService,
+    @InjectRepository(ShopifyStoreEntity)
+    private readonly stores: Repository<ShopifyStoreEntity>,
     private readonly shopifyIntegration: ShopifyIntegrationService,
   ) {}
 
   @Get('oauth/start')
   start(@Query('shop') shop: string, @Res() res: Response) {
     if (!shop) throw new BadRequestException('Missing shop param');
-    const appUrl = this.config.get<string>('ecommerceIntegrations.shopify.appUrl') ?? '';
-    const apiKey = this.config.get<string>('ecommerceIntegrations.shopify.apiKey') ?? '';
-    const scopes = this.config.get<string>('ecommerceIntegrations.shopify.scopes') ?? '';
+    const appUrl =
+      this.config.get<string>('ecommerceIntegrations.shopify.appUrl') ?? '';
+    const apiKey =
+      this.config.get<string>('ecommerceIntegrations.shopify.apiKey') ?? '';
+    const scopes =
+      this.config.get<string>('ecommerceIntegrations.shopify.scopes') ?? '';
     const state = crypto.randomBytes(16).toString('hex');
     const redirectUri = encodeURIComponent(`${appUrl}/shopify/oauth/callback`);
     const url = `https://${shop}/admin/oauth/authorize?client_id=${apiKey}&scope=${encodeURIComponent(scopes)}&redirect_uri=${redirectUri}&state=${state}`;
@@ -33,27 +45,39 @@ export class ShopifyController {
     @Query('hmac') hmac: string,
     @Res() res: Response,
   ) {
-    if (!shop || !code || !hmac) throw new BadRequestException('Missing params');
-    const secret = this.config.get<string>('ecommerceIntegrations.shopify.apiSecret') ?? '';
+    if (!shop || !code || !hmac)
+      throw new BadRequestException('Missing params');
+    const secret =
+      this.config.get<string>('ecommerceIntegrations.shopify.apiSecret') ?? '';
     const params = new URLSearchParams({ shop, code });
     const message = params.toString();
-    const computed = crypto.createHmac('sha256', secret).update(message).digest('hex');
+    const computed = crypto
+      .createHmac('sha256', secret)
+      .update(message)
+      .digest('hex');
     if (computed !== hmac) throw new BadRequestException('Invalid HMAC');
 
     // Exchange code for access token
     const tokenUrl = `https://${shop}/admin/oauth/access_token`;
-    const client_id = this.config.get<string>('ecommerceIntegrations.shopify.apiKey') ?? '';
+    const client_id =
+      this.config.get<string>('ecommerceIntegrations.shopify.apiKey') ?? '';
     const client_secret = secret;
-    const tokenResp = await axios.post(tokenUrl, { client_id, client_secret, code }, { timeout: 8000 });
-    const accessToken = tokenResp.data?.access_token as string;
-    if (!accessToken) throw new BadRequestException('Failed to obtain access token');
+    const tokenResp = await axios.post(
+      tokenUrl,
+      { client_id, client_secret, code },
+      { timeout: 8000 },
+    );
+    const tokenData = tokenResp.data as { access_token?: string };
+    const accessToken = tokenData.access_token;
+    if (!accessToken)
+      throw new BadRequestException('Failed to obtain access token');
 
-    // Persist store
-    await this.prisma.shopifyStore.upsert({
-      where: { shopDomain: shop },
-      update: { accessToken },
-      create: { shopDomain: shop, accessToken },
-    });
+    // Persist store (upsert on shopDomain — SS-101 TypeORM port of the
+    // former prisma.shopifyStore.upsert call).
+    await this.stores.upsert(
+      { shopDomain: shop, accessToken },
+      { conflictPaths: ['shopDomain'] },
+    );
 
     // Register default webhooks
     await this.shopifyIntegration.registerDefaultWebhooks(shop, accessToken);

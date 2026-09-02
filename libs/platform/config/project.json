@@ -13,14 +13,10 @@
   "// targets": "to see all targets run: nx show project config --web",
   "targets": {
     "typecheck": {
-      "executor": "@nx/js:tsc",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/libs/platform/config",
-        "tsConfig": "libs/platform/config/tsconfig.lib.json",
-        "main": "libs/platform/config/src/index.ts"
+        "command": "npx tsc --noEmit -p libs/platform/config/tsconfig.lib.json",
+        "forwardAllArgs": false
       }
     },
     "lint": {
