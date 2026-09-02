@@ -1,271 +1,129 @@
-# Prisma → TypeORM Migration
+# Prisma → TypeORM Migration — COMPLETE
 
-> Status: **In flight** — Plan 1 through Plan 4 of the staged migration are landed; Plan 5 (shim removal) is the final exit gate.
-> Audience: anyone touching a service, entity, or test that still goes through `@prisma/client`.
-
-This guide explains where the Prisma → TypeORM migration currently stands, what the
-`PrismaCompat` shim is for, and how to move a service from Prisma to TypeORM
-end-to-end. It is the source of truth for the migration, and it is the first
-thing to read before opening a PR against a domain lib.
+> Status: **Done.** All five plans of the staged migration landed
+> (SS-029 → SS-044, closed 2026-06-16). The `PrismaCompat` shim, the
+> `@prisma/client` path mappings in `tsconfig.base.json`, and the
+> `@prisma/client` dependency are all deleted. TypeORM 0.3 is the only ORM.
+>
+> This document now serves two purposes:
+> 1. §1–§6 record **what happened** (historical reference — read if you need
+>    to understand why the code looks the way it does).
+> 2. §7 is the **TypeORM conventions runbook** (still authoritative for
+>    writing new services), and §9 is the **remaining `src/` → `libs/`
+>    decommission** — the actual open cleanup, tracked in
+>    [`STATUS.md`](./STATUS.md) §3.
 
 ---
 
-## 1. The new `@swiftship/platform-typeorm` lib
+## 1. Timeline (for the record)
 
-All TypeORM surface area lives in `libs/platform/typeorm/`. The lib exposes:
+| Plan | What it was | Closed by |
+| --- | --- | --- |
+| Plan 1 | `libs/platform/typeorm` lib: `TypeOrmModule`, `DataSource`, entity files, enum re-exports | SS-029 |
+| Plan 2 | Pilot domain migrations (`orders`, `shipments`, `billing`, `warehouses`, `notifications`, `serviceability`, `rate-shop`, `ecommerce-integrations`) | SS-029/SS-030 |
+| Plan 3 | Bulk migration of the remaining domains through the `PrismaCompat` translation shim | SS-041, SS-042, SS-043a–h |
+| Plan 4 | Audit + CI guard (`scripts/audit-prisma-compat.mjs`, `npm run audit:prisma`) | SS-040, SS-047 |
+| Plan 5 | Delete the shim, the `@prisma/client` path mappings, and the dependency — one atomic PR | SS-044 (commit `2062547`) |
 
-| Path | What it is |
-| --- | --- |
-| `libs/platform/typeorm/src/index.ts` | Public barrel — re-exports the module, entities, datasource, and the `PrismaCompat` types. |
-| `libs/platform/typeorm/src/lib/typeorm.module.ts` | `TypeOrmModule` configured from `DATABASE_URL` / `DB_*` env. Registered once in `AppModule`. |
-| `libs/platform/typeorm/src/lib/datasource.ts` | Standalone `DataSource` used by migrations and by tests that spin up a Postgres testcontainer. |
-| `libs/platform/typeorm/src/lib/entities/` | One file per domain area: `billing.entities.ts`, `commerce.entities.ts`, `ecom.entities.ts`, `identity.entities.ts`, `shipping.entities.ts`, `warehouse.entities.ts`, plus `index.ts`. |
-| `libs/platform/typeorm/src/lib/enums.ts` | String-union enums re-exported from `@prisma/client` (see section 3). |
-| `libs/platform/typeorm/src/lib/prisma-compat.types.ts` | The `PrismaCompat` shim — see section 2. |
-| `libs/platform/typeorm/src/lib/@prisma/client/index.d.ts` | Minimal type shim that re-exports the Prisma enums and a placeholder `PrismaClient` so the shim can compile. |
-| `libs/platform/typeorm/src/lib/@prisma/client/runtime.d.ts` | Companion shim for `@prisma/client/runtime/library` (used by some legacy helpers). |
+## 2. What the `PrismaCompat` shim was (deleted)
 
-Import the public surface from a single place:
+`libs/platform/typeorm/src/lib/prisma-compat.types.ts` (gone) exported a
+`PrismaCompat` namespace that let legacy services keep their
+`prisma.x.findMany({ where, include, orderBy })` call sites compiling while the
+actual data access moved to TypeORM repositories — a facade with
+`findUnique`/`findMany`/`create`/`update`/`delete`/`count`/`groupBy` signatures,
+translators from Prisma-shaped `where`/`include`/`orderBy` into TypeORM
+`FindOptionsWhere`/`relations`/`OrderCondition`, and a `registerPrismaCompat()`
+wiring helper. It never called the real `@prisma/client` at runtime. If you see
+a reference to it in old code or old commits, that's history — do not recreate it.
+
+## 3. The `@prisma/client` enum re-export (deleted)
+
+A declaration-only shim at
+`libs/platform/typeorm/src/lib/@prisma/client/index.d.ts` re-exported the Prisma
+enums so DTO/GraphQL imports kept compiling during the transition. Removed in
+SS-044 together with the `tsconfig.base.json` mappings:
+
+```jsonc
+// DELETED — no longer present:
+"@prisma/client": [...],
+"@prisma/client/runtime/library": [...]
+```
+
+Enums are now TypeORM-native string unions exported from
+`@swiftship/platform-typeorm`. There is exactly **one** way to import them:
 
 ```ts
-import { TypeOrmModule, Order, PrismaCompat } from '@swiftship/platform-typeorm';
+import { OrderStatus, ShipmentStatus } from '@swiftship/platform-typeorm';
 ```
 
----
+## 4. Module-by-module status — all fully TypeORM
 
-## 2. The `PrismaCompat` shim
+Every domain lib now injects `@InjectRepository(Entity)` repositories:
 
-`libs/platform/typeorm/src/lib/prisma-compat.types.ts` exports a `PrismaCompat`
-namespace whose goal is to let legacy services keep their `prisma.x.findMany({
-where, include, orderBy })` call sites compiling while the actual data access
-migrates to TypeORM repositories.
+`orders`, `shipments`, `billing` (incl. GST + COD remittance), `warehouses`,
+`notifications`, `serviceability`, `rate-shop`, `ecommerce-integrations`,
+`channels`, `tenants`, `onboarding` (incl. KYC), `carriers`, `cod`, `ndr`,
+`manifests`, `pickups`, `returns`, `shipping-rates`, `users`, `webhooks`,
+`payments`, `plugins`, `surcharges`, `dashboard`, `storage`, `metrics`,
+`bulk-operations`.
 
-What it gives you today:
-
-- A `PrismaCompatClient` facade with method signatures that mirror the
-  `PrismaClient` surface (`findMany`, `findUnique`, `create`, `update`,
-  `delete`, `count`, `groupBy`).
-- Translators from Prisma-shaped `where` / `include` / `orderBy` into
-  TypeORM `FindOptionsWhere`, `relations`, and `OrderCondition` so a service can
-  call `prismaCompat.orders.findMany({ where: { id }, include: { items: true } })`
-  and have it executed against a TypeORM `Repository<Order>`.
-- A `registerPrismaCompat()` helper that wires a `PrismaCompat` instance to the
-  request-scoped repositories from `TypeOrmModule.forFeature(...)`.
-
-What it deliberately does **not** do:
-
-- It does not call the real `@prisma/client` at runtime. The whole point is to
-  break the runtime dependency on Prisma while call sites are in transition.
-- It does not cover every Prisma feature. Anything exotic (raw SQL, `select`
-  projections, complex aggregations) should be moved to a real TypeORM
-  repository, not extended in the shim.
-
-If you are tempted to add a new translator to `prisma-compat.types.ts`, do
-not. Migrate the service instead. The shim is scheduled for deletion in Plan 5.
-
----
-
-## 3. The `@prisma/client` enum re-export
-
-Some modules import Prisma **enums** (e.g. `OrderStatus`, `ShipmentMode`,
-`PaymentStatus`) and re-use them in DTOs and GraphQL models. To keep those
-imports working without pulling in the real Prisma client, the lib ships a
-declaration-only shim at
-`libs/platform/typeorm/src/lib/@prisma/client/index.d.ts`. It re-exports every
-enum that `@prisma/client` previously exposed, sourced from `enums.ts`.
-
-The matching `tsconfig.base.json` path mapping points `@prisma/client` and
-`@prisma/client/runtime/library` straight at these `.d.ts` files:
+## 5. `tsconfig.base.json` path mappings (current)
 
 ```jsonc
-"@prisma/client": [
-  "./libs/platform/typeorm/src/lib/@prisma/client/index.d.ts"
-],
-"@prisma/client/runtime/library": [
-  "./libs/platform/typeorm/src/lib/@prisma/client/runtime.d.ts"
-]
-```
-
-In other words: **enum imports are the only Prisma-flavored imports still
-allowed in app code, and they only work because of the shim.** The next step is
-to flip those enums onto TypeORM-native string unions and delete both shim
-files.
-
----
-
-## 4. Module-by-module status
-
-Domain libs are split into two groups. "Fully TypeORM" means every service
-injects `@InjectRepository(Entity)` and the `prisma` / `PrismaCompat` import
-has been removed from `src/`. "Through PrismaCompat" means the service still
-imports the shim and the next migration PR is welcome.
-
-### 4a. Fully TypeORM
-
-- `domains/orders`
-- `domains/shipments`
-- `domains/billing`
-- `domains/warehouses`
-- `domains/notifications`
-- `domains/serviceability`
-- `domains/rate-shop`
-- `domains/ecommerce-integrations`
-
-### 4b. Still on PrismaCompat
-
-The following domain libs still call into `PrismaCompat`. They are the
-remaining work for Plan 4 and the precondition for Plan 5:
-
-- `domains/carriers`
-- `domains/cod`
-- `domains/ndr`
-- `domains/manifests`
-- `domains/pickups`
-- `domains/returns`
-- `domains/shipping-rates`
-- `domains/users`
-- `domains/roles`
-- `domains/webhooks`
-- `domains/plugins`
-- `domains/surcharges`
-- `domains/dashboard`
-- `domains/storage`
-- `domains/metrics`
-- `domains/onboarding`
-- `domains/payments`
-- `domains/bulk-operations`
-
-> `domains/roles` is included above for completeness; it has not been listed
-> separately in `tsconfig.base.json` (only `domains/users` is wired through
-> the path mapping). File a small follow-up PR to add the role lib to the
-> path map the first time you migrate it.
-
----
-
-## 5. `tsconfig.base.json` path mappings
-
-The relevant entries, copy-pasted from `tsconfig.base.json`:
-
-```jsonc
-"@swiftship/platform-typeorm": [
-  "libs/platform/typeorm/src/index.ts"
-],
+"@swiftship/platform-typeorm": ["libs/platform/typeorm/src/index.ts"],
 "@swiftship/platform-auth":    ["libs/platform/auth/src/index.ts"],
-"@swiftship/platform-queues":   ["libs/platform/queues/src/index.ts"],
-"@swiftship/platform-carriers": ["libs/platform/carriers/src/index.ts"],
-"@swiftship/platform-graphql":  ["libs/platform/graphql/src/index.ts"],
-"@swiftship/platform-config":   ["libs/platform/config/src/index.ts"],
+"@swiftship/platform-queues":  ["libs/platform/queues/src/index.ts"],
+"@swiftship/platform-carriers":["libs/platform/carriers/src/index.ts"],
+"@swiftship/platform-graphql": ["libs/platform/graphql/src/index.ts"],
+"@swiftship/platform-config":  ["libs/platform/config/src/index.ts"],
+"@swiftship/platform-rate-cache": ["libs/platform/rate-cache/src/index.ts"],
+"@swiftship/platform-rate-math":  ["libs/platform/rate-math/src/index.ts"],
+"@swiftship/platform-throttler":  ["libs/platform/throttler/src/index.ts"],
 
-"@swiftship/domains/*":         ["libs/domains/*"],
-"@swiftship/domains-orders":    ["libs/domains/orders/src/index.ts"],
-"@swiftship/domains-shipments": ["libs/domains/shipments/src/index.ts"],
-"@swiftship/domains-billing":   ["libs/domains/billing/src/index.ts"],
-"@swiftship/domains-warehouses":   ["libs/domains/warehouses/src/index.ts"],
-"@swiftship/domains-notifications": ["libs/domains/notifications/src/index.ts"],
-"@swiftship/domains-serviceability": ["libs/domains/serviceability/src/index.ts"],
-"@swiftship/domains-rate-shop": ["libs/domains/rate-shop/src/index.ts"],
-"@swiftship/domains-ecommerce-integrations": ["libs/domains/ecommerce-integrations/src/index.ts"],
-// ... plus the rest of the @swiftship/domains-* entries
+"@swiftship/domains/*":        ["libs/domains/*"],
+"@swiftship/domains-orders":   ["libs/domains/orders/src/index.ts"],
+// ... one @swiftship/domains-<name> entry per lib
 
-"@swiftship/shared/*": ["libs/shared/*"],
-"@swiftship/observability": ["libs/observability/src/index.ts"],
-
-"@prisma/client": ["./libs/platform/typeorm/src/lib/@prisma/client/index.d.ts"],
-"@prisma/client/runtime/library": [
-  "./libs/platform/typeorm/src/lib/@prisma/client/runtime.d.ts"
-]
+"@swiftship/shared/*":         ["libs/shared/*"],   // ⚠️ dir is empty — see STATUS.md
+"@swiftship/observability":    ["libs/observability/src/index.ts"]
 ```
 
 When you add a new domain lib, also add a `@swiftship/domains-<name>` entry.
 
----
+## 6. ESLint / CI guard (still active)
 
-## 6. ESLint rule that bans direct `@prisma/client` imports
+`eslint.config.cjs` bans `@prisma/client` imports via `no-restricted-imports`,
+and `scripts/audit-prisma-compat.mjs` (run as `npm run audit:prisma`, wired as
+the CI `graph-guard` job) rejects any new Prisma reference in `libs/` — with
+tests for the regex (SS-047). Keep it that way: Prisma must not come back.
 
-`eslint.config.cjs` ships with a `no-restricted-imports` rule that fires
-whenever code outside the shim tries to import from `@prisma/client` or
-`@prisma/client/runtime/library`:
+## 7. How to migrate a service (historical runbook)
 
-```js
-'no-restricted-imports': [
-  'error',
-  {
-    patterns: [
-      {
-        group: ['@prisma/client', '@prisma/client/runtime/library'],
-        message:
-          'Do not import from @prisma/client — use @swiftship/platform-typeorm or the entities/enums re-exports.',
-      },
-    ],
-  },
-],
-// ...
-{
-  files: [
-    'libs/platform/typeorm/src/lib/@prisma/**/*',
-    'src/prisma/**/*',
-  ],
-  rules: {
-    'no-restricted-imports': 'off',
-  },
-},
-```
-
-Net effect: the shim is the **only** place that may import `@prisma/client`,
-and the lint rule will block any new leak. If the rule fires on your PR, do
-not silence it — migrate the import.
-
----
-
-## 7. How to migrate a service
-
-A worked runbook for moving one service from `PrismaCompat` to a real
-TypeORM repository.
+The worked example of moving one service to a real TypeORM repository. Follow
+it whenever you add or rewrite a service:
 
 1. **Pick the entity.** Open the matching file in
    `libs/platform/typeorm/src/lib/entities/`. If the table is missing, add
-   the entity there first (decorators, relations, indices) and re-export
-   from `index.ts`.
+   the entity there first (decorators, relations, indices), re-export from
+   `index.ts`, and add a migration under
+   `libs/platform/typeorm/src/lib/migrations/`.
 
-2. **Inject the repository.** Replace the `PrismaCompat` import with a
-   TypeORM repository injection:
+2. **Inject the repository.**
 
    ```ts
-   // before
-   constructor(private readonly prisma: PrismaCompat) {}
-
-   // after
    constructor(
      @InjectRepository(Order)
      private readonly orders: Repository<Order>,
    ) {}
    ```
 
-   Add `TypeOrmModule.forFeature([Order])` to the module that owns the
-   service.
+   Add `TypeOrmModule.forFeature([Order])` to the module that owns the service.
 
-3. **Rewrite the queries.** The shape of the call changes but the meaning
-   does not:
+3. **Write the queries** — the call-site mapping that was used throughout the
+   migration:
 
-   ```ts
-   // before
-   const list = await this.prisma.orders.findMany({
-     where: { id, status: OrderStatus.OPEN },
-     include: { items: true },
-     orderBy: { createdAt: 'desc' },
-   });
-
-   // after
-   const list = await this.orders.find({
-     where: { id, status: OrderStatus.OPEN },
-     relations: { items: true },
-     order: { createdAt: 'DESC' },
-   });
-   ```
-
-   Common mapping gotchas:
-
-   | Prisma | TypeORM |
+   | Prisma (old) | TypeORM (now) |
    | --- | --- |
    | `include: { x: true }` | `relations: { x: true }` |
    | `orderBy: { createdAt: 'desc' }` | `order: { createdAt: 'DESC' }` |
@@ -274,24 +132,13 @@ TypeORM repository.
    | `groupBy` / `aggregate` | `createQueryBuilder().select(...).groupBy()` |
    | `createMany` | `save([...])` or `insert(...).values([...]).execute()` |
 
-4. **Translate Prisma enums.** If you were importing `OrderStatus` from
-   `@prisma/client`, switch the import to `@swiftship/platform-typeorm`:
+4. **Enums** come from `@swiftship/platform-typeorm` (see §3).
 
-   ```ts
-   import { OrderStatus } from '@swiftship/platform-typeorm';
-   ```
+5. **Write a unit test.** The datasource in `datasource.ts` supports
+   `synchronize: true` for test runs — stand up a real Postgres and exercise
+   at least one read path and one write path.
 
-5. **Write a unit test against Postgres testcontainer.** The test must
-   stand up a real Postgres (the datasource in `datasource.ts` already
-   supports `synchronize: true` for test runs) and exercise at least one
-   read path and one write path. The goal is to prove the service works
-   without the shim.
-
-6. **Delete the shim call.** Drop the `PrismaCompat` import and constructor
-   parameter, and remove the `registerPrismaCompat(...)` call from the
-   module. The lint rule should now be happy.
-
-7. **Run the full test matrix.**
+6. **Run the full matrix before opening the PR:**
 
    ```bash
    npx nx run-many --target=test --all
@@ -299,31 +146,43 @@ TypeORM repository.
    npx nx run-many --target=typecheck --all
    ```
 
-   If any of those fail, fix them before opening the PR. The bar is "all
-   three green, with the new test added in step 5 in the pass list."
+   The bar is "all three green, with the new test in the pass list."
 
-8. **Update `MIGRATION.md`.** Move the lib from the
-   "Still on PrismaCompat" list to the "Fully TypeORM" list in section 4.
+## 8. Plan 5 exit criteria (all met ✅)
 
----
+- Every domain lib off `PrismaCompat` ✅ (SS-043a–h)
+- All tests passing without importing `PrismaCompat` ✅
+- `@prisma/client` entries removed from `tsconfig.base.json` ✅
+- Shim files deleted ✅ (`prisma-compat.types.ts`, `lib/@prisma/`)
+- ESLint rule kept as a regression guard (intentional) ✅
+- `@prisma/client` no longer a dependency ✅
 
-## 8. When to delete the shim (Plan 5 exit criteria)
+## 9. The remaining src-to-libs decommission
 
-The shim and the `@prisma/client` path mapping are deleted in Plan 5.
-That plan is unblocked when **all** of the following are true:
+The ORM migration is done, but the **legacy root `src/` tree is still half-alive**.
+This is the actual open cleanup (tracked in STATUS.md §3):
 
-- Every domain lib in section 4b has been moved off `PrismaCompat`.
-- Every service in the repo passes its unit tests **without** importing
-  `PrismaCompat` (verified by `npx nx run-many --target=test --all`).
-- The `@prisma/client` and `@prisma/client/runtime/library` entries have
-  been removed from `tsconfig.base.json`.
-- The shim files themselves
-  (`libs/platform/typeorm/src/lib/prisma-compat.types.ts` and the
-  `libs/platform/typeorm/src/lib/@prisma/` directory) have been deleted.
-- The ESLint `no-restricted-imports` rule has been removed from
-  `eslint.config.mjs` because there is nothing left to ban.
+- **10 domain libs still re-export root `src/` through their barrels:**
+  `bulk-operations`, `dashboard`, `ecommerce-integrations`, `metrics`, `plugins`,
+  `rate-shop` (partial), `storage`, `surcharges`, `users`, `webhooks`.
+  `scripts/write-barrels.sh` regenerates those shims — the end state is to
+  delete both the script and the shims.
+- **5 domain libs are placeholder barrels only** (source of truth in `src/`):
+  `carriers`, `returns`, `roles`, `serviceability`, `shipping-rates`.
+- For `bulk-operations`, `dashboard`, `metrics`, `plugins`, `storage`,
+  `surcharges` there are **local lib implementations that are currently dead
+  code**, shadowed by the `src/`-re-exporting barrels — flip the barrel to the
+  local exports as part of the decommission.
+- `src/prisma/prisma.service.ts` imports the deleted
+  `prisma-compat.types.ts` — it breaks the whole legacy tree; delete it (and
+  its module wiring) or finish migrating its consumers first.
+- Root `nest-cli.json`, the legacy `Dockerfile` (`nest build` → `dist/main.js`
+  + `prisma/` copy), and root jest config (`rootDir: src`) all target the
+  legacy flow and should be removed once the last `src/` consumer is gone.
+  `prisma/schema.prisma` is kept only as a historical reference for the entity
+  migration — nothing generates from it.
 
-Once those gates are met, open the "Plan 5: delete the shim" PR. That PR
-removes the shim, the path mappings, and the lint rule as a single
-atomic change. After it lands, `@prisma/client` is no longer a dependency
-of this repo and the migration is done.
+**Per-lib recipe:** move the code from `src/<name>/` into
+`libs/domains/<name>/src/lib/`, rewrite imports to `@swiftship/*` aliases,
+flip the barrel from `../../../../src/<name>` re-exports to local exports,
+delete the legacy folder, then `npx nx run-many -t lint typecheck test --all`.

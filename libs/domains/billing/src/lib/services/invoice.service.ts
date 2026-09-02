@@ -19,7 +19,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import {
   InvoiceEntity,
   InvoiceItemEntity,
@@ -31,6 +31,7 @@ import {
   WarehouseEntity,
   WarehouseSellerProfileEntity,
   EwayBillEntity,
+  getCurrentTenantId,
 } from '@swiftship/platform-typeorm';
 import { CreateInvoiceInput } from '../dto/create-invoice.input';
 import { GstService } from './gst.service';
@@ -204,7 +205,7 @@ export class InvoiceService {
       const itemRepo = em.getRepository(InvoiceItemEntity);
 
       const header = invoiceRepo.create({
-        id: uuidv4(),
+        id: randomUUID(),
         invoiceNumber,
         sequenceNumber,
         financialYear,
@@ -212,6 +213,10 @@ export class InvoiceService {
         warehouseId: warehouse.id,
         sellerProfileId: sellerProfile.id,
         subscriptionId: input.subscriptionId,
+        // Fall back to the warehouse's tenant (request-scoped ALS context
+        // is the source of truth; the column default of 1 is wrong for
+        // every tenant but the system tenant — see the e2e kyc-gst spec).
+        tenantId: getCurrentTenantId() ?? warehouse.tenantId ?? 1,
         amount,
         taxAmount,
         cgstAmount,
@@ -266,7 +271,7 @@ export class InvoiceService {
     this.generateInvoicePdf(invoice.id)
       .then(() => {
         if (emailDeliveryStatus === 'PENDING' && buyer.email) {
-          this.invoiceEmailWorker.enqueue(invoice.id).catch((err) => {
+          this.invoiceEmailWorker.enqueue(invoice.id).catch((err: unknown) => {
             this.logger.error('Failed to enqueue invoice email', {
               invoiceId: invoice.id,
               error: err instanceof Error ? err.message : String(err),

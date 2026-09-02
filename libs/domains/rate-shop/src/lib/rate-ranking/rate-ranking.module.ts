@@ -1,13 +1,18 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TenantModule } from '@swiftship/domains-tenants';
 import { ConfigModule } from '@nestjs/config';
 
 import { RateRankingService } from './rate-ranking.service';
 import { RateRankingResolver } from './rate-ranking.resolver';
 import { RateSimulatorService } from './rate-simulator.service';
+// Direct file imports (not the `@swiftship/domains-dashboard` /
+// `@swiftship/platform-rate-math` barrels) so the legacy `src/dashboard`
+// re-exports stay out of the compile graph, and because the rate-math
+// barrel deliberately does not re-export its module — see STATUS.md §3.
 import { CourierScoreModule } from '@swiftship/domains-dashboard';
-import { RateCacheModule } from '@swiftship/platform-rate-cache';
 import { RateMathModule } from '@swiftship/platform-rate-math';
+import { RateCacheModule } from '@swiftship/platform-rate-cache';
 import { ObservabilityModule } from '@swiftship/observability';
 
 /**
@@ -32,8 +37,12 @@ import { ObservabilityModule } from '@swiftship/observability';
 @Global()
 @Module({
   imports: [
+    TenantModule,
     RateCacheModule,
-    RateMathModule,
+    // RateMathModule is dynamic-only (@Module({}) + static forRoot) —
+    // importing the bare class registers zero providers. Found by the
+    // live boot test (2026-08).
+    RateMathModule.forRoot(),
     CourierScoreModule,
     ObservabilityModule,
   ],

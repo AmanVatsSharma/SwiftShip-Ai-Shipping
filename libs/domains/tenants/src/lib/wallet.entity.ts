@@ -13,28 +13,28 @@ import { TenantEntity } from './entities';
 @Index('idx_wallets_tenant', ['tenantId'], { unique: true })
 export class WalletEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  tenantId: number;
+  tenantId!: number;
 
   // All balances are stored in PAISE (integer minor currency units).
   // 1 INR = 100 paise. Use integer arithmetic everywhere; never persist floats.
   @Column({ type: 'int', default: 0 })
-  availableBalance: number;
+  availableBalance!: number;
 
   @Column({ type: 'int', default: 0 })
-  reservedBalance: number;
+  reservedBalance!: number;
 
   @Column({ type: 'int', default: 0 })
-  lifetimeRecharged: number;
+  lifetimeRecharged!: number;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @OneToOne(() => TenantEntity, (t: TenantEntity) => t.wallet)
-  tenant: TenantEntity;
+  tenant!: TenantEntity;
 }

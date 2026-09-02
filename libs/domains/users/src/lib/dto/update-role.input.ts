@@ -5,7 +5,7 @@ import { MaxLength, IsNotEmpty, IsOptional } from 'class-validator';
 export class UpdateRoleInput {
   @Field(() => Int)
   @IsNotEmpty({ message: 'Role ID is required' })
-  id: number;
+  id!: number;
 
   @Field({ nullable: true })
   @IsOptional()

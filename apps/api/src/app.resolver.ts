@@ -4,13 +4,13 @@ import { ObjectType, Field } from '@nestjs/graphql';
 @ObjectType()
 export class HealthInfo {
   @Field()
-  status: string;
+  status!: string;
 
   @Field()
-  name: string;
+  name!: string;
 
   @Field()
-  uptime: string;
+  uptime!: string;
 }
 
 @Resolver(() => HealthInfo)

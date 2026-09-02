@@ -1,0 +1,84 @@
+# Upptime status-page configuration (https://upptime.js.org)
+#
+# LAUNCH_PLAN.md Phase 2 — "Status page + runbooks". Checks are executed by
+# .github/workflows/status-check.yml (upptime/uptime-monitor action), which
+# is currently manual-trigger (workflow_dispatch) because the sites below
+# point at localhost. Flip the localhost URLs to the public prod URLs
+# (commented below) and enable the cron schedule in status-check.yml before
+# going live; the status site itself publishes to GitHub Pages
+# (status-website.cname below).
+#
+# Schema reference: https://upptime.js.org/docs/configuration
+# Per-site keys used here: name, url, method, headers, body,
+# expectedStatusCodes, maxResponseTime.
+
+owner: swiftship
+repo: SwiftShip-Ai-Shipping-NestJs-Backend
+
+sites:
+  # ---- Local / staging (dev defaults — API served by `nx serve api`) ----
+  - name: API — liveness (/health)
+    url: http://localhost:3000/health
+    expectedStatusCodes:
+      - 200
+
+  - name: API — readiness (/health/ready)
+    url: http://localhost:3000/health/ready
+    expectedStatusCodes:
+      - 200
+    # NOTE: today /health/ready is a shallow 200 (apps/api/src/health.controller.ts
+    # does not probe Postgres/Redis yet), so a DB outage will NOT flip this
+    # check until deep checks are implemented. Track in docs/runbook.md
+    # "Monitoring gaps".
+
+  - name: API — GraphQL (POST /graphql)
+    url: http://localhost:3000/graphql
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"query":"{ apiInfo { status } }"}'
+    expectedStatusCodes:
+      - 200
+    # apiInfo is the trivial health query from apps/api/src/app.resolver.ts.
+
+  - name: API — Prometheus metrics (/metrics)
+    url: http://localhost:3000/metrics
+    expectedStatusCodes:
+      - 200
+
+  # ---- Production (uncomment once domains + TLS are live — Phase 2) ----
+  # - name: API — prod (api.swiftship.ai)
+  #   url: https://api.swiftship.ai/health
+  #   expectedStatusCodes:
+  #     - 200
+  # - name: API — prod readiness
+  #   url: https://api.swiftship.ai/health/ready
+  #   expectedStatusCodes:
+  #     - 200
+  # - name: API — prod GraphQL
+  #   url: https://api.swiftship.ai/graphql
+  #   method: POST
+  #   headers:
+  #     Content-Type: application/json
+  #   body: '{"query":"{ apiInfo { status } }"}'
+  #   expectedStatusCodes:
+  #     - 200
+  # - name: Admin portal — prod (app.swiftship.ai)
+  #   url: https://app.swiftship.ai
+  #   expectedStatusCodes:
+  #     - 200
+  # - name: Tracking web — prod (track.swiftship.ai)
+  #   url: https://track.swiftship.ai
+  #   expectedStatusCodes:
+  #     - 200
+
+status-website:
+  name: SwiftShip Status
+  # cname: status.swiftship.ai   # uncomment when DNS is ready (Phase 2)
+  introTitle: SwiftShip service status
+  introMessage: >-
+    Live uptime and latency for the SwiftShip API, admin portal and tracking
+    site. Incidents are announced here first.
+  # Rate-shop latency budget from LAUNCH_PLAN.md Phase 2 (p95 < 500ms) —
+  # anything slower than 5s from the checker is "degraded", not "down".
+  maxResponseTime: 5000

@@ -13,17 +13,17 @@ export class CreateWarehouseInput {
   @Field()
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @Field()
   @IsNotEmpty()
   @IsString()
-  code: string;
+  code!: string;
 
   @Field()
   @IsNotEmpty()
   @IsString()
-  addressLine1: string;
+  addressLine1!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -33,18 +33,18 @@ export class CreateWarehouseInput {
   @Field()
   @IsNotEmpty()
   @IsString()
-  city: string;
+  city!: string;
 
   @Field()
   @IsNotEmpty()
   @IsString()
-  state: string;
+  state!: string;
 
   @Field()
   @IsNotEmpty()
   @IsString()
   @Length(4, 10)
-  pincode: string;
+  pincode!: string;
 
   @Field({ defaultValue: 'India' })
   @IsOptional()

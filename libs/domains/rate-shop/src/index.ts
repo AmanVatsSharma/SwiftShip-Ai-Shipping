@@ -1,12 +1,10 @@
-// Legacy rate-shop re-exports (kept stable for consumers during the
-// Prisma → TypeORM migration; the source-of-truth still lives in
-// `src/rate-shop/*`).
-export { RateShopModule, RateShopModule as RateShopLibModule } from '../../../../src/rate-shop/rate-shop.module';
-export { RateShopService, RateShopService as RateShopLibService } from '../../../../src/rate-shop/rate-shop.service';
-export { RateShopResolver, RateShopResolver as RateShopLibResolver } from '../../../../src/rate-shop/rate-shop.resolver';
-export { RateShopRequest, RateShopDecision } from '../../../../src/rate-shop/rate-shop.service';
-export { ServiceabilityService, ServiceabilityService as ServiceabilityLibService } from '../../../../src/rate-shop/serviceability.service';
-export { ServiceabilityParams, ServiceabilityResult } from '../../../../src/rate-shop/serviceability.service';
+// SS-decommission (2026-08): the legacy `src/rate-shop/*` re-exports were
+// removed — that tree no longer compiles (it still referenced the deleted
+// PrismaCompat shim). The rate-ranking engine below is the TypeORM-native
+// source of truth. `RateShopService` (the actual rate fetcher) lives in
+// `@swiftship/platform-rate-cache`. The old `rateShop` / `checkServiceability`
+// GraphQL queries are unwired until they are ported into this lib — tracked
+// as a follow-up bead (see STATUS.md §3).
 
 // ---------------------------------------------------------------------------
 // SS-010: Rate ranking engine — TypeORM-native, depends on

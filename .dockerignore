@@ -1,0 +1,51 @@
+# Root build context for the canonical API image (see Dockerfile).
+# Keep the context small and free of secrets; everything here is either
+# rebuilt inside the image or not needed to build apps/api.
+
+# VCS / CI / agent tooling
+.git
+.github
+.beads
+.claude
+.cursor
+.remember
+.vscode
+.idea
+
+# Dependencies and build artifacts (rebuilt inside the image)
+**/node_modules
+dist
+coverage
+tmp
+.nx
+{workspaceRoot}
+
+# Trees not needed to build the API image (they have their own pipelines)
+apps/web
+apps/admin-portal
+apps/api-public
+apps/api-e2e
+packages
+postman
+loadtest
+chaos
+test
+docs
+
+# Legacy Prisma flow (dead — TypeORM owns the schema now)
+prisma
+
+# Env files never belong in an image
+.env
+.env.*
+!**/.env.example
+
+# Markdown docs — except the typeorm lib README, which is an Nx build asset
+# (libs/platform/typeorm/project.json copies libs/platform/typeorm/*.md)
+*.md
+!libs/**/*.md
+
+# OS / editor noise
+*.log
+.DS_Store
+Thumbs.db

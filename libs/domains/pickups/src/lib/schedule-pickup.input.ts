@@ -3,8 +3,8 @@ import { Field, InputType, Int } from '@nestjs/graphql';
 @InputType()
 export class SchedulePickupInput {
   @Field(() => Int)
-  shipmentId: number;
+  shipmentId!: number;
 
   @Field()
-  scheduledAt: Date;
+  scheduledAt!: Date;
 }

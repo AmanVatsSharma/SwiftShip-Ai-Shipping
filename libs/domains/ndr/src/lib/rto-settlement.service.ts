@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Optional , Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -63,6 +63,8 @@ export class RtoSettlementService {
     @InjectRepository(RtoDisputeEntity)
     private readonly disputes: Repository<RtoDisputeEntity>,
     private readonly wallet: WalletService,
+    // forwardRef: ndr.service <-> rto-settlement.service cycle (live-boot fix).
+    @Inject(forwardRef(() => NdrService))
     private readonly ndrService: NdrService,
     private readonly tenantContext: TenantContext,
     @Optional() private readonly refund?: RefundServiceLike,

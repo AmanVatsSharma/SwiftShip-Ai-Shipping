@@ -6,7 +6,7 @@ export class CreateRoleInput {
   @Field()
   @IsNotEmpty({ message: 'Role name is required' })
   @MaxLength(50, { message: 'Role name must be at most 50 characters' })
-  name: string;
+  name!: string;
 
   @Field({ nullable: true })
   @IsOptional()

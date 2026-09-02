@@ -1,4 +1,5 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Tenant } from './tenant.model';
 
 @ObjectType('Invite')
 export class Invite {
@@ -17,7 +18,7 @@ export class Invite {
   @Field()
   expiresAt!: Date;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   acceptedAt?: Date | null;
 
   @Field()
@@ -47,7 +48,7 @@ export class OnboardingUser {
   @Field()
   email!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   name?: string | null;
 }
 
@@ -62,8 +63,8 @@ export class OnboardingApiKey {
 
 @ObjectType('OnboardingResult')
 export class OnboardingResult {
-  @Field()
-  tenant!: import('./tenant.model').Tenant;
+  @Field(() => Tenant)
+  tenant!: Tenant;
 
   @Field(() => OnboardingUser)
   user!: OnboardingUser;

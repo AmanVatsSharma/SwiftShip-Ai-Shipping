@@ -1,0 +1,30 @@
+# Upptime uptime checks — LAUNCH_PLAN.md Phase 2 "status page".
+#
+# Runs the upptime monitor against the sites in .upptimerc.yml. The schedule
+# is INTENTIONALLY commented out: the .upptimerc.yml sites currently point at
+# http://localhost:3000 (dev defaults), which always fails from a GitHub-hosted
+# runner. To go live:
+#   1. Swap the localhost sites for the prod URLs in .upptimerc.yml.
+#   2. Uncomment the cron schedule below.
+#   3. Enable GitHub Pages (upptime writes the status site to gh-pages).
+# Until then this workflow is manually dispatchable (Actions tab -> Run
+# workflow), which is useful for dry-running against a tunnelled/staging URL.
+name: Status Check
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  uptime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upptime monitor
+        uses: upptime/uptime-monitor@v1.36.0
+        env:
+          TIMEZONE: "UTC"

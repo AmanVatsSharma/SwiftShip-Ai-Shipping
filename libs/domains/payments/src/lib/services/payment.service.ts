@@ -28,7 +28,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import {
   InvoiceEntity,
   OrderEntity,
@@ -143,7 +143,7 @@ export class PaymentService {
 
       // Create payment record in database
       const payment = this.payments.create({
-        id: uuidv4(),
+        id: randomUUID(),
         userId,
         orderId: orderId ?? null,
         invoiceId: invoice?.id ?? null,
@@ -304,7 +304,7 @@ export class PaymentService {
 
       // Create refund record
       const refund = this.refunds.create({
-        id: uuidv4(),
+        id: randomUUID(),
         paymentId: payment.id,
         amount: refundAmount,
         currency: payment.currency,

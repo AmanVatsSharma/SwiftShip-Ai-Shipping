@@ -8,6 +8,20 @@ import { PostgresThrottlerStorage } from './postgres-storage.service';
 import { TenantThrottlerGuard } from './tenant-throttler.guard';
 
 /**
+ * Isolated host for `PostgresThrottlerStorage` so `forRootAsync`'s
+ * `inject: [...]` can resolve it — Nest resolves those injects in the
+ * ThrottlerModule's own context, which cannot see the providers of the
+ * module that declares the forRootAsync call (found by the first live
+ * boot test, 2026-08; see STATUS.md). `DataSource` resolves from the
+ * global `@nestjs/typeorm` module.
+ */
+@Module({
+  providers: [PostgresThrottlerStorage],
+  exports: [PostgresThrottlerStorage],
+})
+export class ThrottlerStorageModule {}
+
+/**
  * Per-tenant throttler module.
  *
  * Wires:
@@ -28,6 +42,7 @@ import { TenantThrottlerGuard } from './tenant-throttler.guard';
   imports: [
     TenantModule,
     NestThrottlerModule.forRootAsync({
+      imports: [ThrottlerStorageModule],
       useFactory: (storage: PostgresThrottlerStorage): ThrottlerModuleOptions => ({
         throttlers: [
           {

@@ -1,178 +1,120 @@
-# SwiftShip AI - Backend Readiness Summary
+# SwiftShip AI — Backend Readiness Summary
 
-## 📊 Quick Stats
+> Rewritten 2026-06 (docs-sync audit) — the previous version predated the Nx
+> migration and the 24-week roadmap build-out. For day-to-day resume info see
+> [`STATUS.md`](./STATUS.md); for the operation-level surface see
+> [`READY_FEATURES.md`](./READY_FEATURES.md).
 
-- **Total Modules**: 25
-- **GraphQL Resolvers**: 22
-- **Services**: 24
-- **Overall Readiness**: **75%**
+## 📊 Quick stats
 
----
+- **Nx projects**: ~46 (5 apps, 39 libs, 3 SDK packages, chaos + loadtest)
+- **Domain lib dirs**: 29 (plus observability, shared-ui)
+- **Carrier adapters**: 13 + sandbox
+- **TypeORM migrations**: 16
+- **Unit test files**: ~96 across libs and apps
+- **Tracker**: 65/65 beads closed — all roadmap pillars complete
+- **ORM**: TypeORM only (Prisma fully removed)
 
-## ✅ What's Ready (19 modules)
+## ✅ Ready (verified in code)
 
-### Core Shipping Features
-1. ✅ **Orders** - Full CRUD, analytics, filtering
-2. ✅ **Carriers** - Multi-carrier adapter pattern (3 adapters)
-3. ✅ **Shipping Rates** - Rate management + comparison
-4. ✅ **Shipments** - Full lifecycle, label gen (stubbed), tracking
-5. ✅ **Returns** - Complete returns workflow
-6. ✅ **Pickups** - Scheduling and management
-7. ✅ **Manifests** - Generation and tracking
-8. ✅ **NDR** - Non-delivery report management
-9. ✅ **COD** - Cash on delivery remittance
+### Core shipping
+Orders (full CRUD + lifecycle), shipments (labels, tracking, WebSocket
+`trackingUpdates`), returns/RMA (incl. public token return portal), pickups,
+manifests, NDR (state machine + ingestion + analytics), COD (remittance +
+bank-statement reconciliation across HDFC/ICICI/Axis/SBI/Kotak + dispute queue),
+warehouses, serviceability, shipping rates + surcharges engine (weight-break,
+zones, fuel/ODA/COD).
 
-### Platform Features
-10. ✅ **Users** - User management with RBAC
-11. ✅ **Roles** - Role-based access control
-12. ✅ **Auth** - JWT authentication (basic)
-13. ✅ **Onboarding** - Advanced milestone tracking
-14. ✅ **eCommerce (Shopify)** - Full integration
+### Rate engine
+Multi-carrier rate shop, Redis rate cache + per-carrier circuit breaker,
+ranking engine with 5 strategies (cheapest/fastest/best_value/balanced/
+reliability_first), A/B rate simulator (`simulateRateShopBatch`), courier
+scorecards.
 
-### Advanced Features
-15. ✅ **Rate Shop** - AI-powered rate comparison
-16. ✅ **Serviceability** - Pincode/zone management
-17. ✅ **Surcharges** - Dynamic surcharge application
-18. ✅ **Webhooks** - Subscription and dispatch
-19. ✅ **Plugins** - Extensible plugin system
+### Multi-tenancy
+Tenant model + context/guard/middleware, per-tenant-tier Postgres-backed
+throttling with quota headers, wallet + double-entry ledger + statements,
+sub-accounts, API keys + rotation, feature flags, onboarding mutations.
 
-### Infrastructure
-20. ✅ **Queues** - BullMQ + Redis
-21. ✅ **Metrics** - Basic metrics collection
+### Compliance & billing
+KYC (PAN/GSTIN/bank validators, BullMQ async verify), GST invoicing + E-way
+bill (ClearTax sandbox adapter), invoices/wallet/credit notes, payments
+(Stripe + Razorpay gateways, payment intents, refunds).
 
----
+### Channels & integrations
+Channel-agnostic `ChannelSyncService` (Shopify, WooCommerce sync adapters;
+Amazon, Flipkart, Myntra, Meesho direct adapters; encrypted credentials;
+BullMQ schedulers), webhook subscriptions + queued delivery + HMAC signing,
+notifications (email/SMS/WhatsApp — Exotel + WATI).
 
-## ⚠️ Needs Enhancement (2 modules)
+### Frontends
+`apps/web` (branded tracking page, end-customer return portal, embeddable CDN
+widgets: tracking/returns/rate-shop), `apps/admin-portal` (dashboard, NDR
+analytics, orders, channel management, rate-shop widget, PWA).
 
-1. **Dashboard** - Basic queries only, needs comprehensive analytics
-2. **Auth** - Missing password management, email verification
+### Public platform
+`apps/api-public` REST v1 (8 controllers, API-key auth, per-tenant throttling,
+Swagger UI `/docs/v1/`), OpenAPI spec, Postman collection + newman runner,
+3 generated SDKs (Node/Python/PHP) with CI regeneration (`sdk-ci.yml`).
 
----
+### Ops
+OTel + Sentry + correlation IDs + audit log + Prometheus `/metrics`, full
+observability compose stack (collector, Prometheus, Loki, Promtail, Grafana) +
+Grafana dashboard, k8s manifests + HPAs, GitHub Actions CI (graph-guard, lint,
+typecheck, test w/ services, e2e, build, release), k6 load tests (order-create,
+rate-shop, graphql-rps), chaos scenarios + runbooks (redis-down,
+postgres-failover, carrier-timeout), pilot onboarding dry-run script + playbook.
 
-## ❌ Missing Critical Features
+## ⚠️ Known gaps / debt (details in STATUS.md §2)
 
-### High Priority
-1. **Carrier API Integration** - Adapters exist but need real API calls
-   - Delhivery: Partial (has fallback)
-   - Xpressbees: Fully stubbed
-   - Need: BlueDart, FedEx, DTDC, etc.
-
-2. **WooCommerce Integration** - Architecture ready, not implemented
-3. **Magento Integration** - Architecture ready, not implemented
-4. **Payment Integration** - Stripe/Razorpay not implemented
-
-### Medium Priority
-5. **AI Fraud Detection** - Mentioned in project overview, not implemented
-6. **Compliance Automation** - Invoice/doc generation missing
-7. **Analytics Dashboard** - Needs comprehensive KPIs and charts
-
-### Low Priority
-8. **White-label/Branding** - Not implemented
-9. **Support Chatbot** - Not implemented
-10. **API Documentation** - Schema only, needs comprehensive docs
-
----
+1. **`apps/api` does not currently typecheck** — broken relative import depths
+   (`../../libs` should be `../../../libs`), missing `apps/api/jest.config.ts`,
+   `app.resolver.ts` TS2564, missing `@types/morgan`. Fix first.
+2. **Legacy `src/` half-decommissioned** — 10 domain-lib barrels still re-export
+   root `src/`; 5 more are placeholder barrels; `src/prisma/prisma.service.ts`
+   imports a deleted file. (MIGRATION.md §9.)
+3. **E2E suite is thin** — only the health suite; roadmap called for one e2e
+   per public mutation.
+4. **SDK runtime acceptance not yet observed on CI** — generator round-trips
+   need Java 21 on a Linux runner (`sdk-ci.yml` exists, deferred from SS-027).
+5. Small deferred items: COD reconciliation invariant test, `publicRateShop`
+   GraphQL mutation (widgets use REST today), `ecommerce-integrations` not
+   Nx-registered, `libs/shared/` empty, legacy root `Dockerfile`/`nest-cli.json`.
 
 ## 🎯 Comparison with Shiprocket
 
-### ✅ Already Better Than Shiprocket
-- **GraphQL API** (Shiprocket: REST only)
-- **WebSocket Support** (Shiprocket: Webhooks only)
-- **Plugin System** (Shiprocket: No extensibility)
-- **Advanced Rate Shopping** (Shiprocket: Basic comparison)
-- **Onboarding Workflow** (Shiprocket: Basic)
+### ✅ At or above parity
+- **13 carriers** incl. regional (India Post, Professional Couriers, Gati)
+- **GraphQL + REST + WebSocket** (Shiprocket: REST + webhooks)
+- **AI-ranked rate shopping + A/B simulator** (Shiprocket: basic comparison)
+- **Channel coverage**: Shopify, WooCommerce, Amazon, Flipkart, Meesho, Myntra
+- **COD reconciliation** with 5-bank parsing + dispute queue
+- **KYC + GST/E-way compliance** built in
+- **NDR analytics** (reason/pincode/courier/time-of-day)
+- **Branded customer surfaces** + embeddable widgets
+- **3 official SDKs** + Postman + OpenAPI + Swagger UI
+- **Multi-tenant** billing wallet, throttling, feature flags
 
-### ⚠️ Feature Parity Needed
-- Multi-carrier integration (need more carriers)
-- E-commerce platforms (need WooCommerce/Magento)
-- Analytics dashboard (needs enhancement)
-- Payment processing (missing)
+### ⚠️ Not yet real
+- No production deployment evidence yet (pilot playbook exists, dry-run script
+  only — `docs/anchor-tenant-pilot.md`)
+- AI fraud detection, white-label branding, support chatbot — still unbuilt
+  (carried over from the original `project_overview.md` vision)
 
-### ❌ Missing Competitive Features
-- AI fraud detection (mentioned but not implemented)
-- Compliance automation
-- White-label capabilities
-- Support chatbot
+## 📈 Readiness by category
 
----
+| Category | Score | Notes |
+|----------|-------|-------|
+| Core shipping | 95% | all flows implemented; production hardening pending |
+| Rate engine | 95% | ranking + simulator + cache + breaker |
+| Multi-tenancy | 90% | wallet/throttle/flags live; sub-account UI thin |
+| Compliance | 90% | KYC + GST/E-way + COD recon |
+| Channels | 85% | 6 channel adapters; billing reconciliation basic |
+| Public API + SDKs | 85% | shipped; CI runtime acceptance pending |
+| Observability | 90% | OTel/Sentry/audit/metrics + dashboards |
+| Customer surfaces | 85% | tracking/return/widgets live |
+| Test coverage | 60% | ~96 unit specs but e2e thin, some libs `passWithNoTests` |
+| Build health | ❌ | apps/api compile breakage — P0, see STATUS.md |
 
-## 🚀 Recommendations
-
-### Immediate (Week 1-2)
-1. **Complete Carrier APIs** - Integrate real Delhivery/Xpressbees APIs
-2. **Enhance Dashboard** - Add revenue, carrier performance, delivery analytics
-3. **Add Password Management** - Complete Auth module
-
-### Short-term (Month 1)
-4. **WooCommerce Integration** - Implement adapter
-5. **Magento Integration** - Implement adapter
-6. **Payment Integration** - Stripe + Razorpay
-
-### Medium-term (Month 2-3)
-7. **AI Fraud Detection** - Implement as mentioned in project overview
-8. **Compliance Automation** - Invoice and document generation
-9. **API Documentation** - Comprehensive docs + SDKs
-
----
-
-## 📈 Readiness Score by Category
-
-| Category | Score | Status |
-|----------|-------|--------|
-| Core Shipping | 85% | ✅ Ready |
-| E-Commerce Integration | 50% | ⚠️ Partial |
-| Advanced Features | 70% | ⚠️ Partial |
-| Infrastructure | 90% | ✅ Ready |
-| Analytics | 30% | ❌ Needs Work |
-| Payments | 0% | ❌ Missing |
-| AI Features | 0% | ❌ Missing |
-
-**Overall: 75% Ready**
-
----
-
-## ✅ Strengths
-
-1. **Modern Architecture** - NestJS, GraphQL, TypeScript
-2. **Extensible Design** - Plugin system, adapter pattern
-3. **Real-time Capabilities** - WebSocket support
-4. **Comprehensive Core** - All basic shipping features implemented
-5. **Good Test Coverage** - Core modules have tests
-6. **Well Documented** - Most modules have READMEs
-
----
-
-## ⚠️ Weaknesses
-
-1. **Carrier Integration** - Adapters exist but need real API calls
-2. **Limited E-commerce** - Only Shopify implemented
-3. **Basic Analytics** - Dashboard needs enhancement
-4. **Missing Payments** - No payment processing
-5. **Incomplete Auth** - No password management
-6. **Missing AI Features** - Fraud detection not implemented
-
----
-
-## 🎯 Conclusion
-
-**The SwiftShip AI backend is 75% ready for production.**
-
-**Core shipping functionality is solid**, with all essential features implemented. The architecture is modern and extensible, providing competitive advantages over Shiprocket in API design and real-time capabilities.
-
-**To surpass Shiprocket**, focus on:
-1. Completing carrier API integrations (CRITICAL)
-2. Adding WooCommerce/Magento (HIGH)
-3. Enhancing analytics dashboard (HIGH)
-4. Implementing payment processing (HIGH)
-5. Adding AI fraud detection (MEDIUM)
-
-With these enhancements, SwiftShip AI will have **feature parity** with Shiprocket and **competitive advantages** in modern API design, extensibility, and real-time capabilities.
-
----
-
-**Next Steps:**
-1. Review `MODULE_READINESS_ASSESSMENT.md` for detailed analysis
-2. Review `MODULE_CHECKLIST.md` for implementation checklist
-3. Prioritize carrier API integration
-4. Plan WooCommerce/Magento implementation
-5. Enhance dashboard module
+**Overall: feature-complete for the 24-week plan; engineering-debt cleanup and
+the pilot are the remaining work.**

@@ -14,12 +14,12 @@ export class UpsertWarehouseCoverageInput {
   @Field(() => Int)
   @IsInt()
   @IsPositive()
-  warehouseId: number;
+  warehouseId!: number;
 
   @Field()
   @IsString()
   @Length(4, 10)
-  pincode: string;
+  pincode!: string;
 
   @Field(() => Int, { nullable: true })
   @IsOptional()

@@ -16,9 +16,6 @@ import {
 import {
   PaymentEntity as Payment,
   RefundEntity as Refund,
-  UserEntity as User,
-  OrderEntity as Order,
-  InvoiceEntity as Invoice,
 } from '@swiftship/platform-typeorm';
 
 export enum PaymentStatus {
@@ -70,20 +67,11 @@ export class PaymentModel {
   @Field(() => Int)
   userId!: number;
 
-  @Field(() => User, { nullable: true })
-  user?: User;
-
   @Field(() => Int, { nullable: true })
   orderId?: number;
 
-  @Field(() => Order, { nullable: true })
-  order?: Order;
-
   @Field({ nullable: true })
   invoiceId?: string;
-
-  @Field(() => Invoice, { nullable: true })
-  invoice?: Invoice;
 
   @Field(() => Float)
   amount!: number;
@@ -196,3 +184,7 @@ export class SubscriptionPlan {
   @Field(() => [String], { nullable: true })
   features?: string[];
 }
+
+// Legacy alias — billing.model (and other consumers) reference the GraphQL
+// object type as `Payment`, the name the old src/payments model used.
+export { PaymentModel as Payment };

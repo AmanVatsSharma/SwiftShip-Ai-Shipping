@@ -1,5 +1,5 @@
 import { InputType, Field, Int, Float } from '@nestjs/graphql';
-import { OrderStatus } from './order.model';
+import { OrderStatus } from '../order.model';
 import {
   IsNotEmpty,
   IsString,
@@ -18,7 +18,7 @@ export class UpdateOrderInput {
   @IsNotEmpty({ message: 'Order ID is required' })
   @IsInt({ message: 'Order ID must be an integer' })
   @IsPositive({ message: 'Order ID must be positive' })
-  id: number;
+  id!: number;
 
   @Field({ nullable: true })
   @IsOptional()

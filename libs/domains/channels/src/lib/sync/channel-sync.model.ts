@@ -24,7 +24,7 @@ export class ChannelConnectionGraphQL {
   @Field(() => Int)
   tenantId!: number;
 
-  @Field()
+  @Field(() => String)
   platform!: ChannelPlatform;
 
   @Field()
@@ -33,25 +33,25 @@ export class ChannelConnectionGraphQL {
   @Field()
   externalAccountId!: string;
 
-  @Field()
+  @Field(() => String)
   status!: ChannelConnectionStatus;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   productCursor?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   orderCursor?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   lastProductSyncAt?: Date | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   lastOrderSyncAt?: Date | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   lastError?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   settings?: ChannelSettings | null;
 
   @Field()
@@ -72,16 +72,16 @@ export class ChannelSyncJobGraphQL {
   @Field(() => Int)
   channelId!: number;
 
-  @Field()
+  @Field(() => String)
   type!: ChannelSyncType;
 
-  @Field()
+  @Field(() => String)
   status!: ChannelSyncStatus;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   startedAt?: Date | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   finishedAt?: Date | null;
 
   @Field(() => Int, { defaultValue: 0 })
@@ -99,7 +99,7 @@ export class ChannelSyncJobGraphQL {
   @Field(() => Int, { defaultValue: 0 })
   itemsFailed!: number;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   errorMessage?: string | null;
 
   @Field()
@@ -111,7 +111,7 @@ export class ChannelSyncJobGraphQL {
 
 @InputType()
 export class ConnectChannelInput {
-  @Field()
+  @Field(() => String)
   platform!: ChannelPlatform;
 
   @Field()

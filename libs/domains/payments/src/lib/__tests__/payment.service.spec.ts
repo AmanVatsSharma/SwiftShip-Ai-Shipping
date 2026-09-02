@@ -16,6 +16,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { PaymentService } from '../services/payment.service';
 import { PaymentGatewayFactory } from '../services/payment-gateway.factory';
 import {
@@ -42,7 +43,9 @@ describe('PaymentService (SS-043g)', () => {
 
   beforeEach(async () => {
     payments = {
-      create: jest.fn((d) => ({ id: 'p-new', ...d })),
+      // Stub id must be spread LAST so it wins over the service-supplied
+      // `id: randomUUID()` field on the created row.
+      create: jest.fn((d) => ({ ...d, id: 'p-new' })),
       save: jest.fn(async (d) => d),
       findOne: jest.fn(),
       find: jest.fn(),
@@ -63,7 +66,14 @@ describe('PaymentService (SS-043g)', () => {
       findOne: jest.fn(),
     };
     dataSource = {
-      transaction: jest.fn((fn) => fn({})),
+      // The service calls `em.getRepository(Entity)` inside the
+      // transaction callback — hand back the matching repo mocks.
+      transaction: jest.fn((fn) =>
+        fn({
+          getRepository: (entity: any) =>
+            entity === InvoiceEntity ? invoices : payments,
+        }),
+      ),
     };
 
     gatewayFactory = {
@@ -93,7 +103,7 @@ describe('PaymentService (SS-043g)', () => {
           provide: getRepositoryToken(UserEntity),
           useValue: users,
         },
-        { provide: 'DataSource', useValue: dataSource },
+        { provide: DataSource, useValue: dataSource },
         { provide: PaymentGatewayFactory, useValue: gatewayFactory },
       ],
     }).compile();

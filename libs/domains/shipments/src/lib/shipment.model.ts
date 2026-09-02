@@ -5,7 +5,7 @@ import {
   Float,
   registerEnumType,
 } from '@nestjs/graphql';
-import { Warehouse } from '../warehouses/warehouse.model';
+import { Warehouse } from '@swiftship/domains-warehouses';
 
 export enum ShipmentStatus {
   PENDING = 'PENDING',
@@ -22,19 +22,19 @@ registerEnumType(ShipmentStatus, {
 @ObjectType()
 export class Shipment {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field()
-  trackingNumber: string;
+  trackingNumber!: string;
 
   @Field(() => ShipmentStatus)
-  status: ShipmentStatus;
+  status!: ShipmentStatus;
 
   @Field(() => Int)
-  orderId: number;
+  orderId!: number;
 
   @Field(() => Int)
-  carrierId: number;
+  carrierId!: number;
 
   @Field(() => Int, { nullable: true })
   warehouseId?: number | null;
@@ -45,10 +45,10 @@ export class Shipment {
   @Field({ nullable: true })
   deliveredAt?: Date;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   originPincode?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationPincode?: string | null;
 
   @Field(() => Int, { nullable: true })
@@ -64,10 +64,10 @@ export class Shipment {
   heightCm?: number | null;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @Field(() => Warehouse, { nullable: true })
   warehouse?: Warehouse | null;
@@ -82,40 +82,40 @@ export class Shipment {
 @ObjectType()
 export class ShippingLabel {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => Int)
-  shipmentId: number;
+  shipmentId!: number;
 
   @Field()
-  labelNumber: string;
+  labelNumber!: string;
 
   @Field()
-  carrierCode: string;
+  carrierCode!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   serviceName?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   format?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   labelUrl?: string | null;
 
   @Field(() => LabelStatus)
-  status: LabelStatus;
+  status!: LabelStatus;
 
   @Field()
-  requestedAt: Date;
+  requestedAt!: Date;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   generatedAt?: Date | null;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 export enum LabelStatus {
@@ -130,35 +130,35 @@ registerEnumType(LabelStatus, { name: 'LabelStatus' });
 @ObjectType()
 export class TrackingEvent {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => Int)
-  shipmentId: number;
+  shipmentId!: number;
 
   @Field()
-  trackingNumber: string;
+  trackingNumber!: string;
 
   @Field()
-  status: string;
+  status!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   subStatus?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   description?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   eventCode?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   location?: string | null;
 
   @Field()
-  occurredAt: Date;
+  occurredAt!: Date;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   raw?: string | null;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 }

@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity, RefreshTokenEntity } from '@swiftship/platform-typeorm';
 import { AuthService } from './auth.service';
+import { AuthResolver } from './auth.resolver';
 import { JwtStrategy } from './jwt.strategy';
 import { GqlAuthGuard } from './auth.guards';
 import { RolesGuard } from './roles.decorator';
@@ -28,7 +29,7 @@ import { RolesGuard } from './roles.decorator';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, JwtStrategy, GqlAuthGuard, RolesGuard],
+  providers: [AuthService, AuthResolver, JwtStrategy, GqlAuthGuard, RolesGuard],
   exports: [AuthService, GqlAuthGuard, RolesGuard, JwtModule],
 })
 export class AuthLibModule {}

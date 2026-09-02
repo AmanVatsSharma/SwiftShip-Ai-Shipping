@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TenantModule } from '@swiftship/domains-tenants';
 import { AuthLibModule } from '@swiftship/platform-auth';
 import {
   OrderEntity,
@@ -19,6 +20,7 @@ import { OrderRateQuoteService } from './order-rate-quote.service';
 
 @Module({
   imports: [
+    TenantModule,
     TypeOrmModule.forFeature([
       OrderEntity,
       OrderRateQuoteEntity,

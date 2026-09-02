@@ -1,5 +1,10 @@
 # SwiftShip AI Backend Plugin System & Owner Panel Roadmap
 
+> **Note (2026-06 docs-sync):** this early thematic roadmap was superseded by
+> [`ROADMAP_24W.md`](./ROADMAP_24W.md) (all 9 pillars complete — 65/65 tracker
+> items closed). It is kept for the still-open plugin-system backlog below.
+> Current state + resume order: [`STATUS.md`](./STATUS.md).
+
 ## Objective
 Build the most advanced, scalable plugin system for the NestJS backend, and implement a robust, extensible owner management panel (admin panel) with React/Next.js integration. This roadmap focuses on backend architecture, plugin management, and API endpoints for the owner panel.
 
@@ -32,17 +37,17 @@ Build the most advanced, scalable plugin system for the NestJS backend, and impl
 ## 2. **Owner Management Panel (Admin Panel)**
 
 ### 2.1. **Core Owner/Admin Features**
-- [ ] User management (CRUD, roles, permissions)
+- [ ] User management (CRUD, roles, permissions) *(users/roles GraphQL exists; full admin CRUD UI pending)*
 - [x] Role management (create, assign, update, delete roles)
-- [ ] Plugin management (list, enable/disable, install/remove plugins)
-- [ ] Dashboard: analytics, system health, plugin status
-- [ ] Audit logs for admin actions
+- [ ] Plugin management (list, enable/disable, install/remove plugins) *(listing done)*
+- [x] Dashboard: analytics, system health, plugin status *(admin-portal `/dashboard` + NDR analytics; plugin health via `pluginStatus`)*
+- [x] Audit logs for admin actions *(SS-028: `@Auditable()` audit log + `auditEvents` / `resourceHistory` queries; dedicated admin-portal page still pending)*
 
 ### 2.2. **API for React/Next.js Panel**
-- [ ] GraphQL/REST endpoints for all admin features *(roles endpoints done)*
+- [ ] GraphQL/REST endpoints for all admin features *(roles, orders, channels, NDR analytics, audit done; remaining admin features pending)*
 - [ ] Endpoint to fetch available UI plugins/components for dynamic rendering
-- [ ] Secure authentication (JWT, session, or OAuth)
-- [ ] RBAC enforcement on all endpoints
+- [x] Secure authentication (JWT, session, or OAuth) *(Passport JWT + refresh tokens + API keys)*
+- [ ] RBAC enforcement on all endpoints *(TenantGuard live; full RBAC on every admin endpoint pending)*
 
 ---
 
@@ -94,9 +99,13 @@ Build the most advanced, scalable plugin system for the NestJS backend, and impl
 
 ---
 
-**Progress Note:**
+**Progress Note (2026-06 sync):**
 - Plugin system foundation, module, and GraphQL plugin listing are complete and integrated.
-- Role management API (CRUD) for owner panel is implemented and available via GraphQL.
-- Next: User management API, plugin enable/disable endpoints, and UI registry exposure.
+- Role management API (CRUD), admin dashboard, NDR analytics, channel management UI, and the
+  audit log (SS-028) are live.
+- Still open: plugin enable/disable endpoints + hot-reload, plugin dependency checks, UI
+  plugin registry, full user-management CRUD, RBAC enforcement everywhere, audit-log admin page.
+- The product roadmap that actually shipped is [`ROADMAP_24W.md`](./ROADMAP_24W.md);
+  remaining plugin work should be re-beaded from STATUS.md before starting.
 
 **This roadmap will be updated as the project evolves.** 

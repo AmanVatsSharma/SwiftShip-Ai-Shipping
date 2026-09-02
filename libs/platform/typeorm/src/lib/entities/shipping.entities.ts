@@ -1,3 +1,4 @@
+import { ObjectType, Field, Int, ID } from '@nestjs/graphql';
 import {
   Column,
   CreateDateColumn,
@@ -107,6 +108,7 @@ export class ShipmentEntity {
   @Column({ type: 'int', nullable: true })
   warehouseId?: number | null;
   @ManyToOne(() => WarehouseEntity, (w) => w.shipments)
+  @JoinColumn({ name: "warehouseId" })
   warehouse?: WarehouseEntity | null;
 
   @Column({ type: 'timestamp', nullable: true })
@@ -358,18 +360,23 @@ export class PickupEntity {
 
 @Entity('manifests')
 @Index('manifests_manifestNo_key', ['manifestNo'], { unique: true })
+@ObjectType()
 export class ManifestEntity {
   @PrimaryGeneratedColumn()
+  @Field(() => ID)
   id!: number;
 
   @Column({ type: 'varchar', length: 64 })
+  @Field()
   manifestNo!: string;
 
   @Column({ type: 'int', default: 1 })
   @Index('idx_manifests_tenantId')
+  @Field(() => Int)
   tenantId!: number;
 
   @CreateDateColumn()
+  @Field()
   createdAt!: Date;
 
   @OneToMany(() => ManifestItemEntity, (m) => m.manifest)
@@ -486,7 +493,7 @@ export class CodRemittanceEntity {
   referenceId?: string | null;
 
   @Column({ type: 'int', default: 1 })
-  @Index('idx_cod_remittances_tenantId')
+  @Index('idx_cod_remittances_legacy_tenantId')
   tenantId!: number;
 
   @CreateDateColumn()

@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/rate-shop",
-        "tsConfig": "libs/domains/rate-shop/tsconfig.lib.json"
+        "tsConfig": "libs/domains/rate-shop/tsconfig.lib.json",
+        "main": "libs/domains/rate-shop/src/index.ts",
+        "packageJson": "libs/domains/rate-shop/package.json"
       }
     },
     "lint": {

@@ -7,49 +7,51 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { join } from 'path';
 
 // Platform libs (TypeORM, auth, queues, carriers, graphql, config, throttler)
-import { TypeormModule } from '../../libs/platform/typeorm/src/lib/typeorm.module';
+import { TypeormModule } from '../../../libs/platform/typeorm/src/lib/typeorm.module';
 import { configureTenantContext } from '@swiftship/platform-typeorm';
-import { AuthLibModule } from '../../libs/platform/auth/src/lib/auth.module';
-import { QueuesModule } from '../../libs/platform/queues/src/lib/queues.module';
-import { CarriersLibModule } from '../../libs/platform/carriers/src/lib/carriers.module';
-import { RateCacheModule } from '../../libs/platform/rate-cache/src/lib/rate-cache.module';
-import { GraphqlLibModule } from '../../libs/platform/graphql/src/lib/graphql.module';
-import { ConfigLibModule } from '../../libs/platform/config/src/lib/config.module';
+import { AuthLibModule } from '../../../libs/platform/auth/src/lib/auth.module';
+import { QueuesModule } from '../../../libs/platform/queues/src/lib/queues.module';
+import { PlatformCarriersModule } from '@swiftship/platform-carriers';
+import { RateCacheModule } from '../../../libs/platform/rate-cache/src/lib/rate-cache.module';
 import {
   ThrottlerModule as PlatformThrottlerModule,
   TenantThrottlerGuard,
 } from '@swiftship/platform-throttler';
 
 // Observability lib
-import { ObservabilityModule } from '../../libs/observability/src/lib/observability.module';
-import { MetricsController } from '../../libs/observability/src/lib/metrics.controller';
+import { ObservabilityModule } from '../../../libs/observability/src/lib/observability.module';
+import { MetricsController } from '../../../libs/observability/src/lib/metrics.controller';
 // SS-028 — Sentry filter + audit interceptor (wired globally via APP_* tokens below)
-import { SentryExceptionFilter } from '../../libs/observability/src/lib/sentry/sentry-exception.filter';
-import { SentryGraphqlInterceptor } from '../../libs/observability/src/lib/sentry/sentry.interceptor';
-import { AuditInterceptor } from '../../libs/observability/src/lib/audit/audit.interceptor';
+import { SentryExceptionFilter } from '../../../libs/observability/src/lib/sentry/sentry-exception.filter';
+import { SentryGraphqlInterceptor } from '../../../libs/observability/src/lib/sentry/sentry.interceptor';
+import { AuditInterceptor } from '../../../libs/observability/src/lib/audit/audit.interceptor';
 
 // SS-031: KYC module (PAN + GSTIN + bank with BullMQ async verify).
 // Lives under the onboarding domain; registered directly so it can
 // inject the TypeORM-platform entities (no PrismaCompat shim).
-import { KycModule } from '../../libs/domains/onboarding/src/lib/kyc/kyc.module';
+import { KycModule } from '../../../libs/domains/onboarding/src/lib/kyc/kyc.module';
 import { CodRemittanceModule } from '@swiftship/domains-billing';
 
 // SS-032: GST invoicing + E-way bill (ClearTax sandbox adapter).
-import { GstModule } from '../../libs/domains/billing/src/lib/gst/gst.module';
+import { GstModule } from '../../../libs/domains/billing/src/lib/gst/gst.module';
 
 // SS-026: channel-agnostic sync stack (Shopify, WooCommerce, Amazon Seller,
 // Flipkart Seller, Myntra). Adds `channelConnections`, `connectChannel`,
 // `triggerChannelSync`, etc. to the GraphQL surface and registers BullMQ
 // recurring jobs for product + order pulls.
-import { ChannelSyncModule } from '../../libs/domains/channels/src/lib/sync/channel-sync.module';
+import { ChannelSyncModule } from '../../../libs/domains/channels/src/lib/sync/channel-sync.module';
 
 // Domain libs — every feature is now an importable Nx lib.
-import { OrdersLibModule } from '../../libs/domains/orders/src/lib/orders.module';
-import { ShipmentsLibModule } from '../../libs/domains/shipments/src/lib/shipments.module';
-import { WarehousesLibModule } from '../../libs/domains/warehouses/src/lib/warehouses.module';
-import { BillingLibModule } from '../../libs/domains/billing/src/lib/billing.module';
-import { UsersLibModule, RolesLibModule } from '../../libs/domains/users/src/lib/roles.module';
-import { CodLibModule, NdrLibModule, ManifestsLibModule, PickupsLibModule } from '../../libs/domains/..';
+import { OrdersLibModule } from '../../../libs/domains/orders/src/lib/orders.module';
+import { ShipmentsLibModule } from '../../../libs/domains/shipments/src/lib/shipments.module';
+import { WarehousesLibModule } from '../../../libs/domains/warehouses/src/lib/warehouses.module';
+import { BillingLibModule } from '../../../libs/domains/billing/src/lib/billing.module';
+import { UsersModule as UsersLibModule } from '../../../libs/domains/users/src/lib/users.module';
+import { RolesModule as RolesLibModule } from '../../../libs/domains/users/src/lib/roles.module';
+import { CodModule as CodLibModule } from '../../../libs/domains/cod/src/lib/cod.module';
+import { NdrModule as NdrLibModule } from '../../../libs/domains/ndr/src/lib/ndr.module';
+import { ManifestsModule as ManifestsLibModule } from '../../../libs/domains/manifests/src/lib/manifests.module';
+import { PickupsModule as PickupsLibModule } from '../../../libs/domains/pickups/src/lib/pickups.module';
 import { TenantModule } from '@swiftship/domains-tenants';
 
 // App-level glue
@@ -64,8 +66,11 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
   imports: [
     // Platform
     TypeormModule.forRoot(),
-    ConfigLibModule.forRoot({
-      schema: Joi.object({
+    // Joi-validated env via @nestjs/config (the platform/config lib ships
+    // only the environment helpers — there is no ConfigLibModule).
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
         NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
         PORT: Joi.number().default(3000),
         DATABASE_URL: Joi.string().uri().required(),
@@ -124,7 +129,10 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     // per tenant tier (Starter 60/min, Growth 300/min, Pro 1000/min,
     // Enterprise 10000/min) at request time.
     PlatformThrottlerModule,
-    GraphqlLibModule.forRoot({
+    // Apollo code-first GraphQL wired directly (the platform/graphql lib
+    // ships a shared `graphQLConfig` object, not a module).
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'apps/api/src/schema.graphql'),
       playground: process.env.NODE_ENV !== 'production',
       context: ({ req }: any) => ({ req }),
@@ -143,7 +151,7 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     PickupsLibModule,
     AuthLibModule,
     QueuesModule,
-    CarriersLibModule,
+    PlatformCarriersModule,
     RateCacheModule,
     ObservabilityModule,
     TenantModule,

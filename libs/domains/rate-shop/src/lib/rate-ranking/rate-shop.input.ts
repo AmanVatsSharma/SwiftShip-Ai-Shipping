@@ -34,6 +34,70 @@ registerEnumType(RateRankingStrategy, {
 });
 
 /**
+ * Override knobs for a single rate-simulation scenario. All fields are
+ * optional — only the ones set are applied on top of the base input.
+ *
+ *   "What if I bump the weight from 500g to 800g?"
+ *     → { weightGrams: 800 }
+ *   "What if I switch from PREPAID to COD?"
+ *     → { paymentMethod: 'COD' }
+ *   "What if I add a ₹100 declared value?"
+ *     → { declaredValuePaise: 10000 }
+ *   "What if I deliver to a more remote PIN?"
+ *     → { destinationPincode: '999999' }
+ *   "What if I tighten my SLA cap from 3 days to 2 days?"
+ *     → { maxDeliveryDays: 2 }
+ *   "What if I require a higher minimum courier score?"
+ *     → { minCourierScore: 90 }
+ *
+ * Money is still in paise. PIN codes are the standard 6-digit Indian
+ * postal codes.
+ */
+@InputType()
+export class RateSimulationOverrides {
+  /** Override the package weight in grams. */
+  @Field(() => Int, { nullable: true, description: 'Override the weight in grams' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  weightGrams?: number;
+
+  /** Override the payment method. */
+  @Field(() => String, { nullable: true, description: 'Override the payment method' })
+  @IsOptional()
+  @IsString()
+  paymentMethod?: 'PREPAID' | 'COD';
+
+  /** Override the declared value in paise (used as the RTO-loss basis). */
+  @Field(() => Int, { nullable: true, description: 'Override the declared value in paise' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  declaredValuePaise?: number;
+
+  /** Override the destination PIN code. */
+  @Field({ nullable: true, description: 'Override the destination pincode' })
+  @IsOptional()
+  @IsString()
+  destinationPincode?: string;
+
+  /** Override the SLA cap in days. */
+  @Field(() => Int, { nullable: true, description: 'Override the SLA cap in days' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxDeliveryDays?: number;
+
+  /** Override the minimum courier score [0..100]. */
+  @Field(() => Int, { nullable: true, description: 'Override the minimum courier score [0..100]' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  minCourierScore?: number;
+}
+
+/**
  * Input for the `rankedRateShop` GraphQL query. Lifts up the
  * `RateQuoteRequest` fields the resolver needs to call
  * `RateShopService.shopRates(req)` and adds two optional ranking
@@ -104,69 +168,5 @@ export class RankedRateShopInput {
   @Field(() => RateSimulationOverrides, { nullable: true })
   @IsOptional()
   simulate?: RateSimulationOverrides;
-}
-
-/**
- * Override knobs for a single rate-simulation scenario. All fields are
- * optional — only the ones set are applied on top of the base input.
- *
- *   "What if I bump the weight from 500g to 800g?"
- *     → { weightGrams: 800 }
- *   "What if I switch from PREPAID to COD?"
- *     → { paymentMethod: 'COD' }
- *   "What if I add a ₹100 declared value?"
- *     → { declaredValuePaise: 10000 }
- *   "What if I deliver to a more remote PIN?"
- *     → { destinationPincode: '999999' }
- *   "What if I tighten my SLA cap from 3 days to 2 days?"
- *     → { maxDeliveryDays: 2 }
- *   "What if I require a higher minimum courier score?"
- *     → { minCourierScore: 90 }
- *
- * Money is still in paise. PIN codes are the standard 6-digit Indian
- * postal codes.
- */
-@InputType()
-export class RateSimulationOverrides {
-  /** Override the package weight in grams. */
-  @Field(() => Int, { nullable: true, description: 'Override the weight in grams' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  weightGrams?: number;
-
-  /** Override the payment method. */
-  @Field({ nullable: true, description: 'Override the payment method' })
-  @IsOptional()
-  @IsString()
-  paymentMethod?: 'PREPAID' | 'COD';
-
-  /** Override the declared value in paise (used as the RTO-loss basis). */
-  @Field(() => Int, { nullable: true, description: 'Override the declared value in paise' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  declaredValuePaise?: number;
-
-  /** Override the destination PIN code. */
-  @Field({ nullable: true, description: 'Override the destination pincode' })
-  @IsOptional()
-  @IsString()
-  destinationPincode?: string;
-
-  /** Override the SLA cap in days. */
-  @Field(() => Int, { nullable: true, description: 'Override the SLA cap in days' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  maxDeliveryDays?: number;
-
-  /** Override the minimum courier score [0..100]. */
-  @Field(() => Int, { nullable: true, description: 'Override the minimum courier score [0..100]' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(100)
-  minCourierScore?: number;
 }
 

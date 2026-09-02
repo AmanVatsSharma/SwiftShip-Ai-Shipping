@@ -1,37 +1,37 @@
 import { ObjectType, Field, Int } from '@nestjs/graphql';
-import { Role } from './role.model';
 
 @ObjectType()
 export class UserAuth {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field()
-  email: string;
+  email!: string;
 
   @Field({ nullable: true })
   name?: string;
 
   @Field()
-  emailVerified: boolean;
+  emailVerified!: boolean;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
-  @Field(() => [Role], { nullable: 'itemsAndList' })
-  roles?: Role[];
+  /** Role NAMES (e.g. ["admin"]) — the auth payload carries no role ids. */
+  @Field(() => [String], { nullable: 'itemsAndList' })
+  roles?: string[];
 }
 
 @ObjectType()
 export class AuthPayload {
   @Field()
-  accessToken: string;
+  accessToken!: string;
 
   @Field()
-  refreshToken: string;
+  refreshToken!: string;
 
-  @Field(() => UserAuth)
-  user: UserAuth;
+  @Field(() => UserAuth, { nullable: true })
+  user?: UserAuth;
 
   @Field({ nullable: true })
   emailVerificationToken?: string;
@@ -40,7 +40,7 @@ export class AuthPayload {
 @ObjectType()
 export class MessageResponse {
   @Field()
-  message: string;
+  message!: string;
 
   @Field({ nullable: true })
   resetToken?: string;

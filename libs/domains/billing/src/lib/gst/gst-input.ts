@@ -6,13 +6,13 @@ import { Field, Float, InputType, Int } from '@nestjs/graphql';
 @InputType()
 export class GenerateGstInvoiceInput {
   @Field(() => String)
-  invoiceId: string;
+  invoiceId!: string;
 
   @Field(() => String)
-  hsnCode: string;
+  hsnCode!: string;
 
   @Field(() => Float, { description: 'Taxable value (pre-tax) in INR.' })
-  taxableValue: number;
+  taxableValue!: number;
 
   @Field(() => Float, {
     nullable: true,
@@ -21,10 +21,10 @@ export class GenerateGstInvoiceInput {
   taxRate?: number;
 
   @Field(() => String, { description: 'Supplier state (e.g. "Maharashtra").' })
-  supplierState: string;
+  supplierState!: string;
 
   @Field(() => String, { description: 'Place of supply (recipient state).' })
-  placeOfSupply: string;
+  placeOfSupply!: string;
 
   @Field(() => String, { nullable: true })
   supplierGstin?: string;
@@ -39,22 +39,22 @@ export class GenerateGstInvoiceInput {
 @InputType()
 export class GenerateEwayBillInput {
   @Field(() => Int)
-  shipmentId: number;
+  shipmentId!: number;
 
   @Field(() => String)
-  supplierGstin: string;
+  supplierGstin!: string;
 
   @Field(() => String, { nullable: true })
   recipientGstin?: string;
 
   @Field(() => String)
-  fromAddress: string;
+  fromAddress!: string;
 
   @Field(() => String)
-  toAddress: string;
+  toAddress!: string;
 
   @Field(() => Float)
-  invoiceValue: number;
+  invoiceValue!: number;
 
   @Field(() => String, {
     nullable: true,

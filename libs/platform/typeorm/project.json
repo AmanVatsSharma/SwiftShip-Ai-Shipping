@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/platform/typeorm",
-        "tsConfig": "libs/platform/typeorm/tsconfig.lib.json"
+        "tsConfig": "libs/platform/typeorm/tsconfig.lib.json",
+        "main": "libs/platform/typeorm/src/index.ts",
+        "packageJson": "libs/platform/typeorm/package.json"
       }
     },
     "lint": {

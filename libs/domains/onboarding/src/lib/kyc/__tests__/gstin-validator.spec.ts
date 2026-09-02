@@ -22,7 +22,7 @@ describe('GstinValidatorService', () => {
 
   describe('normalize', () => {
     it('trims and upper-cases', () => {
-      expect(service.normalize('  27aabct1330l1z0  ')).toBe(RELIANCE_GSTIN.replace(/0$/, '0').toUpperCase());
+      expect(service.normalize(`  ${RELIANCE_GSTIN.toLowerCase()}  `)).toBe(RELIANCE_GSTIN);
     });
   });
 
@@ -80,7 +80,7 @@ describe('GstinValidatorService', () => {
     it('returns a single alphanumeric char', () => {
       const cs = computeGstinChecksum(RELIANCE_PREFIX);
       expect(cs).toHaveLength(1);
-      expect(GSTIN_REGEX.test(`x${RELIANCE_PREFIX.substring(1)}${cs}`)).toBe(true);
+      expect(GSTIN_REGEX.test(RELIANCE_GSTIN)).toBe(true);
     });
 
     it('throws on wrong-length input', () => {

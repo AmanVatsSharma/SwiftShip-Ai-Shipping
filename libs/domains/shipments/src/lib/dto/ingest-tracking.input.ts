@@ -3,13 +3,13 @@ import { Field, InputType, Int } from '@nestjs/graphql';
 @InputType()
 export class IngestTrackingInput {
   @Field(() => Int)
-  shipmentId: number;
+  shipmentId!: number;
 
   @Field()
-  trackingNumber: string;
+  trackingNumber!: string;
 
   @Field()
-  status: string;
+  status!: string;
 
   @Field({ nullable: true })
   subStatus?: string;
@@ -24,7 +24,7 @@ export class IngestTrackingInput {
   location?: string;
 
   @Field()
-  occurredAt: Date;
+  occurredAt!: Date;
 
   @Field({ nullable: true, description: 'JSON string for raw payload' })
   rawJson?: string;

@@ -8,5 +8,5 @@ export class UpdateWarehouseSellerProfileInput extends PartialType(
 ) {
   @Field(() => Int)
   @IsInt()
-  id: number;
+  id!: number;
 }

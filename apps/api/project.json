@@ -21,7 +21,8 @@
           "apps/api/src/assets"
         ],
         "target": "node",
-        "compiler": "tsc"
+        "compiler": "tsc",
+        "webpackConfig": "apps/api/webpack.config.js"
       }
     },
     "serve": {
@@ -52,7 +53,8 @@
       ],
       "options": {
         "outputPath": "dist/apps/api",
-        "tsConfig": "apps/api/tsconfig.app.json"
+        "tsConfig": "apps/api/tsconfig.app.json",
+        "main": "apps/api/src/main.ts"
       }
     }
   }

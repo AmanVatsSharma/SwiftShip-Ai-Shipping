@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { RateShopPublicController } from './rate-shop.public.controller';
-import { RateRankingModule } from '@swiftship/domains-rate-shop';
+// Direct file import (not the `@swiftship/domains-rate-shop` barrel) so the
+// legacy `src/rate-shop` re-exports in the barrel stay out of the app's
+// compile graph — see STATUS.md §3 (src-to-libs decommission).
+import { RateRankingModule } from '../../../../libs/domains/rate-shop/src/lib/rate-ranking/rate-ranking.module';
 import { TenantModule } from '@swiftship/domains-tenants';
 
 /**

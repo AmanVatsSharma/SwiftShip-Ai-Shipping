@@ -7,13 +7,13 @@ export class CreatePaymentIntentInput {
   @Field(() => Int)
   @IsNotEmpty()
   @IsNumber()
-  userId: number;
+  userId!: number;
 
   @Field(() => Float)
   @IsNotEmpty()
   @IsNumber()
   @Min(0.01)
-  amount: number;
+  amount!: number;
 
   @Field({ defaultValue: 'INR' })
   @IsOptional()
@@ -23,7 +23,7 @@ export class CreatePaymentIntentInput {
   @Field(() => PaymentGateway)
   @IsNotEmpty()
   @IsEnum(PaymentGateway)
-  gateway: PaymentGateway;
+  gateway!: PaymentGateway;
 
   @Field(() => Int, { nullable: true })
   @IsOptional()
@@ -35,7 +35,7 @@ export class CreatePaymentIntentInput {
   @IsString()
   invoiceId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   metadata?: Record<string, any>;
 }
@@ -45,7 +45,7 @@ export class VerifyPaymentInput {
   @Field()
   @IsNotEmpty()
   @IsString()
-  paymentId: string;
+  paymentId!: string;
 }
 
 @InputType()
@@ -53,7 +53,7 @@ export class RefundPaymentInput {
   @Field()
   @IsNotEmpty()
   @IsString()
-  paymentId: string;
+  paymentId!: string;
 
   @Field(() => Float, { nullable: true })
   @IsOptional()

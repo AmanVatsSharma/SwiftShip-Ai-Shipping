@@ -158,7 +158,7 @@ describe('KycService', () => {
 
     it('rejects when the embedded GSTIN PAN does not match the supplied PAN', async () => {
       // Build a structurally valid GSTIN for a different PAN.
-      const differentPan = 'ZZZZZ9999A';
+      const differentPan = 'ZZZCZ9999A';
       const prefix = `27${differentPan}1Z`;
       const differentGstin = `${prefix}${computeGstinChecksum(prefix)}`;
       await expect(

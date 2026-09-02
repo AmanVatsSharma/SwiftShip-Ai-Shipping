@@ -1,10 +1,19 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { RoleEntity } from '@swiftship/platform-typeorm';
 import { RolesService } from './roles.service';
 import { RolesResolver } from './roles.resolver';
-import { PrismaService } from '../prisma/prisma.service';
 
+/**
+ * Roles module (TypeORM-backed).
+ *
+ * Migrated off the PrismaCompat-style `PrismaService` — `RolesService` now
+ * injects `@InjectRepository(RoleEntity)` directly (the last users-lib
+ * consumer of the removed shim; see MIGRATION.md §9).
+ */
 @Module({
-  providers: [RolesService, RolesResolver, PrismaService],
+  imports: [TypeOrmModule.forFeature([RoleEntity])],
+  providers: [RolesService, RolesResolver],
   exports: [RolesService],
 })
-export class RolesModule {} 
+export class RolesModule {}

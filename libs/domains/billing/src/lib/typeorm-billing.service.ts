@@ -18,7 +18,6 @@ import {
   UserEntity,
   WarehouseEntity,
   InvoiceStatus,
-  BillingCycle,
 } from '@swiftship/platform-typeorm';
 import { TenantContext } from '@swiftship/domains-tenants';
 import {
@@ -80,7 +79,7 @@ export class BillingService {
     });
   }
 
-  async getInvoice(id: number) {
+  async getInvoice(id: string) {
     const tenantId = this.requireTenantId();
     const inv = await this.invoices.findOne({
       where: { id, tenantId },
@@ -96,7 +95,6 @@ export class BillingService {
     warehouseId: number;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number; hsnSac?: string }[];
     subscriptionId?: number;
-    billingCycle?: BillingCycle;
   }) {
     const tenantId = this.requireTenantId();
     const user = await this.users.findOne({ where: { id: input.userId } });
@@ -150,20 +148,28 @@ export class BillingService {
         invoiceNumber,
         userId: input.userId,
         warehouseId: input.warehouseId,
-        subscriptionId: input.subscriptionId,
+        subscriptionId:
+          input.subscriptionId != null ? String(input.subscriptionId) : null,
         tenantId,
         status: InvoiceStatus.DRAFT,
-        subtotal,
-        totalTax,
-        total,
+        amount: subtotal,
+        taxAmount: totalTax,
+        totalAmount: total,
         currency: 'INR',
-        billingCycle: input.billingCycle ?? BillingCycle.MONTHLY,
         financialYear,
         sequenceNumber,
       });
       const saved = await em.save(inv);
       for (const it of itemRows) {
-        const item = em.create(InvoiceItemEntity, { ...it, invoiceId: saved.id });
+        const item = em.create(InvoiceItemEntity, {
+          description: it.description,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          totalPrice: it.lineTotal,
+          taxRate: it.taxRate,
+          hsnCode: it.hsnSac ?? null,
+          taxAmount: it.taxAmount,
+        });
         await em.save(item);
       }
       return this.getInvoice(saved.id);
@@ -171,20 +177,23 @@ export class BillingService {
   }
 
   // ---- mark paid
-  async markInvoicePaid(invoiceId: number, paymentId: number) {
+  async markInvoicePaid(invoiceId: string, paymentId: string) {
     const tenantId = this.requireTenantId();
-    await this.invoices.update({ id: invoiceId, tenantId } as any, {
-      status: InvoiceStatus.PAID,
-      paidAt: new Date(),
-    });
+    await this.invoices.update(
+      { id: invoiceId, tenantId },
+      {
+        status: InvoiceStatus.PAID,
+        paidAt: new Date(),
+      },
+    );
     return this.getInvoice(invoiceId);
   }
 
-  async voidInvoice(invoiceId: number) {
+  async voidInvoice(invoiceId: string) {
     const tenantId = this.requireTenantId();
     await this.invoices.update(
-      { id: invoiceId, tenantId } as any,
-      { status: InvoiceStatus.VOID },
+      { id: invoiceId, tenantId },
+      { status: InvoiceStatus.CANCELLED },
     );
     return this.getInvoice(invoiceId);
   }

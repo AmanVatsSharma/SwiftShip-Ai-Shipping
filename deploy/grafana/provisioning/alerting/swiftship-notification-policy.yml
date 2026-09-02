@@ -1,0 +1,17 @@
+# Grafana alerting provisioning — default notification policy.
+# Routes every Grafana-managed alert (and alertmanager-mode alerts) to the
+# swiftship-oncall-webhook contact point defined in
+# swiftship-contact-point.yml. Severity-based sub-policies can be layered on
+# later (e.g. page on critical, ticket on warning) — do not add them until a
+# second receiver exists.
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: swiftship-oncall-webhook
+    group_by:
+      - alertname
+      - service
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h

@@ -3,7 +3,19 @@
   "compilerOptions": {
     "outDir": "../../../dist/out-tsc",
     "declaration": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "src/lib/dashboard.module.ts",
+    "src/lib/dashboard.service.ts",
+    "src/lib/dashboard.resolver.ts",
+    "src/lib/dashboard.model.ts"
+  ]
 }

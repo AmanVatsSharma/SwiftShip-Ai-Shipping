@@ -21,144 +21,144 @@ import { WalletEntity } from './wallet.entity';
 @Index('idx_tenants_slug', ['slug'], { unique: true })
 export class TenantEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  slug: string;
+  slug!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ type: 'varchar', length: 16, default: 'TRIAL' })
-  status: TenantStatus;
+  status!: TenantStatus;
 
   @Column({ type: 'varchar', length: 16, default: 'STARTER' })
-  tier: TenantTier;
+  tier!: TenantTier;
 
   @Column({ type: 'jsonb', default: {} })
-  settings: Record<string, unknown>;
+  settings!: Record<string, unknown>;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @OneToMany(() => TenantMemberEntity, (m) => m.tenant)
-  members: TenantMemberEntity[];
+  members!: TenantMemberEntity[];
 
   @OneToMany(() => TenantApiKeyEntity, (k) => k.tenant)
-  apiKeys: TenantApiKeyEntity[];
+  apiKeys!: TenantApiKeyEntity[];
 
   @OneToMany(() => TenantFeatureFlagEntity, (f) => f.tenant)
-  featureFlags: TenantFeatureFlagEntity[];
+  featureFlags!: TenantFeatureFlagEntity[];
 
   @OneToMany(() => TenantRoleEntity, (r) => r.tenant)
-  roles: TenantRoleEntity[];
+  roles!: TenantRoleEntity[];
 
   @OneToOne(() => WalletEntity, (w) => w.tenant)
-  wallet: WalletEntity | null;
+  wallet!: WalletEntity | null;
 }
 
 @Entity('tenant_members')
 @Index('idx_tenant_members_tenant_id', ['tenantId'])
 export class TenantMemberEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  tenantId: number;
+  tenantId!: number;
 
   @ManyToOne(() => TenantEntity, (t) => t.members, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tenantId' })
-  tenant: TenantEntity;
+  tenant!: TenantEntity;
 
   @Column()
-  userId: number;
+  userId!: number;
 
   @Column({ type: 'varchar', length: 16, default: 'MEMBER' })
-  role: TenantMemberRole;
+  role!: TenantMemberRole;
 
   @Column({ default: false })
-  isPrimary: boolean;
+  isPrimary!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 @Entity('tenant_roles')
 @Index('idx_tenant_roles_tenant_id', ['tenantId'])
 export class TenantRoleEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  tenantId: number;
+  tenantId!: number;
 
   @ManyToOne(() => TenantEntity, (t) => t.roles, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tenantId' })
-  tenant: TenantEntity;
+  tenant!: TenantEntity;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ type: 'jsonb', default: {} })
-  permissions: Record<string, unknown>;
+  permissions!: Record<string, unknown>;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 @Entity('tenant_feature_flags')
 @Index('idx_tenant_feature_flags_tenant_id', ['tenantId'])
 export class TenantFeatureFlagEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  tenantId: number;
+  tenantId!: number;
 
   @ManyToOne(() => TenantEntity, (t) => t.featureFlags, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'tenantId' })
-  tenant: TenantEntity;
+  tenant!: TenantEntity;
 
   @Column()
-  key: string;
+  key!: string;
 
   @Column({ type: 'jsonb', default: {} })
-  value: Record<string, unknown>;
+  value!: Record<string, unknown>;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 @Entity('tenant_api_keys')
 @Index('idx_tenant_api_keys_prefix', ['prefix'], { unique: true })
 export class TenantApiKeyEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  tenantId: number;
+  tenantId!: number;
 
   @ManyToOne(() => TenantEntity, (t) => t.apiKeys, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tenantId' })
-  tenant: TenantEntity;
+  tenant!: TenantEntity;
 
   @Column()
-  prefix: string;
+  prefix!: string;
 
   @Column()
-  hashedKey: string;
+  hashedKey!: string;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ type: 'timestamptz', nullable: true })
-  lastUsedAt: Date | null;
+  lastUsedAt!: Date | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }

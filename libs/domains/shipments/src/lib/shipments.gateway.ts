@@ -7,7 +7,7 @@ import { Server, Socket } from 'socket.io';
   },
 })
 export class ShipmentsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server: Server;
+  @WebSocketServer() server!: Server;
 
   afterInit(server: Server) {
     console.log('ShipmentsGateway Initialized');

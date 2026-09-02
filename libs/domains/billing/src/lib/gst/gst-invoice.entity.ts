@@ -30,9 +30,9 @@ export class GstInvoiceEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'varchar', length: 64 })
+  @Column({ type: 'uuid' })
   invoiceId!: string;
-  @OneToOne(() => InvoiceEntity, { onDelete: 'CASCADE' })
+  @OneToOne(() => InvoiceEntity, undefined, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'invoiceId' })
   invoice?: InvoiceEntity;
 

@@ -7,7 +7,7 @@ export class CreateUserInput {
   @IsNotEmpty({ message: 'Email is required' })
   @IsEmail({}, { message: 'Invalid email format' })
   @MaxLength(255, { message: 'Email must be at most 255 characters' })
-  email: string;
+  email!: string;
 
   @Field({ nullable: true })
   @IsOptional()

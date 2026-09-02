@@ -1,4 +1,5 @@
 import {
+  JoinColumn,
   Column,
   CreateDateColumn,
   Entity,
@@ -83,9 +84,10 @@ export class ShopifyOrderEntity {
   @Column({ type: 'varchar', length: 32 })
   status!: string;
 
-  @Column({ type: 'varchar', length: 64 })
+  @Column({ type: 'uuid' })
   storeId!: string;
   @ManyToOne(() => ShopifyStoreEntity, (s) => s.orders)
+  @JoinColumn({ name: 'storeId' })
   store?: ShopifyStoreEntity;
 
   @Column({ type: 'timestamp', nullable: true })
@@ -172,9 +174,10 @@ export class WooCommerceOrderEntity {
   @Column({ type: 'varchar', length: 32 })
   status!: string;
 
-  @Column({ type: 'varchar', length: 64 })
+  @Column({ type: 'uuid' })
   storeId!: string;
   @ManyToOne(() => WooCommerceStoreEntity, (s) => s.orders)
+  @JoinColumn({ name: 'storeId' })
   store?: WooCommerceStoreEntity;
 
   @Column({ type: 'timestamp', nullable: true })

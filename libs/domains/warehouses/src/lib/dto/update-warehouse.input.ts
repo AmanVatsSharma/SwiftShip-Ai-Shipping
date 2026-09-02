@@ -14,7 +14,7 @@ export class UpdateWarehouseInput {
   @Field(() => Int)
   @IsInt()
   @IsPositive()
-  id: number;
+  id!: number;
 
   @Field({ nullable: true })
   @IsOptional()

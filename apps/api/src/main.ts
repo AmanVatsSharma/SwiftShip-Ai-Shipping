@@ -2,19 +2,19 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import helmet from 'helmet';
-import * as morgan from 'morgan';
+import morgan from 'morgan';
 import * as bodyParser from 'body-parser';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { StructuredLogger } from '../../libs/observability/src/lib/logger.service';
+import { StructuredLogger } from '../../../libs/observability/src/lib/logger.service';
 
 // SS-028 — Sentry + OpenTelemetry bootstraps. MUST run BEFORE
 // NestFactory.create so that any constructor-time throw is captured
 // and so the OTel auto-instrumentation hooks can patch the HTTP /
 // TypeORM / BullMQ libraries that NestJS will load.
-import { initSentry } from '../../libs/observability/src/lib/sentry/sentry.bootstrap';
-import { initOtel } from '../../libs/observability/src/lib/otel/otel.bootstrap';
-import { CorrelationIdMiddleware } from '../../libs/observability/src/lib/correlation/correlation-id.middleware';
+import { initSentry } from '../../../libs/observability/src/lib/sentry/sentry.bootstrap';
+import { initOtel } from '../../../libs/observability/src/lib/otel/otel.bootstrap';
+import { CorrelationIdMiddleware } from '../../../libs/observability/src/lib/correlation/correlation-id.middleware';
 
 initSentry({
   dsn: process.env.SENTRY_DSN,

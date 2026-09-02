@@ -13,23 +13,23 @@ export class NdrCase {
   @Field(() => Int) tenantId!: number;
   @Field(() => NdrCaseStatus) status!: NdrCaseStatus;
 
-  @Field({ nullable: true }) awbNumber?: string | null;
-  @Field({ nullable: true }) courierName?: string | null;
-  @Field({ nullable: true }) customerPhone?: string | null;
-  @Field({ nullable: true }) customerEmail?: string | null;
-  @Field({ nullable: true }) customerName?: string | null;
+  @Field(() => String, { nullable: true }) awbNumber?: string | null;
+  @Field(() => String, { nullable: true }) courierName?: string | null;
+  @Field(() => String, { nullable: true }) customerPhone?: string | null;
+  @Field(() => String, { nullable: true }) customerEmail?: string | null;
+  @Field(() => String, { nullable: true }) customerName?: string | null;
 
-  @Field({ nullable: true }) ndrReason?: string | null;
-  @Field({ nullable: true }) reason?: string | null;
-  @Field({ nullable: true }) actionNotes?: string | null;
+  @Field(() => String, { nullable: true }) ndrReason?: string | null;
+  @Field(() => String, { nullable: true }) reason?: string | null;
+  @Field(() => String, { nullable: true }) actionNotes?: string | null;
 
   @Field(() => Int) attemptCount!: number;
 
-  @Field({ nullable: true }) firstAttemptAt?: Date | null;
-  @Field({ nullable: true }) lastAttemptAt?: Date | null;
-  @Field({ nullable: true }) resolvedAt?: Date | null;
+  @Field(() => String, { nullable: true }) firstAttemptAt?: Date | null;
+  @Field(() => String, { nullable: true }) lastAttemptAt?: Date | null;
+  @Field(() => String, { nullable: true }) resolvedAt?: Date | null;
 
-  @Field({ nullable: true }) metadata?: Record<string, any> | null;
+  @Field(() => String, { nullable: true }) metadata?: Record<string, any> | null;
 
   @Field() createdAt!: Date;
   @Field() updatedAt!: Date;

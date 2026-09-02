@@ -7,7 +7,7 @@ export class UpdateUserInput {
   @IsNotEmpty({ message: 'ID is required' })
   @IsInt({ message: 'ID must be an integer' })
   @IsPositive({ message: 'ID must be positive' })
-  id: number;
+  id!: number;
 
   @Field({ nullable: true })
   @IsOptional()

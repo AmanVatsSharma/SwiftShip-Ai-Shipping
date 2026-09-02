@@ -1,9 +1,14 @@
 import { InputType, Field, Int } from '@nestjs/graphql';
-import { ShipmentStatus } from './shipment.model';
-import { IsEnum, IsOptional, IsInt, IsPositive } from 'class-validator';
+import { ShipmentStatus } from '../shipment.model';
+import { IsEnum, IsOptional, IsInt, IsPositive, IsString } from 'class-validator';
 
 @InputType()
 export class ShipmentsFilterInput {
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString({ message: 'Tracking number must be a string' })
+  trackingNumber?: string;
+
   @Field(() => ShipmentStatus, { nullable: true })
   @IsOptional()
   @IsEnum(ShipmentStatus, { message: 'Invalid shipment status' })

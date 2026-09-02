@@ -83,9 +83,9 @@ export class RateSimulatorService {
     // 3. Build the ranker preferences. The strategy enum is upper-case
     //    on the GraphQL side; the ranker consumes lowercase.
     const prefs = {
-      strategy: merged.strategy.toLowerCase() as Parameters<
-        RateRankingService['rank']
-      >[1]['strategy'],
+      strategy: merged.strategy.toLowerCase() as NonNullable<
+        Parameters<RateRankingService['rank']>[1]
+      >['strategy'],
       maxDeliveryDays: merged.maxDeliveryDays,
       minCourierScore: merged.minCourierScore,
       codAmountPaise: merged.declaredValuePaise,

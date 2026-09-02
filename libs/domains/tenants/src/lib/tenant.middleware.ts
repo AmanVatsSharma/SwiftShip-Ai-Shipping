@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
-import type { TenantService } from './tenant.service';
+// Value import (not `import type`) — required for DI param reflection.
+import { TenantService } from './tenant.service';
 import { TenantContext } from './tenant.context';
 
 export interface TenantRequest extends Request {

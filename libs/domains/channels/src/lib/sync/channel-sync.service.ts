@@ -247,7 +247,13 @@ export class ChannelSyncService implements OnModuleInit {
     tenantId: number,
     conn: ChannelConnectionEntity,
   ): Promise<ChannelSyncJobEntity> {
-    const job = await this.openJob(tenantId, conn.id, 'products');
+    const { job, isNew } = await this.openJob(tenantId, conn.id, 'products');
+    if (!isNew) {
+      // A sync for this channel already ran (or is running) in the
+      // current window — collapse into its job row instead of
+      // re-pulling from the adapter.
+      return job;
+    }
     try {
       const adapter = this.requireAdapter(conn.platform);
       let cursor = conn.productCursor ?? undefined;
@@ -278,7 +284,13 @@ export class ChannelSyncService implements OnModuleInit {
           else totalFailed++;
         }
         pages++;
-        if (!page.nextCursor) break;
+        if (!page.nextCursor) {
+          // Drained — the adapter signalled there are no further pages,
+          // so reset the cursor: the next sync starts a fresh full pull
+          // instead of resuming from a stale position.
+          cursor = undefined;
+          break;
+        }
         cursor = page.nextCursor;
       }
 
@@ -322,7 +334,11 @@ export class ChannelSyncService implements OnModuleInit {
     conn: ChannelConnectionEntity,
     since?: Date,
   ): Promise<ChannelSyncJobEntity> {
-    const job = await this.openJob(tenantId, conn.id, 'orders');
+    const { job, isNew } = await this.openJob(tenantId, conn.id, 'orders');
+    if (!isNew) {
+      // Same window collapse as `syncProducts`.
+      return job;
+    }
     try {
       const adapter = this.requireAdapter(conn.platform);
       let cursor = conn.orderCursor ?? undefined;
@@ -357,7 +373,13 @@ export class ChannelSyncService implements OnModuleInit {
           processedExternalIds.push(order.externalId);
         }
         pages++;
-        if (!page.nextCursor) break;
+        if (!page.nextCursor) {
+          // Drained — the adapter signalled there are no further pages,
+          // so reset the cursor: the next sync starts a fresh full pull
+          // instead of resuming from a stale position.
+          cursor = undefined;
+          break;
+        }
         cursor = page.nextCursor;
       }
 
@@ -469,14 +491,16 @@ export class ChannelSyncService implements OnModuleInit {
    *   - orders: per UTC hour (cron runs every 5 min — using hour
    *     means at most 12 jobs per channel per hour are idempotent).
    *
-   * Returns the existing job if one already exists; otherwise creates
-   * a new one in `running` state.
+   * Returns the existing job (with `isNew: false`) if one already
+   * exists in the window; callers must return it as-is instead of
+   * starting a second run. Otherwise creates a new one in `running`
+   * state with `isNew: true`.
    */
   private async openJob(
     tenantId: number,
     channelId: number,
     type: ChannelSyncType,
-  ): Promise<ChannelSyncJobEntity> {
+  ): Promise<{ job: ChannelSyncJobEntity; isNew: boolean }> {
     const window =
       type === 'products'
         ? this.utcWindow('minute')
@@ -484,7 +508,7 @@ export class ChannelSyncService implements OnModuleInit {
     const idempotencyKey = `${tenantId}|${channelId}|${type}|${window}`;
 
     const existing = await this.jobRepo.findOne({ where: { idempotencyKey } });
-    if (existing) return existing;
+    if (existing) return { job: existing, isNew: false };
 
     const job = this.jobRepo.create({
       tenantId,
@@ -495,14 +519,14 @@ export class ChannelSyncService implements OnModuleInit {
       startedAt: new Date(),
     });
     try {
-      return await this.jobRepo.save(job);
+      return { job: await this.jobRepo.save(job), isNew: true };
     } catch (err) {
       // Unique-violation race: a concurrent sync inserted first. Return
       // the winning row.
       const winner = await this.jobRepo.findOne({
         where: { idempotencyKey },
       });
-      if (winner) return winner;
+      if (winner) return { job: winner, isNew: false };
       throw err;
     }
   }

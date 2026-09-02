@@ -1,0 +1,40 @@
+# Grafana alerting provisioning — contact point (webhook stub).
+#
+# Loaded because docker-compose.observability.yml already bind-mounts
+# ./deploy/grafana/provisioning -> /etc/grafana/provisioning (Grafana 10.4.2,
+# unified alerting). Kept deliberately minimal: ONE webhook contact point
+# that a Slack/Discord/PagerDuty-compatible incoming webhook can be plugged
+# into, plus the default notification policy in
+# swiftship-notification-policy.yml. No Grafana-managed alert rules are
+# provisioned — rule evaluation lives in Prometheus
+# (deploy/prometheus/alerts/swiftship-api.rules.yml).
+#
+# SETUP (one env var): the webhook URL is read from SS_ALERT_WEBHOOK_URL.
+# Grafana expands ${VAR} in provisioning files from the server environment.
+# Add to the `grafana` service in docker-compose.observability.yml:
+#
+#   environment:
+#     SS_ALERT_WEBHOOK_URL: ${SS_ALERT_WEBHOOK_URL}   # e.g. a Slack incoming webhook
+#
+# If the variable is unset the URL provisions as an empty string and
+# notifications silently fail — verify in Grafana: Alerting -> Contact points.
+#
+# NOTE: with rules evaluated by Prometheus (not Grafana), this contact point
+# is the delivery path only once a Prometheus alerting/notification pipeline
+# is wired (Alertmanager or Grafana's Prometheus-backed alerting). See
+# docs/runbook.md "Monitoring gaps" for the wiring checklist.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: swiftship-oncall-webhook
+    receivers:
+      - uid: swiftship-oncall-webhook-1
+        type: webhook
+        settings:
+          url: ${SS_ALERT_WEBHOOK_URL}
+          httpMethod: POST
+          # Grafana posts an alert payload JSON body; Slack Incoming Webhooks
+          # expect `text` — flip to `title: ...` custom payload if needed.
+          maxAlerts: 0
+        disableResolveMessage: false

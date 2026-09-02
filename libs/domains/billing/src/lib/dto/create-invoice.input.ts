@@ -6,7 +6,7 @@ export class BuyerDetailsInput {
   @Field(() => String, { description: 'Buyer legal or trading name' })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @Field(() => String, { description: 'Buyer GSTIN', nullable: true })
   @IsOptional()
@@ -62,17 +62,17 @@ export class CreateInvoiceItemInput {
   @Field(() => String, { description: 'Item description' })
   @IsNotEmpty()
   @IsString()
-  description: string;
+  description!: string;
 
   @Field(() => Int, { description: 'Quantity', defaultValue: 1 })
   @IsInt()
   @Min(1)
-  quantity: number;
+  quantity!: number;
 
   @Field(() => Float, { description: 'Unit price' })
   @IsNumber()
   @Min(0)
-  unitPrice: number;
+  unitPrice!: number;
 
   @Field(() => String, { description: 'HSN/SAC code for GST', nullable: true })
   @IsOptional()
@@ -94,11 +94,11 @@ export class CreateInvoiceItemInput {
 export class CreateInvoiceInput {
   @Field(() => Int, { description: 'User ID' })
   @IsInt()
-  userId: number;
+  userId!: number;
 
   @Field(() => Int, { description: 'Warehouse ID for fulfillment' })
   @IsInt()
-  warehouseId: number;
+  warehouseId!: number;
 
   @Field(() => String, { description: 'Subscription ID (optional)', nullable: true })
   subscriptionId?: string;
@@ -119,7 +119,7 @@ export class CreateInvoiceInput {
   buyer?: BuyerDetailsInput;
 
   @Field(() => [CreateInvoiceItemInput], { description: 'Invoice items' })
-  items: CreateInvoiceItemInput[];
+  items!: CreateInvoiceItemInput[];
 
   @Field(() => String, { description: 'Currency code', defaultValue: 'INR' })
   currency?: string;
@@ -127,7 +127,7 @@ export class CreateInvoiceInput {
   @Field(() => Date, { description: 'Due date', nullable: true })
   dueDate?: Date;
 
-  @Field(() => Object, { description: 'Additional metadata', nullable: true })
+  @Field(() => String, { description: 'Additional metadata (JSON-encoded)', nullable: true })
   metadata?: Record<string, any>;
 
   @Field(() => Boolean, {

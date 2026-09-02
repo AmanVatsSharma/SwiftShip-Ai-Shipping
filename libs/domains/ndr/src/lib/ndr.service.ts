@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -27,6 +27,9 @@ export class NdrService {
     private readonly shipments: Repository<ShipmentEntity>,
     private readonly sm: NdrStateMachine,
     private readonly tenantContext: TenantContext,
+    // forwardRef: ndr.service <-> rto-settlement.service form a module cycle;
+    // this breaks it so DI reflection survives (live-boot fix, 2026-08).
+    @Inject(forwardRef(() => RtoSettlementService))
     private readonly rtoSettlement: RtoSettlementService,
   ) {}
 

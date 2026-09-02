@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   OneToOne,
@@ -46,11 +47,13 @@ export class PaymentEntity {
   @Column({ type: 'int', nullable: true })
   orderId?: number | null;
   @ManyToOne(() => OrderEntity, (o) => o.payments)
+  @JoinColumn({ name: "orderId" })
   order?: OrderEntity | null;
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   invoiceId?: string | null;
   @ManyToOne(() => InvoiceEntity, (i) => i.payments)
+  @JoinColumn({ name: "invoiceId" })
   invoice?: InvoiceEntity | null;
 
   @Column({ type: 'double precision' })
@@ -114,9 +117,10 @@ export class RefundEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 64 })
+  @Column({ type: 'uuid' })
   paymentId!: string;
   @ManyToOne(() => PaymentEntity, (p) => p.refunds, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'paymentId' })
   payment?: PaymentEntity;
 
   @Column({ type: 'double precision' })
@@ -215,9 +219,10 @@ export class InvoiceEntity {
   @Column({ type: 'varchar', length: 64 })
   invoiceNumber!: string;
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   subscriptionId?: string | null;
   @ManyToOne(() => SubscriptionEntity, (s) => s.invoices)
+  @JoinColumn({ name: "subscriptionId" })
   subscription?: SubscriptionEntity | null;
 
   @Column({ type: 'int' })
@@ -228,11 +233,13 @@ export class InvoiceEntity {
   @Column({ type: 'int', nullable: true })
   warehouseId?: number | null;
   @ManyToOne(() => WarehouseEntity, (w) => w.invoices)
+  @JoinColumn({ name: "warehouseId" })
   warehouse?: WarehouseEntity | null;
 
   @Column({ type: 'int', nullable: true })
   sellerProfileId?: number | null;
   @ManyToOne(() => WarehouseSellerProfileEntity, (p) => p.invoices)
+  @JoinColumn({ name: "sellerProfileId" })
   sellerProfile?: WarehouseSellerProfileEntity | null;
 
   @Column({ type: 'int', default: 1 })
@@ -331,7 +338,9 @@ export class InvoiceEntity {
   @OneToMany(() => PaymentEntity, (p) => p.invoice)
   payments?: PaymentEntity[];
 
-  @OneToOne(() => EwayBillEntity, (e) => e.invoice)
+  // Unidirectional OneToOne (no inverse lambda): EwayBillEntity exposes
+  // `invoiceId` directly and has no `invoice` relation property.
+  @OneToOne(() => EwayBillEntity)
   ewayBill?: EwayBillEntity | null;
 }
 
@@ -341,7 +350,7 @@ export class InvoiceItemEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'varchar', length: 64 })
+  @Column({ type: 'uuid' })
   invoiceId!: string;
   @ManyToOne(() => InvoiceEntity, (i) => i.invoiceItems, { onDelete: 'CASCADE' })
   invoice?: InvoiceEntity;
@@ -486,11 +495,12 @@ export class BankCodDisputeEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 64 })
+  @Column({ type: 'uuid' })
   codRemittanceId!: string;
   @ManyToOne(() => BankCodRemittanceEntity, (r) => r.disputes, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'codRemittanceId' })
   codRemittance?: BankCodRemittanceEntity;
 
   @Column({ type: 'int' })

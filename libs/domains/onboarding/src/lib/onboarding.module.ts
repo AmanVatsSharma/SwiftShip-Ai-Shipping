@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { QueuesModule } from '@swiftship/platform-queues';
+import { TenantModule } from '@swiftship/domains-tenants';
 import { OnboardingStateEntity } from '@swiftship/platform-typeorm';
 import { OnboardingService } from './onboarding.service';
 import { OnboardingResolver } from './onboarding.resolver';

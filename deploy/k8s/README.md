@@ -103,3 +103,44 @@ kubectl -n swiftship get hpa
 ```
 
 The API should pass its readiness probe at `GET /health/ready` once the NestJS app has started, the GraphQL schema has been generated, and the Postgres/Redis connections are healthy.
+
+## Production image
+
+The canonical API image is built by the **root `Dockerfile`** (multi-stage, Nx-based). `docker-compose.yml` and `.github/workflows/release.yml` both build from it; there is no per-app Dockerfile for `apps/api`.
+
+### Build
+
+```bash
+# Locally (from the repo root — the whole workspace is the build context)
+docker build -f Dockerfile -t swiftship-api:local .
+
+# CI: release.yml builds and pushes on every v*.*.* tag
+#   ghcr.io/<org>/<repo>/api:<tag>  and  :latest
+```
+
+The build stages are: `deps` (`npm ci` from the root lockfile), `build` (`npx nx build api` → `dist/apps/api/main.js`, plus `npx nx build typeorm` → the CommonJS datasource used for migrations), `prod-deps` (`npm ci --omit=dev`), and a slim `node:22-alpine` `runner` that ships only `dist/apps/api`, `dist/libs/platform/typeorm`, production `node_modules`, and `docker-entrypoint.sh`.
+
+### Entrypoint
+
+`docker-entrypoint.sh` runs before the app:
+
+1. Runs all pending TypeORM migrations (registered in `libs/platform/typeorm/src/lib/datasource.ts`), one transaction each.
+2. Forces `DB_SYNCHRONIZE=false` (the schema is owned by migrations — never `synchronize` in production).
+3. `exec node dist/apps/api/main.js` as the unprivileged `node` user.
+
+Set `MIGRATIONS_ENABLED=false` to skip step 1 — useful when you prefer running migrations as a dedicated Job/initContainer instead of per-pod. Note: with multiple replicas booting simultaneously (the `api` Deployment runs 2), pods may race on a cold database; already-applied migrations are skipped, but for a strict single-runner guarantee either use an initContainer or set `MIGRATIONS_ENABLED=false` on the Deployment and run migrations via a one-off Job using the same image.
+
+### Required env / secret keys
+
+| Key | Required | Notes |
+|-----|----------|-------|
+| `DATABASE_URL` | yes | Postgres URL (also parsed by the Postgres StatefulSet init) |
+| `REDIS_URL` | yes | BullMQ / rate-cache |
+| `JWT_SECRET` | yes | Auth token signing |
+| `DB_SYNCHRONIZE` | recommended `false` | Entrypoint enforces `false` when it runs migrations |
+| `MIGRATIONS_ENABLED` | optional | `false` disables startup migrations |
+| `CHANNEL_ENCRYPTION_KEY` | for channel sync | AES-256-GCM key for stored channel credentials |
+| `SENTRY_DSN`, `SENTRY_RELEASE` | optional | No-ops when unset |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME` | optional | OTLP/HTTP traces |
+
+The k8s Secret (`swiftship-secrets`) and ConfigMap (`swiftship-config`) already cover the required keys; add the optional ones there if you need them. The image exposes `:3000` and reports health via `wget GET /health/ready` (image `HEALTHCHECK` — Kubernetes uses its own probes and ignores it).

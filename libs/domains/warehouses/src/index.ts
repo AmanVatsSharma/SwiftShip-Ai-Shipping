@@ -5,3 +5,4 @@ export * from './lib/warehouse.model';
 export * from './lib/dto/create-warehouse.input';
 export * from './lib/dto/update-warehouse.input';
 export * from './lib/dto/upsert-warehouse-coverage.input';
+export * from './lib/seller-profile.model';

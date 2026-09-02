@@ -1,0 +1,1521 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type ManifestEntity {
+  id: ID!
+  manifestNo: String!
+  tenantId: Int!
+  createdAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type UserAuth {
+  id: Int!
+  email: String!
+  name: String
+  emailVerified: Boolean!
+  createdAt: DateTime!
+  roles: [String]
+}
+
+type AuthPayload {
+  accessToken: String!
+  refreshToken: String!
+  user: UserAuth
+  emailVerificationToken: String
+}
+
+type MessageResponse {
+  message: String!
+  resetToken: String
+  verificationToken: String
+}
+
+type Tenant {
+  id: ID!
+  slug: String!
+  name: String!
+  status: String!
+  tier: String!
+  settings: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TenantMember {
+  id: ID!
+  tenantId: ID!
+  userId: ID!
+  role: String!
+  isPrimary: Boolean!
+  createdAt: DateTime!
+}
+
+type Invite {
+  id: ID!
+  tenantId: ID!
+  email: String!
+  role: String!
+  expiresAt: DateTime!
+  acceptedAt: DateTime
+  createdAt: DateTime!
+}
+
+type OnboardingUser {
+  id: ID!
+  email: String!
+  name: String
+}
+
+type OnboardingApiKey {
+  prefix: String!
+  plainText: String!
+}
+
+type OnboardingResult {
+  tenant: Tenant!
+  user: OnboardingUser!
+  apiKey: OnboardingApiKey!
+}
+
+type Wallet {
+  id: ID!
+  tenantId: ID!
+  availableBalance: Int!
+  reservedBalance: Int!
+  lifetimeRecharged: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type WalletLedgerEntry {
+  id: ID!
+  tenantId: ID!
+  walletId: ID!
+  entryType: String!
+  amount: Int!
+  reason: String!
+  idempotencyKey: String
+  metadata: String
+  createdAt: DateTime!
+}
+
+type AuditEvent {
+  id: ID!
+  tenantId: ID
+  actorUserId: ID
+  actorType: String!
+  action: String!
+  resourceType: String!
+  resourceId: String
+
+  """JSON snapshot before the mutation."""
+  before: String
+
+  """JSON snapshot after the mutation."""
+  after: String
+  ipAddress: String
+  userAgent: String
+  correlationId: String
+  createdAt: DateTime!
+}
+
+type KycDocumentModel {
+  id: Int!
+  docType: KycDocumentType!
+  s3Key: String!
+  contentType: String
+  sizeBytes: Int
+  uploadedAt: DateTime!
+}
+
+enum KycDocumentType {
+  PAN
+  GSTIN
+  BANK_STATEMENT
+  CANCELLED_CHEQUE
+}
+
+type KycRecordModel {
+  id: Int!
+  tenantId: Int!
+  pan: String
+  gstin: String
+  bankAccountLast4: String!
+  ifsc: String!
+  accountHolderName: String
+  status: KycStatus!
+  providerRef: String
+  rejectionReason: String
+  documents: [KycDocumentModel!]
+  submittedAt: DateTime!
+  verifiedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum KycStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+type OnboardingStateModel {
+  id: Int!
+  userId: Int!
+  status: OnboardingStatus!
+  kycSubmitted: Boolean!
+  kycApproved: Boolean!
+  pickupAddressAdded: Boolean!
+  pickupVerified: Boolean!
+  carrierConnected: Boolean!
+  ecommerceConnected: Boolean!
+  paymentsConfigured: Boolean!
+  testLabelGenerated: Boolean!
+  firstPickupScheduled: Boolean!
+  nextAction: String
+  blockedReason: String
+  metadata: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+}
+
+type WarehouseCoverage {
+  id: Int!
+  warehouseId: Int!
+  pincode: String!
+  serviceLevel: String
+  tatDays: Int
+  isOda: Boolean!
+  odaFee: Float
+  minWeightGrams: Int
+  maxWeightGrams: Int
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Warehouse {
+  id: Int!
+  name: String!
+  code: String!
+  addressLine1: String!
+  addressLine2: String
+  city: String!
+  state: String!
+  pincode: String!
+  country: String!
+  latitude: Float
+  longitude: Float
+  capacityCbm: Float
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  coverage: [WarehouseCoverage!]!
+}
+
+type WarehouseSellerProfile {
+  id: Int!
+  warehouseId: Int!
+  userId: Int!
+  profileName: String!
+  legalName: String!
+  displayName: String
+  gstin: String!
+  pan: String
+  tan: String
+  cin: String
+  addressLine1: String!
+  addressLine2: String
+  city: String!
+  state: String!
+  pincode: String!
+  country: String!
+  email: String
+  phone: String
+  bankAccountNumber: String
+  bankIfsc: String
+  bankName: String
+  bankBranch: String
+  logoUrl: String
+  signatureUrl: String
+  isDefault: Boolean!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type PaymentModel {
+  id: String!
+  userId: Int!
+  orderId: Int
+  invoiceId: String
+  amount: Float!
+  currency: String!
+  status: PaymentStatus!
+  gateway: PaymentGateway!
+  gatewayPaymentId: String
+  paymentMethod: PaymentMethod
+  failureReason: String
+  refundedAmount: Float!
+  reconciliationStatus: PaymentReconciliationStatus!
+  reconciledAt: DateTime
+  refunds: [RefundModel!]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum PaymentGateway {
+  STRIPE
+  RAZORPAY
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  NETBANKING
+  WALLET
+  COD
+}
+
+enum PaymentReconciliationStatus {
+  NOT_APPLICABLE
+  PENDING_REVIEW
+  MATCHED
+  PARTIAL
+  MISMATCH
+}
+
+type RefundModel {
+  id: String!
+  paymentId: String!
+  payment: PaymentModel
+  amount: Float!
+  currency: String!
+  gatewayRefundId: String
+  reason: String
+  status: PaymentStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type EwayBill {
+  id: Int!
+  shipmentId: Int!
+  ewayBillNumber: String!
+  status: String!
+  validUntil: DateTime
+  ewayBillUrl: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InvoiceItem {
+  id: Int!
+  invoiceId: String!
+  description: String!
+  quantity: Int!
+  unitPrice: Float!
+  totalPrice: Float!
+  hsnCode: String
+  taxRate: Float!
+  taxAmount: Float!
+  cgstAmount: Float!
+  sgstAmount: Float!
+  igstAmount: Float!
+  gstType: String
+  createdAt: DateTime!
+}
+
+type Invoice {
+  id: String!
+  invoiceNumber: String!
+  userId: Int!
+  warehouseId: Int
+  sellerProfileId: Int
+  subscriptionId: String
+  amount: Float!
+  taxAmount: Float!
+  cgstAmount: Float!
+  sgstAmount: Float!
+  igstAmount: Float!
+  gstType: String
+  totalAmount: Float!
+  currency: String!
+  status: String!
+  sequenceNumber: Int
+  financialYear: String
+  dueDate: DateTime
+  paidAt: DateTime
+  invoiceUrl: String
+  pdfStorageKey: String
+  buyerLegalName: String
+  buyerGstin: String
+  buyerState: String
+  buyerEmail: String
+  buyerPhone: String
+  buyerAddressLine1: String
+  buyerAddressLine2: String
+  buyerCity: String
+  buyerPincode: String
+  buyerCountry: String
+  gstnAckNumber: String
+  gstnAckDate: DateTime
+  gstnSignedPayload: String
+  gstnSignatureValid: Boolean
+  emailDeliveryStatus: String!
+  emailDeliveryAttempts: Int!
+  emailDeliveredAt: DateTime
+  items: [InvoiceItem!]!
+  warehouse: Warehouse
+  sellerProfile: WarehouseSellerProfile
+  payments: [PaymentModel!]
+  ewayBill: EwayBill
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type GstCalculation {
+  baseAmount: Float!
+  cgst: Float!
+  sgst: Float!
+  igst: Float!
+  totalTax: Float!
+  totalAmount: Float!
+  gstType: String!
+}
+
+type GstInvoice {
+  id: Int!
+  invoiceId: String!
+  tenantId: Int!
+  hsnCode: String!
+  supplyDescription: String
+  taxableValue: Float!
+  taxRate: Float!
+  cgstAmount: Float!
+  sgstAmount: Float!
+  igstAmount: Float!
+  totalTax: Float!
+  totalAmount: Float!
+  gstType: String!
+  supplierState: String!
+  placeOfSupply: String!
+  supplierGstin: String
+  recipientGstin: String
+  isInterState: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type GstEwayBill {
+  id: Int!
+  shipmentId: Int!
+  tenantId: Int!
+  ewbNo: String!
+  provider: String!
+  status: String!
+  validFrom: DateTime!
+  validTo: DateTime!
+  vehicleNo: String
+  transporterId: String
+  transporterName: String
+  ewayBillUrl: String
+  providerRef: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type EwayBillThresholdCheck {
+  required: Boolean!
+  threshold: Float!
+  invoiceValue: Float!
+  isInterState: Boolean!
+  reason: String
+}
+
+type ChannelConnection {
+  id: ID!
+  tenantId: Int!
+  platform: String!
+  displayName: String!
+  externalAccountId: String!
+  status: String!
+  productCursor: String
+  orderCursor: String
+  lastProductSyncAt: String
+  lastOrderSyncAt: String
+  lastError: String
+  settings: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ChannelSyncJob {
+  id: ID!
+  tenantId: Int!
+  channelId: Int!
+  type: String!
+  status: String!
+  startedAt: String
+  finishedAt: String
+  itemsProcessed: Int!
+  itemsCreated: Int!
+  itemsUpdated: Int!
+  itemsSkipped: Int!
+  itemsFailed: Int!
+  errorMessage: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RateRanking {
+  position: Int!
+  score: Float!
+  costRank: Int!
+  slaRank: Int!
+  reliabilityRank: Int!
+  effectiveCostPaise: Int!
+  expectedRtoLossPaise: Int!
+  courierScore: Float
+  reasonWhyNotFirst: String
+}
+
+type RankedRateQuoteGql {
+  carrier: String!
+  carrierCode: String!
+  serviceType: String!
+  rate: Int!
+  currency: String!
+  etaDaysMin: Int!
+  etaDaysMax: Int!
+  codAvailable: Boolean!
+  pickupAvailable: Boolean!
+  expiresAt: DateTime!
+  metadata: String
+  ranking: RateRanking!
+}
+
+type RankedRateShopResult {
+  quotes: [RankedRateQuoteGql!]!
+  totalCandidates: Int!
+  appliedStrategy: String!
+}
+
+type Order {
+  id: Int!
+  orderNumber: String!
+  total: Float!
+  status: OrderStatus!
+  paymentStatus: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  userId: Int!
+  carrierId: Int
+  warehouseId: Int
+  warehouse: Warehouse
+  destinationName: String
+  destinationPhone: String
+  destinationAddressLine1: String
+  destinationAddressLine2: String
+  destinationCity: String
+  destinationState: String
+  destinationPincode: String
+  destinationCountry: String
+  packageWeightGrams: Int
+  packageLengthCm: Float
+  packageWidthCm: Float
+  packageHeightCm: Float
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+type Shipment {
+  id: Int!
+  trackingNumber: String!
+  status: ShipmentStatus!
+  orderId: Int!
+  carrierId: Int!
+  warehouseId: Int
+  shippedAt: DateTime
+  deliveredAt: DateTime
+  originPincode: String
+  destinationPincode: String
+  weightGrams: Int
+  lengthCm: Float
+  widthCm: Float
+  heightCm: Float
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  warehouse: Warehouse
+  label: ShippingLabel
+  trackingEvents: [TrackingEvent]
+}
+
+enum ShipmentStatus {
+  PENDING
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+type ShippingLabel {
+  id: Int!
+  shipmentId: Int!
+  labelNumber: String!
+  carrierCode: String!
+  serviceName: String
+  format: String
+  labelUrl: String
+  status: LabelStatus!
+  requestedAt: DateTime!
+  generatedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum LabelStatus {
+  PENDING
+  GENERATED
+  FAILED
+  VOIDED
+}
+
+type TrackingEvent {
+  id: Int!
+  shipmentId: Int!
+  trackingNumber: String!
+  status: String!
+  subStatus: String
+  description: String
+  eventCode: String
+  location: String
+  occurredAt: DateTime!
+  raw: String
+  createdAt: DateTime!
+}
+
+type Role {
+  id: Int!
+  name: String!
+  description: String
+}
+
+type User {
+  id: Int!
+  email: String!
+  name: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  roles: [Role]
+}
+
+"""A non-delivery report for a shipment."""
+type NdrCase {
+  id: Int!
+  shipmentId: Int!
+  tenantId: Int!
+  status: NdrCaseStatus!
+  awbNumber: String
+  courierName: String
+  customerPhone: String
+  customerEmail: String
+  customerName: String
+  ndrReason: String
+  reason: String
+  actionNotes: String
+  attemptCount: Int!
+  firstAttemptAt: String
+  lastAttemptAt: String
+  resolvedAt: String
+  metadata: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Lifecycle states for a Non-Delivery Report (NDR) case."""
+enum NdrCaseStatus {
+  PENDING
+  CALL_ATTEMPTED
+  WHATSAPP_SENT
+  EMAIL_SENT
+  RESCHEDULED
+  DELIVERED
+  RTO_INITIATED
+  RTO
+  CANCELLED
+}
+
+"""A merchant dispute over an RTO shipment."""
+type RtoDispute {
+  id: Int!
+  shipmentId: Int!
+  orderId: Int!
+  tenantId: Int!
+  status: RtoDisputeStatus!
+  reasonCode: String
+  merchantNotes: String
+  resolution: String
+  resolvedByUserId: Int
+  refundedPaise: Int
+  openedAt: String
+  resolvedAt: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Lifecycle states for an RTO dispute (merchant vs. carrier)."""
+enum RtoDisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_CARRIER_FAULT
+  RESOLVED_MERCHANT_FAULT
+  REJECTED
+}
+
+"""
+A single NDR reason with its count, recovery rate, and average attempts.
+"""
+type NdrReasonBreakdown {
+  """Free-text reason from the carrier / state machine."""
+  reason: String!
+
+  """Number of NDR cases with this reason in the range."""
+  count: Int!
+
+  """Share (0..1) of cases that resolved to DELIVERED."""
+  recoveryRate: Float!
+
+  """Mean attemptCount across all cases for this reason."""
+  avgAttempts: Float!
+}
+
+"""A destination pincode with its NDR count and rate."""
+type NdrPincodeBreakdown {
+  """Destination pincode (6-digit Indian postal code)."""
+  pincode: String!
+
+  """Number of NDR cases shipped to this pincode."""
+  count: Int!
+
+  """Share (0..1) of shipments to this pincode that became NDR."""
+  ndrRate: Float!
+}
+
+"""NDR rate for a single carrier / courier."""
+type NdrCourierBreakdown {
+  """Carrier code (e.g. "delhivery", "xpressbees")."""
+  courier: String!
+
+  """Number of NDR cases for this carrier in the range."""
+  count: Int!
+
+  """Total number of shipments for this carrier in the range."""
+  totalShipments: Int!
+
+  """Share (0..1) of shipments that became NDR for this carrier."""
+  ndrRate: Float!
+}
+
+"""Count of NDR cases for a single hour of the day (0..23)."""
+type NdrTimeOfDayBucket {
+  """Hour of the day, 0..23 (UTC)."""
+  hour: Int!
+
+  """NDR cases opened during this hour."""
+  count: Int!
+}
+
+type HealthInfo {
+  status: String!
+  name: String!
+  uptime: String!
+}
+
+type Query {
+  apiInfo: HealthInfo!
+  tenant(id: ID!): Tenant
+  tenants(status: String, tier: String, search: String, limit: Float = 50, offset: Float = 0): [Tenant!]!
+  wallet(tenantId: ID!): Wallet
+  walletStatement(filter: WalletStatementFilterInput!): [WalletLedgerEntry!]!
+
+  """Get all orders (newest first)"""
+  orders: [Order!]!
+  order(id: Int!): Order!
+  ordersByUser(userId: Int!): [Order!]!
+  ordersByStatus(status: OrderStatus!): [Order!]!
+  filterOrders(filter: OrdersFilterInput!): [Order!]!
+  totalSales: String!
+
+  """Current authenticated user"""
+  me: UserAuth!
+
+  """
+  Rate-shop from all non-OPEN carriers, apply surcharges, then rank the quotes per the merchant's strategy (cheapest, fastest, best_value, balanced, reliability_first).
+  """
+  rankedRateShop(input: RankedRateShopInput!): RankedRateShopResult!
+
+  """
+  Run a single rate simulation with overrides applied on top of the base input
+  """
+  simulateRateShop(baseInput: RankedRateShopInput!, overrides: RateSimulationOverrides!): RankedRateShopResult!
+
+  """
+  Run multiple rate simulations in parallel and return results in scenario order
+  """
+  simulateRateShopBatch(baseInput: RankedRateShopInput!, scenarios: [RateSimulationOverrides!]!): [RankedRateShopResult!]!
+  auditEvents(tenantId: ID!, filter: AuditLogFilterInput, limit: Int = 50, offset: Int = 0): [AuditEvent!]!
+  resourceHistory(tenantId: ID!, resourceType: String!, resourceId: String!): [AuditEvent!]!
+
+  """Latest KYC record for the current tenant."""
+  kycStatus: KycRecordModel
+  shipments: [Shipment!]!
+  shipment(id: Int!): Shipment!
+  filterShipments(filter: ShipmentsFilterInput!): [Shipment!]!
+  warehouses(search: String, isActive: Boolean): [Warehouse!]!
+  warehouse(id: Int!): Warehouse!
+  warehouseCoverage(warehouseId: Int!): [WarehouseCoverage!]!
+
+  """Get invoice by ID"""
+  invoice(id: String!): Invoice!
+
+  """Get invoice by invoice number"""
+  invoiceByNumber(invoiceNumber: String!): Invoice!
+
+  """Get all invoices for current user"""
+  myInvoices: [Invoice!]!
+
+  """Get E-way bill by ID"""
+  ewayBill(id: Int!): EwayBill!
+
+  """Validate E-way bill"""
+  validateEwayBill(ewayBillNumber: String!): Boolean!
+
+  """Calculate GST for an amount"""
+  calculateGst(baseAmount: Float!, taxRate: Float!, isInterState: Boolean! = false): GstCalculation!
+
+  """Check if E-way bill is required"""
+  isEwayBillRequired(invoiceValue: Float!, isInterState: Boolean! = false): Boolean!
+
+  """Get the GST breakdown for a specific invoice."""
+  gstInvoiceByInvoiceId(invoiceId: String!): GstInvoice
+
+  """Get an E-way bill by its shipment id."""
+  ewayBillByShipment(shipmentId: Int!): GstEwayBill
+
+  """Check whether an invoice value triggers the E-way bill requirement."""
+  ewayBillThreshold(invoiceValue: Float!, isInterState: Boolean! = false): EwayBillThresholdCheck!
+
+  """
+  Is the current tenant a GSTIN-paying customer (KYC verified, GSTIN present)?
+  """
+  isGstinPayingCustomer: Boolean!
+  users: [User!]!
+  user(id: Int!): User!
+  roles: [Role!]!
+  role(id: Int!): Role!
+
+  """All NDR cases for the current tenant."""
+  ndrCases: [NdrCase!]!
+
+  """Look up a single NDR case by id."""
+  ndrCase(id: Int!): NdrCase
+
+  """NDR cases for a single shipment, newest first."""
+  ndrCasesByShipment(shipmentId: Int!): [NdrCase!]!
+
+  """NDR cases filtered by status (e.g. PENDING, RTO_INITIATED)."""
+  ndrCasesByStatus(status: NdrCaseStatus!): [NdrCase!]!
+
+  """All OPEN RTO disputes for a tenant, newest first."""
+  openRtoDisputes(tenantId: Int!): [RtoDispute!]!
+
+  """All RTO disputes for a tenant (any status), newest first."""
+  rtoDisputesByTenant(tenantId: Int!): [RtoDispute!]!
+
+  """Look up a single RTO dispute by id."""
+  rtoDispute(id: Int!): RtoDispute
+
+  """Top N NDR reasons with recovery rate and average attempts."""
+  ndrAnalytics(filter: NdrAnalyticsFilter!, limit: Int = 10): [NdrReasonBreakdown!]!
+
+  """Top pincodes by NDR count, with NDR rate per pincode."""
+  ndrByPincode(filter: NdrAnalyticsFilter!, limit: Int = 20): [NdrPincodeBreakdown!]!
+
+  """NDR rate per carrier (all active carriers, even if zero NDRs)."""
+  ndrByCourier(filter: NdrAnalyticsFilter!): [NdrCourierBreakdown!]!
+
+  """NDR count per hour of day (0..23, dense)."""
+  ndrByTimeOfDay(filter: NdrAnalyticsFilter!): [NdrTimeOfDayBucket!]!
+
+  """All manifests for the current tenant, newest first."""
+  manifests: [ManifestEntity!]!
+
+  """Look up a single manifest by id."""
+  manifest(id: Int!): ManifestEntity
+  onboardingState(userId: Int!): OnboardingStateModel!
+
+  """List all channel connections for the tenant."""
+  channelConnections(tenantId: Int!): [ChannelConnection!]!
+
+  """Fetch a single channel connection by id."""
+  channelConnection(tenantId: Int!, channelId: ID!): ChannelConnection!
+
+  """Recent sync jobs for a channel (optionally filtered by status)."""
+  channelSyncJobs(tenantId: Int!, channelId: ID!, status: String, limit: Int = 50): [ChannelSyncJob!]!
+}
+
+input WalletStatementFilterInput {
+  tenantId: ID!
+  fromDate: DateTime
+  toDate: DateTime
+  entryType: String
+  reason: String
+  limit: Int = 100
+  offset: Int = 0
+}
+
+input OrdersFilterInput {
+  status: OrderStatus
+  userId: Int
+  carrierId: Int
+  orderNumber: String
+  warehouseId: Int
+}
+
+input RankedRateShopInput {
+  originPincode: String!
+  destinationPincode: String!
+  weightGrams: Int!
+  paymentMethod: String! = "PREPAID"
+  declaredValuePaise: Int
+  strategy: RateRankingStrategy! = BEST_VALUE
+  maxDeliveryDays: Int
+  minCourierScore: Int
+  simulate: RateSimulationOverrides
+}
+
+"""
+Strategy for ranking rate-shop quotes. Cheapest / Fastest / Best-Value / Balanced / Reliability-First.
+"""
+enum RateRankingStrategy {
+  CHEAPEST
+  FASTEST
+  BEST_VALUE
+  BALANCED
+  RELIABILITY_FIRST
+}
+
+input RateSimulationOverrides {
+  """Override the weight in grams"""
+  weightGrams: Int
+
+  """Override the payment method"""
+  paymentMethod: String
+
+  """Override the declared value in paise"""
+  declaredValuePaise: Int
+
+  """Override the destination pincode"""
+  destinationPincode: String
+
+  """Override the SLA cap in days"""
+  maxDeliveryDays: Int
+
+  """Override the minimum courier score [0..100]"""
+  minCourierScore: Int
+}
+
+input AuditLogFilterInput {
+  actorUserId: Int
+  action: String
+  resourceType: String
+  resourceId: String
+  since: DateTime
+  until: DateTime
+  limit: Int = 50
+  offset: Int = 0
+}
+
+input ShipmentsFilterInput {
+  trackingNumber: String
+  status: ShipmentStatus
+  orderId: Int
+  carrierId: Int
+  warehouseId: Int
+}
+
+"""Optional tenant override for NDR analytics queries."""
+input NdrAnalyticsFilter {
+  """Tenant id; defaults to TenantContext."""
+  tenantId: Int
+
+  """Inclusive date range to aggregate over."""
+  range: DateRangeInput!
+}
+
+"""Inclusive date range for NDR analytics queries."""
+input DateRangeInput {
+  """ISO-8601 start date (inclusive)."""
+  from: String!
+
+  """ISO-8601 end date (inclusive; clamped to end-of-day)."""
+  to: String!
+}
+
+type Mutation {
+  createTenant(input: CreateTenantInput!): Tenant!
+  updateTenant(input: UpdateTenantInput!): Tenant!
+  suspendTenant(id: ID!): Tenant!
+  assignRole(input: AssignRoleInput!): Boolean!
+  onboardTenant(input: OnboardTenantInput!): OnboardingResult!
+  inviteTeamMember(input: InviteTeamMemberInput!): Invite!
+  acceptInvite(token: String!, userId: ID!): TenantMember!
+  rotateApiKey(oldKeyId: ID!): OnboardingApiKey!
+  createSubAccount(parentTenantId: ID!, input: SubAccountInput!): Tenant!
+  topUpWallet(input: TopUpWalletInput!): Wallet!
+  transferBetweenWallets(fromTenantId: ID!, toTenantId: ID!, amount: Int!, reason: String!, idempotencyKey: String!): Boolean!
+  lockFunds(input: LockFundsInput!): Wallet!
+  releaseFunds(input: ReleaseFundsInput!): Wallet!
+  createOrder(input: CreateOrderInput!): Order!
+  updateOrder(input: UpdateOrderInput!): Order!
+  deleteOrder(id: Int!): Boolean!
+
+  """Register a new user and sign them in"""
+  register(email: String!, password: String!, name: String): AuthPayload!
+
+  """Login with email and password"""
+  login(email: String!, password: String!): AuthPayload!
+
+  """Request password reset email"""
+  requestPasswordReset(email: String!): MessageResponse!
+
+  """Reset password using reset token"""
+  resetPassword(token: String!, newPassword: String!): MessageResponse!
+
+  """Refresh access and refresh tokens"""
+  refreshToken(refreshToken: String!): AuthPayload!
+
+  """Submit a KYC payload (PAN, GSTIN, bank). Triggers async verify."""
+  submitKyc(input: SubmitKycInput!): KycRecordModel!
+  createShipment(input: CreateShipmentInput!): Shipment!
+  updateShipment(input: UpdateShipmentInput!): Shipment!
+  cancelShipment(id: Int!): Shipment!
+  generateShippingLabel(input: CreateLabelInput!): ShippingLabel!
+  ingestTracking(input: IngestTrackingInput!): TrackingEvent!
+  createWarehouse(input: CreateWarehouseInput!): Warehouse!
+  updateWarehouse(input: UpdateWarehouseInput!): Warehouse!
+  deleteWarehouse(id: Int!): Boolean!
+  upsertCoverage(input: UpsertWarehouseCoverageInput!): WarehouseCoverage!
+  deleteCoverage(id: Int!): Boolean!
+
+  """Create a new invoice"""
+  createInvoice(input: CreateInvoiceInput!): Invoice!
+
+  """Generate PDF for an invoice"""
+  generateInvoicePdf(invoiceId: String!): String!
+
+  """Mark invoice as paid"""
+  markInvoiceAsPaid(invoiceId: String!, paidAt: DateTime): Invoice!
+
+  """Cancel an invoice"""
+  cancelInvoice(invoiceId: String!): Invoice!
+
+  """Generate (or refresh) the GST breakdown for an invoice."""
+  generateGstInvoice(input: GenerateGstInvoiceInput!): GstInvoice!
+
+  """
+  Issue an E-way bill via the configured provider (default: ClearTax sandbox).
+  """
+  generateEwayBill(input: GenerateEwayBillInput!): GstEwayBill!
+
+  """Cancel an active E-way bill."""
+  cancelEwayBill(id: Int!, reason: String): GstEwayBill!
+  createUser(createUserInput: CreateUserInput!): User!
+  updateUser(updateUserInput: UpdateUserInput!): User!
+  removeUser(id: Int!): User!
+  createRole(createRoleInput: CreateRoleInput!): Role!
+  updateRole(updateRoleInput: UpdateRoleInput!): Role!
+  removeRole(id: Int!): Role!
+
+  """Create a COD remittance record"""
+  remitCod(orderId: Int!, amount: Float!, referenceId: String): String!
+
+  """Transition an NDR case to a new state. Throws if illegal."""
+  transitionNdr(id: Int!, to: NdrCaseStatus!, reason: String): NdrCase!
+
+  """Mark an NDR case as DELIVERED (customer successfully re-attempted)."""
+  markDelivered(id: Int!): NdrCase!
+
+  """Escalate an NDR case to RTO_INITIATED (max attempts exhausted)."""
+  initiateRto(id: Int!): NdrCase!
+
+  """
+  Resolve an RTO dispute. The carrier-fault path optionally records a merchant compensation amount (paise).
+  """
+  resolveRtoDispute(id: Int!, status: String!, resolution: String!, refundedPaise: Int): RtoDispute!
+
+  """Generate manifest for shipments"""
+  generateManifest(generateManifestInput: GenerateManifestInput!): ManifestEntity!
+  updateOnboardingState(userId: Int!, updateOnboardingInput: UpdateOnboardingInput!): OnboardingStateModel!
+
+  """Schedule a pickup for a shipment"""
+  schedulePickup(schedulePickupInput: SchedulePickupInput!): String!
+
+  """
+  Connect a new e-commerce platform. Validates credentials with `testConnection` before persisting.
+  """
+  connectChannel(tenantId: Int!, input: ConnectChannelInput!): ChannelConnection!
+
+  """Soft-delete (disconnect) a channel connection."""
+  disconnectChannel(tenantId: Int!, channelId: ID!): ChannelConnection!
+
+  """Kick a sync immediately. Returns the sync job row."""
+  triggerChannelSync(tenantId: Int!, channelId: ID!, type: String!): ChannelSyncJob!
+
+  """Update per-connection settings (sync mode, conflict resolution, etc.)."""
+  updateChannelSettings(tenantId: Int!, channelId: ID!, settingsJson: String!): ChannelConnection!
+}
+
+input CreateTenantInput {
+  slug: String!
+  name: String!
+  tier: String = "STARTER"
+  status: String = "TRIAL"
+  settings: String
+}
+
+input UpdateTenantInput {
+  id: ID!
+  name: String
+  tier: String
+  status: String
+  settings: String
+}
+
+input AssignRoleInput {
+  tenantId: ID!
+  userId: ID!
+  role: String!
+}
+
+input OnboardTenantInput {
+  name: String!
+  email: String!
+  password: String!
+  contactPhone: String
+  gstin: String
+}
+
+input InviteTeamMemberInput {
+  tenantId: ID!
+  email: String!
+  role: String! = "MEMBER"
+}
+
+input SubAccountInput {
+  name: String!
+  email: String!
+  contactPhone: String
+}
+
+input TopUpWalletInput {
+  tenantId: ID!
+  amount: Int!
+  idempotencyKey: String!
+  metadata: String
+}
+
+input LockFundsInput {
+  tenantId: ID!
+  amount: Int!
+  reason: String!
+  idempotencyKey: String
+  metadata: String
+}
+
+input ReleaseFundsInput {
+  tenantId: ID!
+  amount: Int!
+  reason: String!
+  idempotencyKey: String
+  metadata: String
+}
+
+input CreateOrderInput {
+  orderNumber: String!
+  total: Float!
+  userId: Int!
+  status: OrderStatus
+  carrierId: Int
+  warehouseId: Int
+  destinationName: String
+  destinationPhone: String
+  destinationAddressLine1: String
+  destinationAddressLine2: String
+  destinationCity: String
+  destinationState: String
+  destinationCountry: String
+  destinationPincode: String!
+  packageWeightGrams: Int!
+  packageLengthCm: Float
+  packageWidthCm: Float
+  packageHeightCm: Float
+
+  """
+  If true, the rate-engine picks the best carrier; if false, use the merchant-supplied carrierId
+  """
+  rankRate: Boolean! = true
+
+  """
+  Strategy for the rate-engine to use; defaults to the tenant-level setting
+  """
+  rateStrategy: RateRankingStrategy
+
+  """PREPAID | COD — COD orders require tenant KYC VERIFIED"""
+  paymentMethod: String = "PREPAID"
+}
+
+input UpdateOrderInput {
+  id: Int!
+  orderNumber: String
+  total: Float
+  status: OrderStatus
+  carrierId: Int
+  warehouseId: Int
+  destinationName: String
+  destinationPhone: String
+  destinationAddressLine1: String
+  destinationAddressLine2: String
+  destinationCity: String
+  destinationState: String
+  destinationCountry: String
+  destinationPincode: String
+  packageWeightGrams: Int
+  packageLengthCm: Float
+  packageWidthCm: Float
+  packageHeightCm: Float
+}
+
+input SubmitKycInput {
+  """PAN — AAAAA9999A"""
+  pan: String!
+
+  """GSTIN — 15 characters"""
+  gstin: String!
+
+  """Bank account number (we never store the full number)"""
+  bankAccountNumber: String!
+
+  """IFSC — AAAA0XXXXXX"""
+  ifsc: String!
+  accountHolderName: String
+  documents: [KycDocumentInput!]
+}
+
+input KycDocumentInput {
+  """PAN | GSTIN | BANK_STATEMENT | CANCELLED_CHEQUE"""
+  docType: String!
+  s3Key: String!
+  contentType: String
+}
+
+input CreateShipmentInput {
+  trackingNumber: String!
+  status: ShipmentStatus!
+  orderId: Int!
+  carrierId: Int!
+  shippedAt: DateTime
+  deliveredAt: DateTime
+  warehouseId: Int
+  weightGrams: Int
+  lengthCm: Float
+  widthCm: Float
+  heightCm: Float
+  originPincode: String
+  destinationPincode: String
+}
+
+input UpdateShipmentInput {
+  id: Int!
+  trackingNumber: String
+  status: ShipmentStatus
+  shippedAt: DateTime
+  deliveredAt: DateTime
+  warehouseId: Int
+  weightGrams: Int
+  lengthCm: Float
+  widthCm: Float
+  heightCm: Float
+  originPincode: String
+  destinationPincode: String
+}
+
+input CreateLabelInput {
+  shipmentId: Int!
+
+  """Desired label format (PDF/ZPL)"""
+  format: String
+}
+
+input IngestTrackingInput {
+  shipmentId: Int!
+  trackingNumber: String!
+  status: String!
+  subStatus: String
+  description: String
+  eventCode: String
+  location: String
+  occurredAt: DateTime!
+
+  """JSON string for raw payload"""
+  rawJson: String
+}
+
+input CreateWarehouseInput {
+  name: String!
+  code: String!
+  addressLine1: String!
+  addressLine2: String
+  city: String!
+  state: String!
+  pincode: String!
+  country: String! = "India"
+  latitude: Float
+  longitude: Float
+  capacityCbm: Float
+  isActive: Boolean! = true
+}
+
+input UpdateWarehouseInput {
+  id: Int!
+  name: String
+  code: String
+  addressLine1: String
+  addressLine2: String
+  city: String
+  state: String
+  pincode: String
+  country: String
+  latitude: Float
+  longitude: Float
+  capacityCbm: Float
+  isActive: Boolean
+}
+
+input UpsertWarehouseCoverageInput {
+  warehouseId: Int!
+  pincode: String!
+  tatDays: Int
+  isOda: Boolean
+  odaFee: Float
+  minWeightGrams: Int
+  maxWeightGrams: Int
+}
+
+input CreateInvoiceInput {
+  """User ID"""
+  userId: Int!
+
+  """Warehouse ID for fulfillment"""
+  warehouseId: Int!
+
+  """Subscription ID (optional)"""
+  subscriptionId: String
+
+  """Seller profile override (defaults to warehouse default)"""
+  sellerProfileId: Int
+
+  """Buyer details used for GST break-up and email delivery"""
+  buyer: BuyerDetailsInput
+
+  """Invoice items"""
+  items: [CreateInvoiceItemInput!]!
+
+  """Currency code"""
+  currency: String! = "INR"
+
+  """Due date"""
+  dueDate: DateTime
+
+  """Additional metadata (JSON-encoded)"""
+  metadata: String
+
+  """Automatically email the buyer once invoice PDF is ready"""
+  autoEmailBuyer: Boolean! = true
+}
+
+input BuyerDetailsInput {
+  """Buyer legal or trading name"""
+  name: String!
+
+  """Buyer GSTIN"""
+  gstin: String
+
+  """Buyer state or union territory"""
+  state: String
+
+  """Primary email for invoice delivery"""
+  email: String
+
+  """Buyer phone number"""
+  phone: String
+
+  """Address line 1"""
+  addressLine1: String
+
+  """Address line 2"""
+  addressLine2: String
+
+  """City"""
+  city: String
+
+  """Postal code"""
+  pincode: String
+
+  """Country"""
+  country: String = "India"
+}
+
+input CreateInvoiceItemInput {
+  """Item description"""
+  description: String!
+
+  """Quantity"""
+  quantity: Int! = 1
+
+  """Unit price"""
+  unitPrice: Float!
+
+  """HSN/SAC code for GST"""
+  hsnCode: String
+
+  """Tax rate percentage (e.g., 18 for 18%)"""
+  taxRate: Float! = 0
+}
+
+input GenerateGstInvoiceInput {
+  invoiceId: String!
+  hsnCode: String!
+
+  """Taxable value (pre-tax) in INR."""
+  taxableValue: Float!
+
+  """Optional override. If absent we look the HSN up in the rate table."""
+  taxRate: Float
+
+  """Supplier state (e.g. "Maharashtra")."""
+  supplierState: String!
+
+  """Place of supply (recipient state)."""
+  placeOfSupply: String!
+  supplierGstin: String
+  recipientGstin: String
+  supplyDescription: String
+}
+
+input GenerateEwayBillInput {
+  shipmentId: Int!
+  supplierGstin: String!
+  recipientGstin: String
+  fromAddress: String!
+  toAddress: String!
+  invoiceValue: Float!
+
+  """Default 996811 ("postal / courier services", 18% slab)."""
+  hsnCode: String
+  vehicleNo: String
+  transporterId: String
+  transporterName: String
+  distanceKm: Float
+}
+
+input CreateUserInput {
+  email: String!
+  name: String
+  roleIds: [Int!]
+}
+
+input UpdateUserInput {
+  id: Int!
+  email: String
+  name: String
+  roleIds: [Int!]
+}
+
+input CreateRoleInput {
+  name: String!
+  description: String
+}
+
+input UpdateRoleInput {
+  id: Int!
+  name: String
+  description: String
+}
+
+input GenerateManifestInput {
+  shipmentIds: [Int!]!
+}
+
+input UpdateOnboardingInput {
+  kycSubmitted: Boolean
+  kycApproved: Boolean
+  pickupAddressAdded: Boolean
+  pickupVerified: Boolean
+  carrierConnected: Boolean
+  ecommerceConnected: Boolean
+  paymentsConfigured: Boolean
+  testLabelGenerated: Boolean
+  firstPickupScheduled: Boolean
+  nextAction: String
+  blockedReason: String
+
+  """Serialized JSON string to merge into metadata"""
+  metadataJson: String
+}
+
+input SchedulePickupInput {
+  shipmentId: Int!
+  scheduledAt: DateTime!
+}
+
+input ConnectChannelInput {
+  platform: String!
+  displayName: String!
+  externalAccountId: String!
+
+  """JSON string of per-platform credentials"""
+  credentialsJson: String!
+
+  """JSON string of settings"""
+  settingsJson: String
+}

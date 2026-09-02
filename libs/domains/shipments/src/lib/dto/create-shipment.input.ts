@@ -1,5 +1,5 @@
 import { InputType, Field, Int, Float } from '@nestjs/graphql';
-import { ShipmentStatus } from './shipment.model';
+import { ShipmentStatus } from '../shipment.model';
 import {
   IsNotEmpty,
   IsString,
@@ -17,24 +17,24 @@ export class CreateShipmentInput {
   @Field()
   @IsNotEmpty({ message: 'Tracking number is required' })
   @IsString({ message: 'Tracking number must be a string' })
-  trackingNumber: string;
+  trackingNumber!: string;
 
   @Field(() => ShipmentStatus)
   @IsNotEmpty({ message: 'Shipment status is required' })
   @IsEnum(ShipmentStatus, { message: 'Invalid shipment status' })
-  status: ShipmentStatus;
+  status!: ShipmentStatus;
 
   @Field(() => Int)
   @IsNotEmpty({ message: 'Order ID is required' })
   @IsInt({ message: 'Order ID must be an integer' })
   @IsPositive({ message: 'Order ID must be positive' })
-  orderId: number;
+  orderId!: number;
 
   @Field(() => Int)
   @IsNotEmpty({ message: 'Carrier ID is required' })
   @IsInt({ message: 'Carrier ID must be an integer' })
   @IsPositive({ message: 'Carrier ID must be positive' })
-  carrierId: number;
+  carrierId!: number;
 
   @Field({ nullable: true })
   @IsOptional()

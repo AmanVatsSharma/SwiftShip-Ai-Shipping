@@ -1,16 +1,21 @@
 # Architecture
 
-> One-page reference for the SwiftShip AI Nx monorepo. For the in-flight
-> Prisma → TypeORM migration, see [`MIGRATION.md`](./MIGRATION.md).
+> One-page reference for the SwiftShip AI Nx monorepo. The Prisma → TypeORM
+> migration is **complete** — [`MIGRATION.md`](./MIGRATION.md) now covers the
+> TypeORM conventions and the remaining legacy `src/` decommission. For the
+> current state of the tree (including known breakages), see
+> [`STATUS.md`](./STATUS.md).
 
 ## Lib layers
 
 ```
 apps/         ← entry points (the only things that wire everything together)
 libs/domains/ ← business capabilities (one lib per bounded context)
-libs/platform/← infrastructure: auth, typeorm, queues, carriers, graphql, config
-libs/shared/  ← cross-cutting types, utils, DTO fragments
-libs/observability/ ← logger, metrics, tracing
+libs/platform/← infrastructure: auth, typeorm, queues, carriers, graphql, config,
+                rate-cache, rate-math, throttler
+libs/shared-ui/ ← cross-app formatting helpers (cn, formatINR, formatDate)
+libs/observability/ ← OTel, Sentry, audit log, correlation IDs, logger, metrics
+packages/     ← generated SDKs (node, python, php) from the OpenAPI spec
 ```
 
 The arrows in the diagram below are the only legal dependency directions.
@@ -24,7 +29,7 @@ graph TD
     WEB[apps/web<br/>merchant storefront]
   end
 
-  subgraph DOMAINS[libs/domains — 18 domain libs]
+  subgraph DOMAINS[libs/domains — 29 domain lib dirs]
     D_ORDERS[domains/orders]
     D_SHIPMENTS[domains/shipments]
     D_BILLING[domains/billing]
@@ -33,6 +38,8 @@ graph TD
     D_SERVICEABILITY[domains/serviceability]
     D_RATESHOP[domains/rate-shop]
     D_ECOM[domains/ecommerce-integrations]
+    D_CHANNELS[domains/channels]
+    D_TENANTS[domains/tenants]
     D_CARRIERS[domains/carriers]
     D_COD[domains/cod]
     D_NDR[domains/ndr]
@@ -42,20 +49,23 @@ graph TD
     D_RATES[domains/shipping-rates]
     D_USERS[domains/users]
     D_WEBHOOKS[domains/webhooks]
-    D_OTHERS[... plugins, payments,<br/>bulk-operations, surcharges,<br/>dashboard, storage, metrics,<br/>onboarding, roles]
+    D_OTHERS[... plugins, payments, onboarding,<br/>bulk-operations, surcharges,<br/>dashboard, storage, metrics, roles]
   end
 
-  subgraph PLATFORM[libs/platform]
+  subgraph PLATFORM[libs/platform — 9 platform libs]
     P_AUTH[platform/auth]
     P_TYPEORM[platform/typeorm]
     P_QUEUES[platform/queues]
     P_CARRIERS[platform/carriers]
     P_GRAPHQL[platform/graphql]
     P_CONFIG[platform/config]
+    P_RATECACHE[platform/rate-cache]
+    P_RATEMATH[platform/rate-math]
+    P_THROTTLER[platform/throttler]
   end
 
-  subgraph SHARED[libs/shared + libs/observability]
-    SH[libs/shared/*]
+  subgraph SHARED[libs/shared-ui + libs/observability]
+    SH[libs/shared-ui/*]
     OBS[libs/observability]
   end
 
@@ -88,61 +98,74 @@ graph TD
   P_QUEUES --> REDIS
 ```
 
-## The 3 apps
+## The 5 apps
 
 | App | Path | What it does |
 | --- | --- | --- |
-| **`api`** | `apps/api/` | The NestJS GraphQL + REST API. Owns auth, carriers, orders, billing, webhooks, and the GraphQL schema. This is where the bulk of the backend lives. |
-| **`admin-portal`** | `apps/admin-portal/` | The Next.js owner/operator panel. Internal tooling for SwiftShip staff (tenant management, support, finance). |
-| **`web`** | `apps/web/` | The Next.js merchant storefront. Customer-facing UI for sellers using SwiftShip as their shipping partner. |
+| **`api`** | `apps/api/` | The NestJS GraphQL + REST core API. Wires every domain + platform lib, KYC, GST/E-way, COD remittance, channel sync, observability, and the tenant guard. |
+| **`api-public`** | `apps/api-public/` | The public, versioned REST API (tsoa): 8 controllers, API-key auth, per-tenant throttling, Swagger UI at `/docs/v1/`, committed OpenAPI spec — the contract the SDKs are generated from. |
+| **`admin-portal`** | `apps/admin-portal/` | The Next.js owner/operator console (PWA): dashboard, NDR analytics, orders, channel management, rate-shop widget. |
+| **`web`** | `apps/web/` | The Next.js customer-facing surfaces: branded tracking page, end-customer return portal, embeddable CDN widgets. |
+| **`api-e2e`** | `apps/api-e2e/` | Supertest e2e suite that boots the full `AppModule` against Postgres + Redis. |
 
-## The 6 platform libs (`libs/platform/`)
+## The 9 platform libs (`libs/platform/`)
 
 | Lib | Path | What it does |
 | --- | --- | --- |
 | `platform/auth` | `libs/platform/auth/` | Passport JWT strategy, refresh tokens, `@CurrentUser` / `@Roles` decorators, GraphQL guards. |
-| `platform/typeorm` | `libs/platform/typeorm/` | The `TypeOrmModule`, the entity files, the `DataSource`, and the in-flight `PrismaCompat` shim (see `MIGRATION.md`). |
-| `platform/queues` | `libs/platform/queues/` | BullMQ wrapper on `ioredis` (`QueuesService`, `getQueue`, `createWorker`). |
-| `platform/carriers` | `libs/platform/carriers/` | The `CarrierAdapter` interface and the adapter registry (`carrier-adapter.service.ts`) that wires `Delhivery`, `BlueDart`, `Xpressbees`, etc. |
+| `platform/typeorm` | `libs/platform/typeorm/` | The `TypeOrmModule`, entity files, `DataSource`, and the 16 TypeORM migrations. The only ORM — Prisma is gone. |
+| `platform/queues` | `libs/platform/queues/` | BullMQ wrapper on `ioredis` (`QueuesService`, `getQueue`, `createWorker`) + webhook dispatcher. |
+| `platform/carriers` | `libs/platform/carriers/` | The `CarrierAdapter` interface and the adapter registry wiring 13 carriers (Delhivery, BlueDart, DTDC, Ecom Express, Xpressbees, Shadowfax, Aramex, DHL, FedEx India, Gati, India Post, Professional Couriers) + sandbox. |
 | `platform/graphql` | `libs/platform/graphql/` | Apollo driver wiring, code-first schema generation, throttler, and shared GraphQL decorators. |
 | `platform/config` | `libs/platform/config/` | Joi-validated `ConfigModule` and the `env` accessor used by every other lib. |
+| `platform/rate-cache` | `libs/platform/rate-cache/` | Redis-backed rate cache, per-carrier circuit breaker, prewarm support. |
+| `platform/rate-math` | `libs/platform/rate-math/` | Weight-break slabs, zone resolution, fuel/ODA/COD/insurance surcharges + fuel-index scheduler. |
+| `platform/throttler` | `libs/platform/throttler/` | Postgres-backed throttler storage + `TenantThrottlerGuard` (per-tier buckets, quota headers). |
 
-## The 18 domain libs (`libs/domains/`)
+## The 29 domain lib dirs (`libs/domains/`)
 
 Each domain lib is a self-contained NestJS feature module (resolver, service,
-entities, models, inputs, specs). The 18:
+entities, models, inputs, specs). The first-class bounded contexts:
 
 1. `domains/orders` — order intake, manifest assignment, lifecycle.
 2. `domains/shipments` — shipment records, label lifecycle, tracking.
-3. `domains/billing` — invoices, wallet, credit notes.
+3. `domains/billing` — invoices, wallet, credit notes **+ GST/E-way (ClearTax adapter) + COD remittance/reconciliation (5 bank parsers) + dispute queue**.
 4. `domains/warehouses` — warehouse CRUD, inventory.
-5. `domains/notifications` — email/SMS/WhatsApp dispatch.
+5. `domains/notifications` — email/SMS/WhatsApp dispatch (Exotel + WATI).
 6. `domains/serviceability` — pincode → carrier matrix.
-7. `domains/rate-shop` — multi-carrier rate shopping.
+7. `domains/rate-shop` — multi-carrier rate shopping **+ ranking engine + A/B simulator**.
 8. `domains/ecommerce-integrations` — Shopify + WooCommerce adapters.
-9. `domains/carriers` — carrier accounts and credential management.
-10. `domains/cod` — COD remittance and reconciliation.
-11. `domains/ndr` — non-delivery report handling.
-12. `domains/manifests` — daily manifests and handover.
-13. `domains/pickups` — pickup scheduling and tracking.
-14. `domains/returns` — return-to-origin flows.
-15. `domains/shipping-rates` — rate cards and zone pricing.
-16. `domains/users` — users and tenants.
-17. `domains/webhooks` — outbound webhook delivery (queued).
-18. `domains/payments` — Stripe + Razorpay integration.
+9. `domains/channels` — **channel-agnostic sync stack**: `ChannelSyncService`, credential cipher, per-channel adapters (Shopify, WooCommerce, Amazon, Flipkart, Myntra, Meesho) + auth services.
+10. `domains/tenants` — tenant context/guard/middleware, wallet, sub-accounts, API keys, feature flags.
+11. `domains/carriers` — carrier accounts and credential management.
+12. `domains/cod` — COD remittance and reconciliation.
+13. `domains/ndr` — non-delivery report handling **+ analytics (reason/pincode/courier/time-of-day breakdowns)**.
+14. `domains/manifests` — daily manifests and handover.
+15. `domains/pickups` — pickup scheduling and tracking.
+16. `domains/returns` — return-to-origin flows.
+17. `domains/shipping-rates` — rate cards and zone pricing.
+18. `domains/users` — users and roles.
+19. `domains/webhooks` — outbound webhook delivery (queued).
+20. `domains/payments` — Stripe + Razorpay integration.
+21. `domains/onboarding` — onboarding milestones **+ KYC (PAN/GSTIN/bank validators, async verify)**.
 
-> The directory actually has 25 entries (it also includes `plugins`,
-> `bulk-operations`, `surcharges`, `dashboard`, `storage`, `metrics`,
-> `onboarding`, and `roles`). The 18 listed above are the bounded contexts
-> that the architecture and migration plans treat as "first-class"; the rest
-> are capability libs that the apps wire in alongside the domains.
+> Plus the capability libs: `plugins`, `bulk-operations`, `surcharges`,
+> `dashboard`, `storage`, `metrics`, `roles` — 29 directories in total.
+>
+> **Migration note:** a handful of these (`carriers`, `returns`, `roles`,
+> `serviceability`, `shipping-rates` are placeholder barrels; ~10 libs still
+> re-export the legacy root `src/` tree through their barrels). The legacy
+> `src/` decommission is the remaining cleanup — see
+> [`MIGRATION.md`](./MIGRATION.md#9-the-remaining-src-to-libs-decommission) and
+> [`STATUS.md`](./STATUS.md#3-the-half-finished-src-to-libs-decommission).
 
 ## Shared and observability libs
 
 | Lib | Path | What it does |
 | --- | --- | --- |
-| `shared/*` | `libs/shared/` | Cross-cutting types, DTO fragments, money helpers, country/currency tables, validation utilities. Imported by both `platform` and `domains`. |
-| `observability` | `libs/observability/` | Structured logger, Prometheus-style metrics, request tracing, audit log. The only place cross-cutting telemetry is defined. |
+| `shared-ui` | `libs/shared-ui/` | `cn()`, `formatINR()`, `formatDate()` — used by both Next apps. (`libs/shared/` exists in the path map but is currently empty — do not add to it; see STATUS.md.) |
+| `observability` | `libs/observability/` | `StructuredLogger`, Prometheus `/metrics`, correlation IDs, OTel tracing bootstrap, Sentry filter/interceptor, and the `@Auditable()` audit log. The only place cross-cutting telemetry is defined. |
+| `packages/*` | `packages/node, python, php` | Official SDKs generated from the `api-public` OpenAPI spec by `scripts/build-sdks.mjs` (CI: `sdk-ci.yml`). |
 
 ## The 5 architectural rules
 

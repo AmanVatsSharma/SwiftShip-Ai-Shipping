@@ -233,7 +233,7 @@ export class EwayBillService {
     const saved = await this.ewayBills.save(ewayBill);
 
     if (invoice && invoice.emailDeliveryStatus === 'PENDING' && invoice.buyerEmail) {
-      this.invoiceEmailWorker.enqueue(invoice.id).catch((error) => {
+      this.invoiceEmailWorker.enqueue(invoice.id).catch((error: unknown) => {
         this.logger.error('Failed to enqueue invoice email after e-way bill', {
           invoiceId: invoice?.id,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -419,6 +419,8 @@ export class EwayBillService {
     // In production, call GSTN API to cancel
     // await this.cancelEwayBillInGstn(ewayBill.ewayBillNumber, reason);
 
+    // The jsonb column union (`Record<string, any> | null`) confuses
+    // TypeORM's DeepPartial expansion for jsonb — cast the payload.
     await this.ewayBills.update(
       { id },
       {
@@ -427,7 +429,7 @@ export class EwayBillService {
           ...(ewayBill.metadata as Record<string, any>),
           cancelledAt: new Date().toISOString(),
           cancellationReason: reason,
-        },
+        } as Record<string, any>,
       },
     );
 

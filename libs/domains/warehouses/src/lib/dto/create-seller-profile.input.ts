@@ -13,15 +13,15 @@ import {
 export class CreateWarehouseSellerProfileInput {
   @Field(() => Int)
   @IsInt()
-  warehouseId: number;
+  warehouseId!: number;
 
   @Field(() => String)
   @IsString()
-  profileName: string;
+  profileName!: string;
 
   @Field(() => String)
   @IsString()
-  legalName: string;
+  legalName!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -30,7 +30,7 @@ export class CreateWarehouseSellerProfileInput {
 
   @Field(() => String)
   @Length(15, 15)
-  gstin: string;
+  gstin!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -49,7 +49,7 @@ export class CreateWarehouseSellerProfileInput {
 
   @Field(() => String)
   @IsString()
-  addressLine1: string;
+  addressLine1!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -58,19 +58,19 @@ export class CreateWarehouseSellerProfileInput {
 
   @Field(() => String)
   @IsString()
-  city: string;
+  city!: string;
 
   @Field(() => String)
   @IsString()
-  state: string;
+  state!: string;
 
   @Field(() => String)
   @IsString()
-  pincode: string;
+  pincode!: string;
 
   @Field(() => String, { defaultValue: 'India' })
   @IsString()
-  country: string;
+  country!: string;
 
   @Field({ nullable: true })
   @IsOptional()

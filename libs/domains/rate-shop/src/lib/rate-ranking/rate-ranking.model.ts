@@ -91,7 +91,7 @@ export class RankedRateQuoteGql {
   @Field()
   expiresAt!: Date;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   metadata?: Record<string, unknown>;
 
   @Field(() => RateRanking)

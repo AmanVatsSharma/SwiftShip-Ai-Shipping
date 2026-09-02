@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/billing",
-        "tsConfig": "libs/domains/billing/tsconfig.lib.json"
+        "tsConfig": "libs/domains/billing/tsconfig.lib.json",
+        "main": "libs/domains/billing/src/index.ts",
+        "packageJson": "libs/domains/billing/package.json"
       }
     },
     "lint": {

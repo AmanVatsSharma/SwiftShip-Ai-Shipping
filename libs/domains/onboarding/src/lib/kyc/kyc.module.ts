@@ -1,7 +1,7 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TenantContext } from '@swiftship/domains-tenants';
-import { QueuesService } from '@swiftship/platform-queues';
+import { TenantContext, TenantModule } from '@swiftship/domains-tenants';
+import { QueuesModule, QueuesService } from '@swiftship/platform-queues';
 import { KycRecordEntity, KycDocumentEntity } from './kyc.entity';
 import { PanValidatorService } from './pan-validator';
 import { GstinValidatorService } from './gstin-validator';
@@ -23,7 +23,14 @@ import { KycResolver } from './kyc.resolver';
  * registered by env override.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([KycRecordEntity, KycDocumentEntity])],
+  imports: [
+    TypeOrmModule.forFeature([KycRecordEntity, KycDocumentEntity]),
+    // This module's own constructor injects QueuesService + TenantContext,
+    // so their host modules must be imported here (found by the live boot
+    // test — Nest resolves a module's constructor deps in its own context).
+    QueuesModule,
+    TenantModule,
+  ],
   providers: [
     PanValidatorService,
     GstinValidatorService,

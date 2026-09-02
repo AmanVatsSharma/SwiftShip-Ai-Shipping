@@ -39,9 +39,8 @@ export {
   ChannelSyncScheduler,
   ChannelConnectionEntity,
   ChannelSyncJobEntity,
-} from '../../../../domains/channels/src';
+} from '../../channels/src';
 export type {
-  EcomChannelAdapter,
   ChannelPlatform,
   ChannelConnectionStatus,
   ChannelSyncType,
@@ -54,4 +53,5 @@ export type {
   ChannelPushResult,
   ChannelWebhookRegistration,
   ChannelSettings,
-} from '../../../../domains/channels/src/lib/sync/channel-sync.types';
+} from '../../channels/src/lib/sync/channel-sync.types';
+export type { EcomChannelAdapter } from '../../channels/src/lib/sync/channel-adapter.interface';

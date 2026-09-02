@@ -9,7 +9,7 @@ describe('PanValidatorService', () => {
 
   describe('normalize', () => {
     it('trims whitespace and upper-cases', () => {
-      expect(service.normalize('  abcde1234f  ')).toBe('ABCDE1234F');
+      expect(service.normalize('  abcfe1234f  ')).toBe('ABCFE1234F');
     });
 
     it('handles null/undefined safely', () => {
@@ -20,15 +20,15 @@ describe('PanValidatorService', () => {
 
   describe('validate', () => {
     it('accepts a structurally valid individual PAN', () => {
-      const r = service.validate('ABCDE1234F');
+      const r = service.validate('ABCFE1234F');
       expect(r.valid).toBe(true);
-      expect(r.normalized).toBe('ABCDE1234F');
+      expect(r.normalized).toBe('ABCFE1234F');
       expect(r.holderType).toBe('F');
     });
 
     it('accepts all known holder types', () => {
       for (const t of PAN_HOLDER_TYPE_CHARS) {
-        const pan = `AAAA${t}999A`;
+        const pan = `AAA${t}A9999A`;
         const r = service.validate(pan);
         expect(r.valid).toBe(true);
         expect(r.holderType).toBe(t);
@@ -47,9 +47,9 @@ describe('PanValidatorService', () => {
     });
 
     it('rejects lower-case (forces upper-case then re-checks)', () => {
-      const r = service.validate('abcde1234f');
+      const r = service.validate('abcfe1234f');
       expect(r.valid).toBe(true);
-      expect(r.normalized).toBe('ABCDE1234F');
+      expect(r.normalized).toBe('ABCFE1234F');
     });
 
     it('rejects alphabetic in the digit block', () => {
@@ -71,7 +71,7 @@ describe('PanValidatorService', () => {
     });
 
     it('regex matches exactly the right shape', () => {
-      expect(PAN_REGEX.test('ABCDE1234F')).toBe(true);
+      expect(PAN_REGEX.test('ABCFE1234F')).toBe(true);
       expect(PAN_REGEX.test('12345ABCDE')).toBe(false);
       expect(PAN_REGEX.test('A1CDE1234F')).toBe(false);
     });

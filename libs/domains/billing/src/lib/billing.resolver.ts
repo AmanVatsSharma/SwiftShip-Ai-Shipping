@@ -3,19 +3,21 @@ import { UseGuards } from '@nestjs/common';
 import { InvoiceService } from './services/invoice.service';
 import { EwayBillService } from './services/eway-bill.service';
 import { GstService } from './services/gst.service';
-import { GqlAuthGuard } from '../auth/gql-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { GqlAuthGuard, CurrentUser } from '@swiftship/platform-auth';
 import { Invoice, EwayBill, GstCalculation } from './billing.model';
 import { CreateInvoiceInput } from './dto/create-invoice.input';
-import { GenerateEwayBillInput } from './dto/generate-eway-bill.input';
 
 /**
  * Billing Resolver
- * 
+ *
  * GraphQL resolver for billing operations including:
  * - Invoice management
- * - E-way bill generation
  * - GST calculations
+ *
+ * E-way bill mutations/queries (`generateEwayBill`, `cancelEwayBill`,
+ * `ewayBillByShipment`, `gstInvoiceByInvoiceId`, …) deliberately live on the
+ * GST sub-resolver (`./gst/gst.resolver.ts`) — do NOT re-add them here:
+ * duplicate GraphQL field names across resolvers crash Apollo at boot.
  */
 @Resolver()
 export class BillingResolver {
@@ -33,7 +35,8 @@ export class BillingResolver {
     @CurrentUser() user: any,
   ) {
     // Override userId with current user
-    input.userId = user.id;
+    // JWT payload exposes `sub` (jwt.strategy) — accept the common shapes.
+    input.userId = user?.userId ?? user?.sub ?? user?.id;
     return this.invoiceService.createInvoice(input);
   }
 
@@ -74,36 +77,14 @@ export class BillingResolver {
   @Query(() => [Invoice], { description: 'Get all invoices for current user' })
   @UseGuards(GqlAuthGuard)
   async myInvoices(@CurrentUser() user: any) {
-    return this.invoiceService.getInvoicesByUser(user.id);
+    return this.invoiceService.getInvoicesByUser(user?.userId ?? user?.sub ?? user?.id);
   }
 
-  // E-way Bill Mutations
-  @Mutation(() => EwayBill, { description: 'Generate E-way bill for a shipment' })
-  @UseGuards(GqlAuthGuard)
-  async generateEwayBill(@Args('input') input: GenerateEwayBillInput) {
-    return this.ewayBillService.generateEwayBill(input);
-  }
-
-  @Mutation(() => EwayBill, { description: 'Cancel an E-way bill' })
-  @UseGuards(GqlAuthGuard)
-  async cancelEwayBill(
-    @Args('id', { type: () => Int }) id: number,
-    @Args('reason', { nullable: true }) reason?: string,
-  ) {
-    return this.ewayBillService.cancelEwayBill(id, reason);
-  }
-
-  // E-way Bill Queries
+  // E-way Bill Queries (mutations live on the GST resolver)
   @Query(() => EwayBill, { description: 'Get E-way bill by ID' })
   @UseGuards(GqlAuthGuard)
   async ewayBill(@Args('id', { type: () => Int }) id: number) {
     return this.ewayBillService.getEwayBill(id);
-  }
-
-  @Query(() => EwayBill, { description: 'Get E-way bill by shipment ID' })
-  @UseGuards(GqlAuthGuard)
-  async ewayBillByShipment(@Args('shipmentId', { type: () => Int }) shipmentId: number) {
-    return this.ewayBillService.getEwayBillByShipment(shipmentId);
   }
 
   @Query(() => Boolean, { description: 'Validate E-way bill' })

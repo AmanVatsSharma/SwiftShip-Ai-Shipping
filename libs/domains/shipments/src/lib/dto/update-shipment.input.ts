@@ -1,5 +1,5 @@
 import { InputType, Field, Int, Float } from '@nestjs/graphql';
-import { ShipmentStatus } from './shipment.model';
+import { ShipmentStatus } from '../shipment.model';
 import {
   IsNotEmpty,
   IsString,
@@ -18,7 +18,7 @@ export class UpdateShipmentInput {
   @IsNotEmpty({ message: 'Shipment ID is required' })
   @IsInt({ message: 'Shipment ID must be an integer' })
   @IsPositive({ message: 'Shipment ID must be positive' })
-  id: number;
+  id!: number;
 
   @Field({ nullable: true })
   @IsOptional()

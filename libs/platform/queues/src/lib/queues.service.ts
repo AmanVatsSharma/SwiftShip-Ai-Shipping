@@ -25,7 +25,13 @@ export class QueuesService {
 
   constructor() {
     const url = process.env.REDIS_URL || 'redis://localhost:6379';
-    this.connection = new IORedis(url);
+    // BullMQ blocking connections (workers) REQUIRE maxRetriesPerRequest
+    // to be null — ioredis defaults it to 20 and BullMQ throws
+    // "maxRetriesPerRequest must be null" at worker construction.
+    // Found by the first live boot test (2026-08); see STATUS.md.
+    this.connection = new IORedis(url, {
+      maxRetriesPerRequest: null,
+    });
   }
 
   getQueue(name: string, opts?: QueueOptions): Queue {

@@ -11,8 +11,8 @@
  */
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from '../api/src/app.module';
+import request from 'supertest';
+import { AppModule } from '../../api/src/app.module';
 
 describe('SwiftShip API (e2e)', () => {
   let app: INestApplication;

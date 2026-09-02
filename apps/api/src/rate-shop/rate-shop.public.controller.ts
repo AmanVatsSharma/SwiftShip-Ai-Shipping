@@ -8,10 +8,13 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { TenantGuard } from '@swiftship/domains-tenants';
+// Direct file import (not the `@swiftship/domains-rate-shop` barrel) so the
+// legacy `src/rate-shop` re-exports stay out of the app's runtime graph —
+// see STATUS.md §3 (src-to-libs decommission).
 import {
   RateRankingService,
   RateRankingPreferences,
-} from '@swiftship/domains-rate-shop';
+} from '../../../../libs/domains/rate-shop/src/lib/rate-ranking/rate-ranking.service';
 import { RateQuoteRequest } from '@swiftship/platform-carriers';
 
 /**

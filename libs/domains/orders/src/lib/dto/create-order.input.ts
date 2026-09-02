@@ -1,5 +1,5 @@
 import { InputType, Field, Int, Float } from '@nestjs/graphql';
-import { OrderStatus } from './order.model';
+import { OrderStatus } from '../order.model';
 import { RateRankingStrategy } from '@swiftship/domains-rate-shop';
 import {
   IsBoolean,
@@ -19,7 +19,7 @@ export class CreateOrderInput {
   @Field()
   @IsNotEmpty({ message: 'Order number is required' })
   @IsString({ message: 'Order number must be a string' })
-  orderNumber: string;
+  orderNumber!: string;
 
   @Field(() => Float)
   @IsNotEmpty({ message: 'Total is required' })
@@ -28,13 +28,13 @@ export class CreateOrderInput {
     { message: 'Total must be a number' },
   )
   @Min(0, { message: 'Total must be greater than or equal to 0' })
-  total: number;
+  total!: number;
 
   @Field(() => Int)
   @IsNotEmpty({ message: 'User ID is required' })
   @IsInt({ message: 'User ID must be an integer' })
   @IsPositive({ message: 'User ID must be positive' })
-  userId: number;
+  userId!: number;
 
   @Field(() => OrderStatus, { nullable: true })
   @IsOptional()
@@ -94,13 +94,13 @@ export class CreateOrderInput {
   @Length(4, 10, {
     message: 'Destination pincode must be between 4 and 10 characters',
   })
-  destinationPincode: string;
+  destinationPincode!: string;
 
   @Field(() => Int)
   @IsNotEmpty({ message: 'Package weight is required' })
   @IsInt({ message: 'Package weight must be an integer (grams)' })
   @IsPositive({ message: 'Package weight must be positive' })
-  packageWeightGrams: number;
+  packageWeightGrams!: number;
 
   @Field(() => Float, { nullable: true })
   @IsOptional()

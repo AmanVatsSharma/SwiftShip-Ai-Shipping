@@ -1,7 +1,37 @@
 import { ObjectType, Field, Int, Float } from '@nestjs/graphql';
-import { Warehouse } from '../warehouses/warehouse.model';
-import { WarehouseSellerProfile } from '../warehouses/seller-profile.model';
-import { Payment } from '../payments/payment.model';
+import { Warehouse } from '@swiftship/domains-warehouses';
+import { WarehouseSellerProfile } from '@swiftship/domains-warehouses';
+import { Payment } from '@swiftship/domains-payments';
+
+/**
+ * E-way Bill GraphQL Model
+ */
+@ObjectType()
+export class EwayBill {
+  @Field(() => Int)
+  id!: number;
+
+  @Field(() => Int)
+  shipmentId!: number;
+
+  @Field(() => String)
+  ewayBillNumber!: string;
+
+  @Field(() => String)
+  status!: string;
+
+  @Field(() => Date, { nullable: true })
+  validUntil?: Date;
+
+  @Field(() => String, { nullable: true })
+  ewayBillUrl?: string;
+
+  @Field(() => Date)
+  createdAt!: Date;
+
+  @Field(() => Date)
+  updatedAt!: Date;
+}
 
 /**
  * Invoice Item GraphQL Model
@@ -9,46 +39,46 @@ import { Payment } from '../payments/payment.model';
 @ObjectType()
 export class InvoiceItem {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => String)
-  invoiceId: string;
+  invoiceId!: string;
 
   @Field(() => String)
-  description: string;
+  description!: string;
 
   @Field(() => Int)
-  quantity: number;
+  quantity!: number;
 
   @Field(() => Float)
-  unitPrice: number;
+  unitPrice!: number;
 
   @Field(() => Float)
-  totalPrice: number;
+  totalPrice!: number;
 
   @Field(() => String, { nullable: true })
   hsnCode?: string;
 
   @Field(() => Float)
-  taxRate: number;
+  taxRate!: number;
 
   @Field(() => Float)
-  taxAmount: number;
+  taxAmount!: number;
 
   @Field(() => Float)
-  cgstAmount: number;
+  cgstAmount!: number;
 
   @Field(() => Float)
-  sgstAmount: number;
+  sgstAmount!: number;
 
   @Field(() => Float)
-  igstAmount: number;
+  igstAmount!: number;
 
   @Field(() => String, { nullable: true })
   gstType?: string;
 
   @Field(() => Date)
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 /**
@@ -57,13 +87,13 @@ export class InvoiceItem {
 @ObjectType()
 export class Invoice {
   @Field(() => String)
-  id: string;
+  id!: string;
 
   @Field(() => String)
-  invoiceNumber: string;
+  invoiceNumber!: string;
 
   @Field(() => Int)
-  userId: number;
+  userId!: number;
 
   @Field(() => Int, { nullable: true })
   warehouseId?: number;
@@ -75,31 +105,31 @@ export class Invoice {
   subscriptionId?: string;
 
   @Field(() => Float)
-  amount: number;
+  amount!: number;
 
   @Field(() => Float)
-  taxAmount: number;
+  taxAmount!: number;
 
   @Field(() => Float)
-  cgstAmount: number;
+  cgstAmount!: number;
 
   @Field(() => Float)
-  sgstAmount: number;
+  sgstAmount!: number;
 
   @Field(() => Float)
-  igstAmount: number;
+  igstAmount!: number;
 
   @Field(() => String, { nullable: true })
   gstType?: string;
 
   @Field(() => Float)
-  totalAmount: number;
+  totalAmount!: number;
 
   @Field(() => String)
-  currency: string;
+  currency!: string;
 
   @Field(() => String)
-  status: string;
+  status!: string;
 
   @Field(() => Int, { nullable: true })
   sequenceNumber?: number;
@@ -162,16 +192,16 @@ export class Invoice {
   gstnSignatureValid?: boolean;
 
   @Field(() => String)
-  emailDeliveryStatus: string;
+  emailDeliveryStatus!: string;
 
   @Field(() => Int)
-  emailDeliveryAttempts: number;
+  emailDeliveryAttempts!: number;
 
   @Field(() => Date, { nullable: true })
   emailDeliveredAt?: Date;
 
   @Field(() => [InvoiceItem], { name: 'items' })
-  invoiceItems: InvoiceItem[];
+  invoiceItems!: InvoiceItem[];
 
   @Field(() => Warehouse, { nullable: true })
   warehouse?: Warehouse;
@@ -186,40 +216,10 @@ export class Invoice {
   ewayBill?: EwayBill;
 
   @Field(() => Date)
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field(() => Date)
-  updatedAt: Date;
-}
-
-/**
- * E-way Bill GraphQL Model
- */
-@ObjectType()
-export class EwayBill {
-  @Field(() => Int)
-  id: number;
-
-  @Field(() => Int)
-  shipmentId: number;
-
-  @Field(() => String)
-  ewayBillNumber: string;
-
-  @Field(() => String)
-  status: string;
-
-  @Field(() => Date, { nullable: true })
-  validUntil?: Date;
-
-  @Field(() => String, { nullable: true })
-  ewayBillUrl?: string;
-
-  @Field(() => Date)
-  createdAt: Date;
-
-  @Field(() => Date)
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 /**
@@ -228,23 +228,23 @@ export class EwayBill {
 @ObjectType()
 export class GstCalculation {
   @Field(() => Float)
-  baseAmount: number;
+  baseAmount!: number;
 
   @Field(() => Float)
-  cgst: number; // Central GST
+  cgst!: number; // Central GST
 
   @Field(() => Float)
-  sgst: number; // State GST
+  sgst!: number; // State GST
 
   @Field(() => Float)
-  igst: number; // Integrated GST (for inter-state)
+  igst!: number; // Integrated GST (for inter-state)
 
   @Field(() => Float)
-  totalTax: number;
+  totalTax!: number;
 
   @Field(() => Float)
-  totalAmount: number;
+  totalAmount!: number;
 
   @Field(() => String)
-  gstType: string; // 'CGST+SGST' for intra-state, 'IGST' for inter-state
+  gstType!: string; // 'CGST+SGST' for intra-state, 'IGST' for inter-state
 }

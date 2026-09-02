@@ -1,10 +1,21 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import {
-  ThrottlerStorage,
-  ThrottlerStorageRecord,
-} from '@nestjs/throttler';
+import { ThrottlerStorage } from '@nestjs/throttler';
+
+/**
+ * Structural stand-in for `ThrottlerStorageRecord` — `@nestjs/throttler`
+ * v6.4 declares the interface in
+ * `dist/throttler-storage-record.interface.d.ts` but does not re-export it
+ * from the package index, so it cannot be imported portably. The shape
+ * below matches the upstream interface exactly.
+ */
+export interface ThrottlerStorageRecord {
+  totalHits: number;
+  timeToExpire: number;
+  isBlocked: boolean;
+  timeToBlockExpire: number;
+}
 
 /**
  * Postgres-backed throttler storage.

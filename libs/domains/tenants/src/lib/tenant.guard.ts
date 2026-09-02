@@ -4,7 +4,11 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import type { TenantService } from './tenant.service';
+// NOTE: value import, NOT `import type` — Nest DI relies on
+// emitDecoratorMetadata reflecting constructor param types; a type-only
+// import erases the type, the param reflects as `Object`, and the
+// container cannot resolve it (found by the first live boot test).
+import { TenantService } from './tenant.service';
 
 export interface RequestWithTenant {
   tenantId?: number;

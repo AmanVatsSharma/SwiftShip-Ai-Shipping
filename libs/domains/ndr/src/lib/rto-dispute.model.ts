@@ -42,17 +42,17 @@ export class RtoDispute {
   @Field(() => Int) tenantId!: number;
   @Field(() => RtoDisputeStatus) status!: RtoDisputeStatus;
 
-  @Field({ nullable: true }) reasonCode?: string | null;
-  @Field({ nullable: true }) merchantNotes?: string | null;
-  @Field({ nullable: true }) resolution?: string | null;
+  @Field(() => String, { nullable: true }) reasonCode?: string | null;
+  @Field(() => String, { nullable: true }) merchantNotes?: string | null;
+  @Field(() => String, { nullable: true }) resolution?: string | null;
 
   @Field(() => Int, { nullable: true })
   resolvedByUserId?: number | null;
   @Field(() => Int, { nullable: true })
   refundedPaise?: number | null;
 
-  @Field({ nullable: true }) openedAt?: Date | null;
-  @Field({ nullable: true }) resolvedAt?: Date | null;
+  @Field(() => String, { nullable: true }) openedAt?: Date | null;
+  @Field(() => String, { nullable: true }) resolvedAt?: Date | null;
   @Field() createdAt!: Date;
   @Field() updatedAt!: Date;
 }

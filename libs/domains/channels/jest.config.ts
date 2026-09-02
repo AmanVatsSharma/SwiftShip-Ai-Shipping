@@ -2,20 +2,24 @@
 /**
  * Nx jest target for the @swiftship/domains-channels lib.
  *
- * Mirrors the shape of `libs/observability/jest.config.ts` — a thin
- * wrapper around the root `jest.preset.js` that adds the per-lib
- * module name mapper. The preset owns the ts-jest transformer and the
- * `@swiftship/*` path alias resolver, so this file only needs to
- * point at it.
+ * Thin wrapper around the root jest.preset.js. NOTE: the preset's generic
+ * '@swiftship/*' mapper resolves <rootDir>-relative and is wrong for
+ * 3-deep libs, so this config defines the full alias set explicitly
+ * (preset keys are merged per-key and the generic one would shadow).
  */
 export default {
   displayName: 'channels',
-  preset: '../../jest.preset.js',
+  preset: '../../../jest.preset.js',
   testEnvironment: 'node',
   rootDir: '.',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: ['<rootDir>/src/**/*.(spec|test).ts'],
+  // uuid (and friends) ship ESM that ts-jest must transform.
+  transformIgnorePatterns: ['node_modules/(?!(uuid)/)'],
   moduleNameMapper: {
     '^@swiftship/domains-channels$': '<rootDir>/src/index.ts',
+    '^@swiftship/domains-(.*)$': '<rootDir>/../../domains/$1/src/index.ts',
+    '^@swiftship/platform-(.*)$': '<rootDir>/../../platform/$1/src/index.ts',
+    '^@swiftship/observability$': '<rootDir>/../../observability/src/index.ts',
   },
 };

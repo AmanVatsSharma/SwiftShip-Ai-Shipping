@@ -1,5 +1,6 @@
 import { Module, Provider } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { QueuesModule } from '@swiftship/platform-queues';
 
 import { ChannelConnectionEntity, ChannelSyncJobEntity } from './channel-sync.entities';
 import { ChannelSyncService, CHANNEL_ADAPTERS } from './channel-sync.service';

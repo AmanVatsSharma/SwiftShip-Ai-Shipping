@@ -1,0 +1,296 @@
+# SwiftShip API — Prometheus alert rules
+#
+# Loaded via `rule_files` in deploy/prometheus/prometheus.yml. Raw `groups:`
+# format, consumable by both vanilla Prometheus and a PrometheusRule CRD
+# (`spec.groups` — wrap with kubectl-slice / helm when moving to k8s).
+#
+# METRIC REALITY CHECK (2026-08-30) — what GET /metrics actually exposes.
+# The endpoint is libs/observability/src/lib/metrics.controller.ts (wired in
+# apps/api/src/app.module.ts). It renders exactly four gauges and NO counters
+# or histograms:
+#
+#   process_uptime_seconds        (gauge, seconds since controller init)
+#   nodejs_heap_size_used_bytes   (gauge)
+#   nodejs_heap_size_total_bytes  (gauge)
+#   nodejs_rss_bytes              (gauge)
+#
+# Prometheus synthesizes `up`, `scrape_duration_seconds`, etc. per job —
+# those are usable too.
+#
+# The following metrics DO NOT EXIST today (no prom-client dependency, no
+# http instrumentation, no exporter jobs for postgres/redis in
+# deploy/prometheus/prometheus.yml). Their rules are included COMMENTED OUT
+# so they can be enabled the moment the metric lands — do not uncomment
+# blindly, the alert would either never fire or (with absent()) always fire:
+#
+#   - http_request_duration_seconds_count / _bucket   (5xx rate, p95 latency)
+#     NOTE: libs/domains/metrics/src/lib/metrics.service.ts is an in-memory
+#     JSON counter (not Prometheus format, not wired into the /metrics
+#     endpoint). Adopting prom-client + an http histogram is the prerequisite.
+#   - pg_up / up{job="postgres-exporter"}             (Postgres connectivity)
+#   - up{job="redis-exporter"}                        (Redis connectivity)
+#   - any unhandled-error counter                     (error log rate; logs are
+#     JSON to Loki via promtail — a Loki ruler alert on
+#     `{compose_service="swiftship-api"} | json | level="error"` is the
+#     right home for this once a ruler is configured)
+#   - carrier circuit-breaker state                   (breaker state lives in
+#     Redis keys `breaker:<CARRIER>:state`, not in metrics; see
+#     chaos/runbooks/carrier-timeout.md)
+
+groups:
+  # ------------------------------------------------------------------
+  # Availability — these rules are LIVE (metrics exist today)
+  # ------------------------------------------------------------------
+  - name: swiftship-api.availability
+    rules:
+      - alert: SwiftShipApiDown
+        expr: up{job="swiftship-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: swiftship-api
+        annotations:
+          summary: "swiftship-api scrape target is down ({{ $labels.instance }})"
+          description: >-
+            Prometheus has failed to scrape http://{{ $labels.instance }}/metrics
+            for 2 minutes. Process dead, pod evicted, or network partition.
+            Liveness/readiness probes hit /health and /health/ready
+            (deploy/k8s/30-api.yaml).
+          runbook: "docs/runbook.md#1-api-5xx-spike--api-down"
+
+      - alert: SwiftShipApiScrapeTargetMissing
+        expr: absent(up{job="swiftship-api"})
+        for: 5m
+        labels:
+          severity: critical
+          service: swiftship-api
+        annotations:
+          summary: "swiftship-api scrape job has no targets"
+          description: >-
+            up{job="swiftship-api"} is absent entirely — the scrape job was
+            removed from deploy/prometheus/prometheus.yml or Prometheus lost
+            its configuration. This is a monitoring-config regression, not an
+            app outage.
+          runbook: "docs/runbook.md#6-monitoring-itself-broken"
+
+      - alert: SwiftShipApiSlowScrape
+        expr: scrape_duration_seconds{job="swiftship-api"} > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: swiftship-api
+        annotations:
+          summary: "swiftship-api /metrics scrape takes {{ $value }}s"
+          description: >-
+            The metrics endpoint is slow — usually event-loop saturation
+            starving the HTTP server, or too many scrape targets on one
+            instance.
+
+  # ------------------------------------------------------------------
+  # Process health — LIVE (process_uptime_seconds / heap gauges exist)
+  # ------------------------------------------------------------------
+  - name: swiftship-api.process
+    rules:
+      - alert: SwiftShipApiRestarted
+        expr: process_uptime_seconds{job="swiftship-api"} < 180
+        labels:
+          severity: warning
+          service: swiftship-api
+        annotations:
+          summary: "swiftship-api restarted {{ $value | humanize }}s ago"
+          description: >-
+            process_uptime_seconds is under 3 minutes — the process (or its
+            pod) just started. Expected during deploys; a page outside a
+            deploy window means a crash/OOM-kill loop. Check
+            `kubectl -n swiftship rollout history deploy/api` and pod events
+            before assuming a code crash.
+          runbook: "docs/runbook.md#1-api-5xx-spike--api-down"
+
+      - alert: SwiftShipApiUptimeFlapping
+        expr: process_uptime_seconds{job="swiftship-api"} < 600
+        for: 30m
+        labels:
+          severity: critical
+          service: swiftship-api
+        annotations:
+          summary: "swiftship-api never reaches 10 minutes of uptime"
+          description: >-
+            Uptime has stayed below 10 minutes for 30 minutes — the process
+            is crash-looping (OOM, unhandled exception at boot, or a failing
+            liveness probe causing restart thrash).
+          runbook: "docs/runbook.md#1-api-5xx-spike--api-down"
+
+      - alert: SwiftShipApiHeapPressure
+        expr: >-
+          nodejs_heap_size_used_bytes{job="swiftship-api"}
+            / nodejs_heap_size_total_bytes{job="swiftship-api"} > 0.90
+        for: 10m
+        labels:
+          severity: warning
+          service: swiftship-api
+        annotations:
+          summary: "Node heap >90% of heap total for 10m"
+          description: >-
+            Sustained heap pressure precedes long GC pauses and OOM kills.
+            Cross-check nodejs_rss_bytes and the memory panels in
+            deploy/grafana/dashboards/swiftship-api.json.
+
+      # Threshold is a heuristic for the 512Mi-1Gi containers in
+      # deploy/k8s/30-api.yaml — tune when resource requests change.
+      - alert: SwiftShipApiRssHigh
+        expr: nodejs_rss_bytes{job="swiftship-api"} > 1.5e9
+        for: 15m
+        labels:
+          severity: warning
+          service: swiftship-api
+        annotations:
+          summary: "swiftship-api RSS above 1.5GiB ({{ $value | humanize1024 }}B)"
+          description: >-
+            Resident memory is high for a single Node process. If it keeps
+            climbing, the next stop is the kernel OOM killer. Take a heap
+            snapshot before restarting.
+
+  # ------------------------------------------------------------------
+  # HTTP 5xx / latency — COMMENTED: metrics do not exist yet.
+  # Enable after adopting prom-client with an http request histogram,
+  # e.g. histogram `http_request_duration_seconds` with labels
+  # {route, method, status_code}. Metric names below follow that
+  # convention — they are NOT emitted by the app today.
+  # ------------------------------------------------------------------
+  - name: swiftship-api.http
+    rules: []  # empty by design — every rule below is commented out; uncomment individually as metrics land
+    # - alert: SwiftShipApi5xxRateHigh
+      #   expr: >-
+      #     sum(rate(http_request_duration_seconds_count{job="swiftship-api",status_code=~"5.."}[5m]))
+      #       / clamp_min(sum(rate(http_request_duration_seconds_count{job="swiftship-api"}[5m])), 1e-9) > 0.02
+      #   for: 10m
+      #   labels:
+      #     severity: critical
+      #     service: swiftship-api
+      #   annotations:
+      #     summary: "swiftship-api 5xx ratio {{ $value | humanizePercentage }}"
+      #     description: >-
+      #       More than 2% of requests over the last 10 minutes returned 5xx.
+      #       Until this metric exists, detect 5xx spikes via Sentry
+      #       (docs/observability.md section 3) and the status page.
+      #     runbook: "docs/runbook.md#1-api-5xx-spike--api-down"
+      #
+      # - alert: SwiftShipApi5xxBurst
+      #   expr: >-
+      #     sum(increase(http_request_duration_seconds_count{job="swiftship-api",status_code=~"5.."}[5m])) > 20
+      #   labels:
+      #     severity: critical
+      #     service: swiftship-api
+      #   annotations:
+      #     summary: "{{ $value | humanize }} 5xx responses in 5 minutes"
+      #     runbook: "docs/runbook.md#1-api-5xx-spike--api-down"
+      #
+      # - alert: SwiftShipApiP95LatencyHigh
+      #   expr: >-
+      #     histogram_quantile(0.95,
+      #       sum(rate(http_request_duration_seconds_bucket{job="swiftship-api"}[5m])) by (le)
+      #     ) > 0.5
+      #   for: 10m
+      #   labels:
+      #     severity: warning
+      #     service: swiftship-api
+      #   annotations:
+      #     summary: "swiftship-api p95 latency above 500ms"
+      #     description: >-
+      #       500ms is the Phase 2 load-test target (LAUNCH_PLAN.md: sustained
+      #       50 RPS with p95 < 500ms). Investigate against the k6 baselines
+      #       (loadtest:order-create, loadtest:rate-shop).
+      #     runbook: "docs/runbook.md#1-api-5xx-spike--api-down"
+
+  # ------------------------------------------------------------------
+  # Dependencies (Postgres / Redis) — COMMENTED: no exporter jobs are
+  # configured in deploy/prometheus/prometheus.yml, so pg_up and
+  # up{job="postgres-exporter"|"redis-exporter"} do not exist. Two steps to
+  # enable:
+  #   1. Deploy postgres_exporter and redis_exporter (or managed-CloudWatch/
+  #      Cloud-monitoring equivalents) and add their scrape jobs.
+  #   2. Uncomment the rules below. Alert names intentionally match the ones
+  #      referenced by chaos/runbooks/postgres-failover.md and
+  #      chaos/runbooks/redis-failover.md.
+  # Until then, dependency outages surface through /health/ready failures
+  # (status page + k8s pod readiness), not through Prometheus.
+  # ------------------------------------------------------------------
+  - name: swiftship-api.dependencies
+    rules: []  # empty by design — uncomment after exporter scrape jobs are added
+    # - alert: PostgresPrimaryDown
+      #   expr: pg_up == 0 or up{job="postgres-exporter"} == 0
+      #   for: 1m
+      #   labels:
+      #     severity: critical
+      #     service: postgres
+      #   annotations:
+      #     summary: "Postgres is down or unreachable (pg_up=0)"
+      #     runbook: "chaos/runbooks/postgres-failover.md"
+      #
+      # - alert: PostgresExporterMissing
+      #   expr: absent(up{job="postgres-exporter"})
+      #   for: 10m
+      #   labels:
+      #     severity: warning
+      #     service: postgres
+      #   annotations:
+      #     summary: "postgres-exporter scrape job absent — DB monitoring blind"
+      #     runbook: "docs/runbook.md#6-monitoring-itself-broken"
+      #
+      # - alert: RedisDown
+      #   expr: up{job="redis-exporter"} == 0 or redis_up == 0
+      #   for: 1m
+      #   labels:
+      #     severity: critical
+      #     service: redis
+      #   annotations:
+      #     summary: "Redis is down — BullMQ queues stall, rate-shop cache misses"
+      #     runbook: "chaos/runbooks/redis-failover.md"
+      #
+      # - alert: RedisExporterMissing
+      #   expr: absent(up{job="redis-exporter"})
+      #   for: 10m
+      #   labels:
+      #     severity: warning
+      #     service: redis
+      #   annotations:
+      #     summary: "redis-exporter scrape job absent — queue/cache monitoring blind"
+      #     runbook: "docs/runbook.md#6-monitoring-itself-broken"
+
+  # ------------------------------------------------------------------
+  # Error logs / carrier breakers — COMMENTED: no metrics exist.
+  #   - Unhandled error rate belongs in a Loki ruler alert on the JSON
+  #     logs shipped by promtail (deploy/loki/promtail.yml):
+  #       sum(count_over_time({compose_service="swiftship-api"}
+  #            | json | level="error" [5m])) > 10
+  #     Requires the Loki ruler to be enabled (it is not today).
+  #   - CarrierBreakerOpen: circuit-breaker state is stored in Redis keys
+  #     breaker:<CARRIER>:state (libs/platform/rate-cache circuit breaker),
+  #     not exported as metrics. See chaos/runbooks/carrier-timeout.md for
+  #     the manual check commands until a breaker-state gauge is added.
+  # ------------------------------------------------------------------
+  - name: swiftship-api.errors
+    rules: []  # empty by design — error-rate + breaker alerts pending metrics (see header)
+    # - alert: SwiftShipErrorLogRateHigh
+      #   expr: sum(rate(app_errors_total{job="swiftship-api"}[5m])) > 0.5
+      #   for: 10m
+      #   labels:
+      #     severity: warning
+      #     service: swiftship-api
+      #   annotations:
+      #     summary: "Unhandled error log rate {{ $value }}/s"
+      #     description: >-
+      #       Requires an app_errors_total counter (does not exist) or a Loki
+      #       ruler query on level="error" lines. Until then, Sentry is the
+      #       source of truth for error volume (docs/observability.md section 3).
+      #     runbook: "docs/runbook.md#1-api-5xx-spike--api-down"
+      #
+      # - alert: CarrierBreakerOpen
+      #   expr: max(carrier_circuit_breaker_open) by (carrier) == 1
+      #   for: 5m
+      #   labels:
+      #     severity: warning
+      #     service: carriers
+      #   annotations:
+      #     summary: "Carrier {{ $labels.carrier }} circuit breaker OPEN"
+      #     runbook: "chaos/runbooks/carrier-timeout.md"

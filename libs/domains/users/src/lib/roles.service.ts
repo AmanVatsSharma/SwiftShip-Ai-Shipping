@@ -1,32 +1,54 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { RoleEntity } from '@swiftship/platform-typeorm';
 import { CreateRoleInput } from './dto/create-role.input';
 import { UpdateRoleInput } from './dto/update-role.input';
 
+/**
+ * Roles service (TypeORM-backed).
+ *
+ * Prisma → TypeORM call-site mapping (see MIGRATION.md §7):
+ *   prisma.role.create({ data })  → repo.create + repo.save
+ *   prisma.role.findMany()        → repo.find()
+ *   prisma.role.findUnique(...)   → repo.findOne({ where })
+ *   prisma.role.update(...)       → Object.assign + repo.save
+ *   prisma.role.delete(...)       → repo.remove
+ */
 @Injectable()
 export class RolesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(RoleEntity)
+    private readonly roles: Repository<RoleEntity>,
+  ) {}
 
-  async create(createRoleInput: CreateRoleInput) {
-    return this.prisma.role.create({ data: createRoleInput });
+  async create(createRoleInput: CreateRoleInput): Promise<RoleEntity> {
+    const role = this.roles.create({
+      name: createRoleInput.name,
+      description: createRoleInput.description ?? null,
+    });
+    return this.roles.save(role);
   }
 
-  async findAll() {
-    return this.prisma.role.findMany();
+  async findAll(): Promise<RoleEntity[]> {
+    return this.roles.find({ relations: { users: false } });
   }
 
-  async findOne(id: number) {
-    const role = await this.prisma.role.findUnique({ where: { id } });
+  async findOne(id: number): Promise<RoleEntity> {
+    const role = await this.roles.findOne({ where: { id } });
     if (!role) throw new NotFoundException(`Role with ID ${id} not found`);
     return role;
   }
 
-  async update(updateRoleInput: UpdateRoleInput) {
+  async update(updateRoleInput: UpdateRoleInput): Promise<RoleEntity> {
     const { id, ...data } = updateRoleInput;
-    return this.prisma.role.update({ where: { id }, data });
+    const role = await this.findOne(id);
+    Object.assign(role, data);
+    return this.roles.save(role);
   }
 
-  async remove(id: number) {
-    return this.prisma.role.delete({ where: { id } });
+  async remove(id: number): Promise<RoleEntity> {
+    const role = await this.findOne(id);
+    return this.roles.remove(role);
   }
-} 
+}

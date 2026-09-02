@@ -1,20 +1,26 @@
 # NX Migration Strategy
 
-This document describes how the legacy `src/`-tree NestJS app is being migrated
-to a proper Nx workspace (libs/ + apps/). The migration is incremental — at no
-point does the API go offline, and at every commit the build is expected to pass.
+> **Status (2026-06 docs-sync): complete.** All phases below landed. The
+> follow-up Prisma → TypeORM migration also completed (SS-044 deleted the
+> shim — see [`MIGRATION.md`](../MIGRATION.md)). The one remaining tail is the
+> legacy `src/` decommission (~10 domain-lib barrels still re-export root
+> `src/`) — see MIGRATION.md §9 and [`STATUS.md`](../STATUS.md) §3.
 
-## Phases (status)
+This document describes how the legacy `src/`-tree NestJS app was migrated
+to a proper Nx workspace (libs/ + apps/). The migration was incremental — at no
+point did the API go offline, and at every commit the build was expected to pass.
+
+## Phases (final status)
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| 1. Workspace setup        | ✅ done  | Nx 22 installed, `nx.json`, `tsconfig.base.json` paths, `workspace.json` summary. |
-| 2A. Platform libs         | ✅ done  | `libs/platform/{config,auth,queues,carriers,graphql,typeorm}`. New code in libs. |
-| 2B. Pilot domains         | 🟡 next  | `libs/domains/{warehouses,notifications,serviceability}`. |
-| 3.  Bulk domain migration | ⏳ pending | 17+ remaining domains (`orders`, `shipments`, `billing`, …). |
-| 4.  App extraction        | ⏳ pending | `apps/api`, `apps/admin-portal` (Next.js), `apps/web` (Next.js). |
-| 5.  Cleanup + enforcement | ⏳ pending | Dep constraints, lint rules, `prisma/` removal, `dist/` strict. |
-| 6.  CI/CD + observability | ⏳ pending | Affected graph, Nx Cloud, Datadog, Sentry. |
+| 1. Workspace setup        | ✅ done | Nx 22 installed, `nx.json`, `tsconfig.base.json` paths, `workspace.json` summary. |
+| 2A. Platform libs         | ✅ done | `libs/platform/{config,auth,queues,carriers,graphql,typeorm,rate-cache,rate-math,throttler}`. |
+| 2B. Pilot domains         | ✅ done | `libs/domains/{warehouses,notifications,serviceability}` + the rest. |
+| 3.  Bulk domain migration | ✅ done | All 29 domain dirs created (`orders`, `shipments`, `billing`, `channels`, `tenants`, …). Barrels for ~10 of them still re-export `src/` — final flip pending. |
+| 4.  App extraction        | ✅ done | `apps/api`, `apps/api-public`, `apps/api-e2e`, `apps/admin-portal`, `apps/web`. ⚠️ `apps/api` currently has broken import depths — STATUS.md §2. |
+| 5.  Cleanup + enforcement | ✅ mostly | Dep constraints + `scripts/check-nx-graph.mjs` CI guard live; `prisma/` reference copy + root `Dockerfile`/`nest-cli.json` legacy flow still pending removal. |
+| 6.  CI/CD + observability | ✅ done | `ci.yml` (affected graph), `sdk-ci.yml`, `release.yml`; OTel/Sentry/Grafana stack (`docker-compose.observability.yml`, `docs/observability.md`). |
 
 ## Architecture rules (post-migration)
 

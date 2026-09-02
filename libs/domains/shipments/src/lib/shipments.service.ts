@@ -35,8 +35,8 @@ import { UpdateShipmentInput } from './dto/update-shipment.input';
 import { ShipmentsFilterInput } from './dto/shipments-filter.input';
 import { CreateLabelInput } from './dto/create-label.input';
 import { IngestTrackingInput } from './dto/ingest-tracking.input';
-import { CarrierAdapterService } from '../../../../platform/carriers/src/lib/carrier-adapter.service';
-import { QueuesService } from '../../../../platform/queues/src/lib/queues.service';
+import { CarrierAdapterService } from '@swiftship/platform-carriers';
+import { QueuesService } from '@swiftship/platform-queues';
 import { ShipmentsGateway } from './shipments.gateway';
 
 @Injectable()
@@ -79,7 +79,7 @@ export class ShipmentsService {
     const tenantId = this.requireTenantId();
     const shipment = await this.shipments.findOne({
       where: { id, tenantId },
-      relations: ['order', 'carrier', 'warehouse', 'labels', 'trackingEvents'],
+      relations: ['order', 'carrier', 'warehouse', 'label', 'trackingEvents'],
     });
     if (!shipment) {
       throw new NotFoundException(`Shipment with ID ${id} not found`);
@@ -130,16 +130,18 @@ export class ShipmentsService {
     const shipment = this.shipments.create({
       orderId: input.orderId,
       carrierId: input.carrierId,
-      warehouseId: input.warehouseId,
+      warehouseId: input.warehouseId ?? null,
       trackingNumber: input.trackingNumber,
       tenantId,
       status: ShipmentStatus.PENDING,
-      courierName: input.courierName,
-      awbNumber: input.awbNumber,
-      weight: input.weight,
-      dimensions: input.dimensions,
-      declaredValue: input.declaredValue,
-      metadata: input.metadata,
+      shippedAt: input.shippedAt ?? null,
+      deliveredAt: input.deliveredAt ?? null,
+      weightGrams: input.weightGrams ?? null,
+      lengthCm: input.lengthCm ?? null,
+      widthCm: input.widthCm ?? null,
+      heightCm: input.heightCm ?? null,
+      originPincode: input.originPincode ?? null,
+      destinationPincode: input.destinationPincode ?? null,
     });
     try {
       const saved = await this.shipments.save(shipment);
@@ -195,8 +197,12 @@ export class ShipmentsService {
     }
     const label = this.labels.create({
       shipmentId: shipment.id,
+      carrierCode: carrier.carrier.name,
       status: LabelStatus.PENDING,
-      provider: carrier.carrier.name,
+      // Placeholder until the label-generator worker mints the carrier's
+      // real label number / URL.
+      labelNumber: `PENDING-${shipment.id}-${Date.now()}`,
+      requestedAt: new Date(),
     });
     const saved = await this.labels.save(label);
     this.queues.add('label-generator', { labelId: saved.id, shipmentId: shipment.id });
@@ -214,18 +220,20 @@ export class ShipmentsService {
     }
     const event = this.tracking.create({
       shipmentId: shipment.id,
+      trackingNumber: shipment.trackingNumber,
       status: input.status,
-      description: input.description,
-      location: input.location,
+      subStatus: input.subStatus ?? null,
+      description: input.description ?? null,
+      eventCode: input.eventCode ?? null,
+      location: input.location ?? null,
       occurredAt: input.occurredAt ?? new Date(),
-      providerEventCode: input.providerEventCode,
     });
     const saved = await this.tracking.save(event);
     // derive shipment status
     await this.shipments.update({ id: shipment.id, tenantId } as any, {
       status: input.status as any,
     });
-    this.gateway.emitTrackingUpdate(shipment.id, saved);
+    this.gateway.notifyTrackingEvent(saved);
     return saved;
   }
 

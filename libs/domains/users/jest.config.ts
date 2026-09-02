@@ -1,25 +1,25 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import type { Config } from 'jest';
-
-const tsConfig = JSON.parse(
-  readFileSync(join(__dirname, 'tsconfig.spec.json'), 'utf8'),
-);
-
+/* eslint-env node */
+/**
+ * Nx jest target for the @swiftship/domains-users lib.
+ *
+ * Thin wrapper around the root jest.preset.js. NOTE: the preset's generic
+ * '@swiftship/*' mapper resolves <rootDir>-relative and is wrong for
+ * 3-deep libs, so this config defines the full alias set explicitly
+ * (preset keys are merged per-key and the generic one would shadow).
+ */
 export default {
   displayName: 'users',
-  preset: '../../jest.preset.js',
+  preset: '../../../jest.preset.js',
   testEnvironment: 'node',
   rootDir: '.',
-  moduleFileExtensions: ['ts', 'js', 'html'],
-  testRegex: '(.*\\.spec\\.ts)$',
-  transform: {
-    '^.+\\.(ts|js|html)$': [
-      'jest-preset-jest',
-      { tsconfig: '<rootDir>/tsconfig.spec.json' },
-    ],
-  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  testMatch: ['<rootDir>/src/**/*.(spec|test).ts'],
+  // uuid (and friends) ship ESM that ts-jest must transform.
+  transformIgnorePatterns: ['node_modules/(?!(uuid)/)'],
   moduleNameMapper: {
-    '^@swiftship/(.*)$': '<rootDir>/../../$1',
+    '^@swiftship/domains-users$': '<rootDir>/src/index.ts',
+    '^@swiftship/domains-(.*)$': '<rootDir>/../../domains/$1/src/index.ts',
+    '^@swiftship/platform-(.*)$': '<rootDir>/../../platform/$1/src/index.ts',
+    '^@swiftship/observability$': '<rootDir>/../../observability/src/index.ts',
   },
-} satisfies Config;
+};

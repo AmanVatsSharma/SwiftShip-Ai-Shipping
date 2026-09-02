@@ -1,11 +1,23 @@
 # SwiftShip AI — 24-week roadmap to Shiprocket threat
 
+> **STATUS (2026-06 audit): ALL 9 PILLARS ARE COMPLETE.** Every bead in
+> `.beads/issues.jsonl` (65/65) is closed — Pillars 1–6 below plus Pillars 7–9
+> (compliance/RMA/COD recon, reliability, growth) and the TypeORM Track A
+> (SS-040…SS-044, shim deleted). The last landed work was the SS-027 SDK epic
+> (public REST + Node/Python/PHP SDKs + `/docs/v1/` Swagger UI) and SS-026
+> channel sync, both on 2026-06-17.
+>
+> **This file is now the record of what was planned and shipped.** For what is
+> actually broken in the tree right now and the recommended resume order, read
+> [`STATUS.md`](./STATUS.md). Nothing below should be treated as pending work
+> except where STATUS.md repeats it.
+
 > Goal: ship a category-leading Indian shipping SaaS in 24 weeks, with multi-tenant
 > architecture, live AI rate shopping, NDR/RTO automation, branded customer surfaces,
 > and the channel integrations Indian D2C brands actually use.
 >
-> All work lives in this Nx monorepo. The Prisma → TypeORM migration stays a
-> parallel track; nothing here depends on it landing first.
+> All work lives in this Nx monorepo. ~~The Prisma → TypeORM migration stays a
+> parallel track~~ (done — SS-044 deleted the shim on 2026-06-16).
 
 ## Pillar 1 — Tenancy (weeks 1-4, cross-cutting)
 
@@ -206,11 +218,15 @@ turn a working SaaS into a product people recommend.
 
 ## Cross-cutting work (every week)
 
+> Historical note: all of the below was applied during the build. The TypeORM
+> bullet is complete (shim deleted in SS-044); the remaining `src/` → `libs/`
+> decommission is tracked in [`MIGRATION.md`](./MIGRATION.md#9-the-remaining-src-to-libs-decommission).
+
 - **Tenancy**: every new lib must be tenant-scoped from day 1. The `TenantGuard` is wired into `apps/api/src/app.module.ts` and is a hard prerequisite.
-- **TypeORM migration**: ship one PrismaCompat-removal PR per week. By W12 we should be down to 5 libs on the shim; by W24 the shim is gone.
-- **Nx boundary**: every new lib has a `project.json`, `tsconfig.json`, `tsconfig.lib.json`, `package.json`, and an `index.ts` barrel from day 1. ESLint boundary rule is the gate.
+- **TypeORM migration**: ✅ done — one PrismaCompat-removal PR per week landed (SS-041…SS-044); the shim is gone.
+- **Nx boundary**: every new lib has a `project.json`, `tsconfig.json`, `tsconfig.lib.json`, `package.json`, and an `index.ts` barrel from day 1. ESLint boundary rule is the gate. (Exception today: `ecommerce-integrations` lacks a `project.json` — see STATUS.md.)
 - **Observability**: every new GraphQL resolver uses `StructuredLogger`, every new worker emits a metric.
-- **Test coverage**: every new lib has a 70% line-coverage bar. E2E test in `apps/api-e2e/` for every new public mutation.
+- **Test coverage**: every new lib has a 70% line-coverage bar. E2E test in `apps/api-e2e/` for every new public mutation. (Known gap: only the health e2e suite exists — see STATUS.md.)
 - **Docs**: every new lib updates `ARCHITECTURE.md` (lib map), `MIGRATION.md` (status), and `READY_FEATURES.md` (public surface).
 
 ## Risk register
@@ -226,6 +242,9 @@ turn a working SaaS into a product people recommend.
 | The TypeORM migration drags past W24 | Low | The compat shim is good enough that the migration is no longer blocking features. We can land it after W24. |
 
 ## What this gets us
+
+> ✅ Shipped. All bullets below exist in the codebase (verified 2026-06 audit —
+> see `READY_FEATURES.md` for the actual surface and `STATUS.md` for caveats).
 
 After 24 weeks, SwiftShip AI is:
 - **Multi-tenant** SaaS with per-tenant billing, throttling, and feature flags
@@ -286,13 +305,17 @@ The moats that make SwiftShip better than Shiprocket, and the real-world validat
 
 **Deliverable:** One anchor tenant in production (5K+ orders/day), NDR analytics as a key feature, and retention from multi-channel notification delivery.
 
-## Cross-cutting: Track A (Prisma shim removal)
+## Cross-cutting: Track A (Prisma shim removal) — ✅ COMPLETE
+
+> Landed 2026-06-15/16. The shim, the `@prisma/client` path mappings, and the
+> dependency are deleted (SS-044, commit `2062547`). `npm run audit:prisma`
+> guards against regressions in CI.
 
 ### W25-33 — Parallel with Pillars 7-8
-- SS-040: Audit script + CI guard
-- SS-041: billing lib shim → TypeORM (3d)
-- SS-042: cod lib shim → TypeORM (3d)
-- SS-043a-h: Remaining 8 libs (21d, parallel)
-- SS-044: Delete shim (day 70, P-FINAL complete)
+- SS-040: Audit script + CI guard ✅
+- SS-041: billing lib shim → TypeORM (3d) ✅
+- SS-042: cod lib shim → TypeORM (3d) ✅
+- SS-043a-h: Remaining 8 libs (21d, parallel) ✅
+- SS-044: Delete shim (day 70, P-FINAL complete) ✅
 
 **This track runs in parallel** and unblocks TypeORM-native features (raw joins, transactions).

@@ -7,13 +7,13 @@ registerEnumType(KycDocumentType, { name: 'KycDocumentType' });
 @ObjectType()
 export class KycDocumentModel {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => KycDocumentType)
-  docType: KycDocumentType;
+  docType!: KycDocumentType;
 
   @Field()
-  s3Key: string;
+  s3Key!: string;
 
   @Field({ nullable: true })
   contentType?: string;
@@ -22,34 +22,34 @@ export class KycDocumentModel {
   sizeBytes?: number;
 
   @Field()
-  uploadedAt: Date;
+  uploadedAt!: Date;
 }
 
 @ObjectType()
 export class KycRecordModel {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => Int)
-  tenantId: number;
+  tenantId!: number;
 
   @Field({ nullable: true })
-  pan: string;
+  pan!: string;
 
   @Field({ nullable: true })
-  gstin: string;
+  gstin!: string;
 
   @Field()
-  bankAccountLast4: string;
+  bankAccountLast4!: string;
 
   @Field()
-  ifsc: string;
+  ifsc!: string;
 
   @Field({ nullable: true })
   accountHolderName?: string;
 
   @Field(() => KycStatus)
-  status: KycStatus;
+  status!: KycStatus;
 
   @Field({ nullable: true })
   providerRef?: string;
@@ -61,14 +61,14 @@ export class KycRecordModel {
   documents?: KycDocumentModel[];
 
   @Field()
-  submittedAt: Date;
+  submittedAt!: Date;
 
   @Field({ nullable: true })
   verifiedAt?: Date;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

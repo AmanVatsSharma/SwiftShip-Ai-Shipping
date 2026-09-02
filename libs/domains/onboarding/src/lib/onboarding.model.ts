@@ -7,54 +7,54 @@ registerEnumType(OnboardingStatus, { name: 'OnboardingStatus' });
 @ObjectType()
 export class OnboardingStateModel {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => Int)
-  userId: number;
+  userId!: number;
 
   @Field(() => OnboardingStatus)
-  status: OnboardingStatus;
+  status!: OnboardingStatus;
 
   @Field()
-  kycSubmitted: boolean;
+  kycSubmitted!: boolean;
 
   @Field()
-  kycApproved: boolean;
+  kycApproved!: boolean;
 
   @Field()
-  pickupAddressAdded: boolean;
+  pickupAddressAdded!: boolean;
 
   @Field()
-  pickupVerified: boolean;
+  pickupVerified!: boolean;
 
   @Field()
-  carrierConnected: boolean;
+  carrierConnected!: boolean;
 
   @Field()
-  ecommerceConnected: boolean;
+  ecommerceConnected!: boolean;
 
   @Field()
-  paymentsConfigured: boolean;
+  paymentsConfigured!: boolean;
 
   @Field()
-  testLabelGenerated: boolean;
+  testLabelGenerated!: boolean;
 
   @Field()
-  firstPickupScheduled: boolean;
+  firstPickupScheduled!: boolean;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   nextAction?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   blockedReason?: string | null;
 
   // JSON from DB exposed as string for simplicity
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   metadata?: string | null;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

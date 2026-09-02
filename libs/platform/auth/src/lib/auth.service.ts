@@ -43,9 +43,19 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  // ---- current user
+  /** Load the authenticated user's public shape (the `me` query). */
+  async me(userId: number) {
+    const user = await this.users.findOne({
+      where: { id: userId },
+      relations: ['roles'],
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+    return this.toPublic(user);
+  }
+
   // ---- registration
-  async register(input: { email: string; password: string; name?: string }) {
-    const existing = await this.users.findOne({ where: { email: input.email } });
+  async register(input: { email: string; password: string; name?: string }) {    const existing = await this.users.findOne({ where: { email: input.email } });
     if (existing) throw new BadRequestException('Email already in use');
 
     const passwordHash = await bcrypt.hash(input.password, 12);
@@ -153,6 +163,8 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.name,
+      emailVerified: user.emailVerified ?? false,
+      createdAt: user.createdAt,
       roles: user.roles?.map((r) => r.name) ?? [],
     };
   }

@@ -1,5 +1,12 @@
 # SwiftShip AI - Project Overview
 
+> **Note (2026-06 docs-sync):** this is the original *vision* document written
+> before the build. The 24-week roadmap built from it is complete
+> ([`ROADMAP_24W.md`](./ROADMAP_24W.md)); for what actually exists in the tree
+> today (and what is broken), read [`STATUS.md`](./STATUS.md) and
+> [`READY_FEATURES.md`](./READY_FEATURES.md). AI fraud detection,
+> white-labeling, and the support chatbot below remain unbuilt vision items.
+
 ## Introduction
 SwiftShip AI is an advanced, AI-powered logistics and shipping SaaS platform designed to optimize shipping operations for e-commerce businesses. It integrates seamlessly with multiple carriers and popular e-commerce platforms like Shopify, WooCommerce, Magento, and others. Our goal is to provide an intelligent, automated, and cost-effective shipping solution that surpasses existing platforms like Shiprocket.
 

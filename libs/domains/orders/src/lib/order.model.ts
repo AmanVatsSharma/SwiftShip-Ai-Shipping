@@ -15,38 +15,34 @@ registerEnumType(OrderStatus, {
   name: 'OrderStatus',
 });
 
-registerEnumType(PaymentStatus, {
-  name: 'PaymentStatus',
-});
-
 @ObjectType()
 export class Order {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field()
-  orderNumber: string;
+  orderNumber!: string;
 
   @Field(() => Float)
-  total: number;
+  total!: number;
 
   @Field(() => OrderStatus)
-  status: OrderStatus;
+  status!: OrderStatus;
 
-  @Field(() => PaymentStatus)
-  paymentStatus: PaymentStatus;
-
-  @Field()
-  createdAt: Date;
+  @Field(() => String)
+  paymentStatus!: PaymentStatus;
 
   @Field()
-  updatedAt: Date;
+  createdAt!: Date;
+
+  @Field()
+  updatedAt!: Date;
 
   @Field(() => Int)
-  userId: number;
+  userId!: number;
 
   @Field(() => Int, { nullable: true })
-  carrierId: number | null;
+  carrierId!: number | null;
 
   @Field(() => Int, { nullable: true })
   warehouseId?: number | null;
@@ -54,28 +50,28 @@ export class Order {
   @Field(() => Warehouse, { nullable: true })
   warehouse?: Warehouse | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationName?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationPhone?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationAddressLine1?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationAddressLine2?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationCity?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationState?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationPincode?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationCountry?: string | null;
 
   @Field(() => Int, { nullable: true })

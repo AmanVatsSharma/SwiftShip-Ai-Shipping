@@ -3,15 +3,16 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PincodeZoneEntity, RateZoneMatrixEntity } from '@swiftship/platform-typeorm';
 
-import {
-  WeightBreakService,
-  FuelSurchargeService,
-  FuelSurchargeScheduler,
-  CodSurchargeService,
-  OdaSurchargeService,
-  ZoneResolverService,
-  RateMathService,
-} from './index';
+// Direct file imports (NOT the './index' barrel) so the barrel can safely
+// re-export this module without a circular reference — consumers import
+// `RateMathModule` from '@swiftship/platform-rate-math'.
+import { WeightBreakService } from './lib/weight-break.service';
+import { FuelSurchargeService } from './lib/fuel-surcharge.service';
+import { FuelSurchargeScheduler } from './lib/fuel-surcharge.scheduler';
+import { CodSurchargeService } from './lib/cod-surcharge.service';
+import { OdaSurchargeService } from './lib/oda-surcharge.service';
+import { ZoneResolverService } from './lib/zone-resolver.service';
+import { RateMathService } from './lib/rate-math.service';
 
 /**
  * RateMathModule — wire up the rate-math lib.

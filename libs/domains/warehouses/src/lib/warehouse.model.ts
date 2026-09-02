@@ -3,13 +3,13 @@ import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
 @ObjectType()
 export class WarehouseCoverage {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => Int)
-  warehouseId: number;
+  warehouseId!: number;
 
   @Field()
-  pincode: string;
+  pincode!: string;
 
   @Field({ nullable: true })
   serviceLevel?: string;
@@ -18,7 +18,7 @@ export class WarehouseCoverage {
   tatDays?: number;
 
   @Field()
-  isOda: boolean;
+  isOda!: boolean;
 
   @Field(() => Float, { nullable: true })
   odaFee?: number;
@@ -30,40 +30,40 @@ export class WarehouseCoverage {
   maxWeightGrams?: number;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 @ObjectType()
 export class Warehouse {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field()
-  name: string;
+  name!: string;
 
   @Field()
-  code: string;
+  code!: string;
 
   @Field()
-  addressLine1: string;
+  addressLine1!: string;
 
   @Field({ nullable: true })
   addressLine2?: string;
 
   @Field()
-  city: string;
+  city!: string;
 
   @Field()
-  state: string;
+  state!: string;
 
   @Field()
-  pincode: string;
+  pincode!: string;
 
   @Field()
-  country: string;
+  country!: string;
 
   @Field(() => Float, { nullable: true })
   latitude?: number;
@@ -75,13 +75,13 @@ export class Warehouse {
   capacityCbm?: number;
 
   @Field()
-  isActive: boolean;
+  isActive!: boolean;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @Field(() => [WarehouseCoverage])
   coverage?: WarehouseCoverage[];

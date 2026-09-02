@@ -25,27 +25,27 @@ export type WalletLedgerEntryType = 'CREDIT' | 'DEBIT' | 'LOCK' | 'RELEASE';
 @Index('idx_wallet_ledger_idempotency', ['idempotencyKey'], { unique: true })
 export class WalletLedgerEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  tenantId: number;
+  tenantId!: number;
 
   @Column()
-  walletId: number;
+  walletId!: number;
 
   @Column({ type: 'varchar', length: 32 })
-  entryType: WalletLedgerEntryType;
+  entryType!: WalletLedgerEntryType;
 
   /** Paise; always positive. Direction lives in `entryType`. */
   @Column({ type: 'int' })
-  amount: number;
+  amount!: number;
 
   /**
    * High-level reason code, e.g. WALLET_TOPUP, COURIER_LABEL,
    * NDR_REATTEMPT, ADMIN_ADJUSTMENT, REFUND, INTERNAL_TRANSFER.
    */
   @Column({ type: 'varchar', length: 80 })
-  reason: string;
+  reason!: string;
 
   /**
    * Caller-supplied unique key (e.g. Razorpay payment_id, shipment_id,
@@ -53,11 +53,11 @@ export class WalletLedgerEntity {
    * and the wallet is *not* double-debited.
    */
   @Column({ type: 'varchar', length: 80, nullable: true })
-  idempotencyKey: string | null;
+  idempotencyKey!: string | null;
 
   @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, unknown>;
+  metadata!: Record<string, unknown>;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }

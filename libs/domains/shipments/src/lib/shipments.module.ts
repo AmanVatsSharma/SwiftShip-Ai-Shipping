@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TenantModule } from '@swiftship/domains-tenants';
 import { AuthLibModule } from '@swiftship/platform-auth';
-import { CarriersLibModule } from '@swiftship/platform-carriers';
+import { PlatformCarriersModule } from '@swiftship/platform-carriers';
 import { QueuesModule } from '@swiftship/platform-queues';
 import {
   ShipmentEntity,
@@ -18,6 +19,7 @@ import { ShipmentsGateway } from './shipments.gateway';
 
 @Module({
   imports: [
+    TenantModule,
     TypeOrmModule.forFeature([
       ShipmentEntity,
       OrderEntity,
@@ -28,7 +30,7 @@ import { ShipmentsGateway } from './shipments.gateway';
       WarehouseEntity,
     ]),
     AuthLibModule,
-    CarriersLibModule,
+    PlatformCarriersModule,
     QueuesModule,
   ],
   providers: [ShipmentsService, ShipmentsResolver, ShipmentsGateway],

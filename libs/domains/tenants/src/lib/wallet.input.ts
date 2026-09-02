@@ -31,7 +31,7 @@ export class LockFundsInput {
   reason!: string;
 
   /** E.g. "lock:shipment:<id>" — same key on lock + release is a no-op. */
-  @Field()
+  @Field(() => String, { nullable: true })
   idempotencyKey!: string;
 
   @Field(() => String, { nullable: true })
@@ -54,7 +54,7 @@ export class ReleaseFundsInput {
    * is rejected. This prevents releasing funds that were never locked
    * by the caller.
    */
-  @Field()
+  @Field(() => String, { nullable: true })
   idempotencyKey!: string;
 
   @Field(() => String, { nullable: true })
@@ -75,7 +75,7 @@ export class TransferWalletsInput {
   @Field()
   reason!: string;
 
-  @Field()
+  @Field(() => String, { nullable: true })
   idempotencyKey!: string;
 
   @Field(() => String, { nullable: true })

@@ -48,7 +48,7 @@ export class WalletLedgerEntry {
   @Field()
   reason!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   idempotencyKey?: string | null;
 
   @Field(() => String, { nullable: true })

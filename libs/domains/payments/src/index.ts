@@ -9,6 +9,7 @@ export { PaymentService, PaymentService as PaymentsLibService } from './lib/serv
 export { PaymentResolver, PaymentResolver as PaymentsLibResolver } from './lib/payment.resolver';
 export {
   PaymentModel,
+  PaymentModel as Payment,
   RefundModel,
   PaymentIntent,
   SubscriptionPlan,

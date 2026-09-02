@@ -2,6 +2,15 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# Alerting rules (deploy/prometheus/alerts/*.yml — swiftship-api.rules.yml).
+# Uses a glob on purpose: an unmatched glob is a no-op, so Prometheus still
+# boots even where the alerts directory is not mounted. To activate rules in
+# the docker-compose.observability.yml stack, add ONE volume line to the
+# prometheus service (see docs/runbook.md "Monitoring gaps"):
+#   - ./deploy/prometheus/alerts:/etc/prometheus/alerts:ro
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:

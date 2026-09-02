@@ -25,7 +25,13 @@ import { AddChannelSyncTables1718160000015 } from './migrations/1718160000015-Ad
 export const buildDataSourceOptions = (): DataSourceOptions => ({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  entities: Object.values(entities),
+  // The entity barrel also re-exports string enums (ShipmentStatus, …),
+  // which compile to plain objects and must not reach TypeORM's entity
+  // list — keep only class constructors. (SS-fix: the old unfiltered
+  // spread produced TS2322 `typeof ShipmentStatus` not assignable.)
+  entities: Object.values(entities).filter(
+    (e) => typeof e === 'function',
+  ) as unknown as DataSourceOptions['entities'],
   // Migrations are ordered by the timestamp prefix in their filenames
   // (1718160000000 before 1718160000001). Add new migrations here, in
   // append order; never re-order or re-number an existing one.

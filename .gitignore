@@ -45,3 +45,4 @@ build/
 dist/
 .venv/
 venv/
+docker-compose.override.yml

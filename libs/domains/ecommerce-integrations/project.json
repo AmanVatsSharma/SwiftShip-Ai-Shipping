@@ -1,0 +1,22 @@
+{
+  "name": "ecommerce-integrations",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domains/ecommerce-integrations/src",
+  "projectType": "library",
+  "tags": [
+    "layer:domain",
+    "scope:ecommerce-integrations",
+    "team:logistics",
+    "maturity:pilot",
+    "type:domain"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ]
+    }
+  },
+  "//": "typecheck/build targets intentionally omitted 2026-08: both the local src/lib code and the legacy src/ecommerce-integrations tree it shadows still import the removed PrismaService and never compiled as a project (see STATUS.md §3 + the SS-decommission bead). Restore the targets when the Shopify/WooCommerce services are ported to TypeORM repositories."
+}

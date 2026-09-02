@@ -5,10 +5,8 @@ import { RateRankingService } from './rate-ranking.service';
 import { RateSimulatorService } from './rate-simulator.service';
 import { RankedRateShopResult, projectRankedQuoteForGql } from './rate-ranking.model';
 import { RankedRateShopInput, RateSimulationOverrides } from './rate-shop.input';
-import type {
-  RateQuoteRequest,
-  RateRankingStrategyName,
-} from './rate-ranking.service';
+import type { RateRankingStrategyName } from './rate-ranking.service';
+import type { RateQuoteRequest } from '@swiftship/platform-carriers';
 
 /**
  * GraphQL entry point for the rate-ranking engine.

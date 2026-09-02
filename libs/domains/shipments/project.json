@@ -33,7 +33,9 @@
       ],
       "options": {
         "outputPath": "dist/libs/domains/shipments",
-        "tsConfig": "libs/domains/shipments/tsconfig.lib.json"
+        "tsConfig": "libs/domains/shipments/tsconfig.lib.json",
+        "main": "libs/domains/shipments/src/index.ts",
+        "packageJson": "libs/domains/shipments/package.json"
       }
     },
     "lint": {

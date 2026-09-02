@@ -59,6 +59,40 @@ export class TenantThrottlerGuard extends ThrottlerGuard {
   }
 
   /**
+   * GraphQL requests: the stock ThrottlerGuard unwraps the GQL context as
+   * `res`, which is `{ req }` here (not an Express response) — its quota
+   * header code then crashes with "res.header is not a function" (found by
+   * the first live boot, 2026-08). Unwrap the Apollo context and recover
+   * the real Express objects (`req.res` is Express's back-reference).
+   */
+  protected getRequestResponse(context: ExecutionContext): { req: Record<string, any>; res: Record<string, any> } {
+    if (context.getType<any>() === 'graphql') {
+      const gqlCtx = context.getArgByIndex(2) as
+        | { req?: any; res?: any }
+        | undefined;
+      if (gqlCtx?.req) {
+        const req = gqlCtx.req;
+        const res = gqlCtx.res ?? req.res;
+        if (res && typeof res.header === 'function') {
+          return { req, res };
+        }
+        // No usable Express res (pure-GraphQL context) — hand the base
+        // guard a res-shaped stub so quota headers become no-ops instead
+        // of crashing the resolver.
+        return {
+          req,
+          res: {
+            header: () => undefined,
+            setHeader: () => undefined,
+            getHeader: () => undefined,
+          },
+        };
+      }
+    }
+    return super.getRequestResponse(context);
+  }
+
+  /**
    * Resolve the bucket key for the current request. Reads from:
    *
    *   1. `req.tenantId` (set by `TenantMiddleware` from the API key or JWT)

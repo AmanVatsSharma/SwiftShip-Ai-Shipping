@@ -10,7 +10,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { OrderStatus, ReturnStatus, ShipmentStatus } from '../enums';
+import { OrderStatus, PaymentStatus, ReturnStatus, ShipmentStatus } from '../enums';
 import { UserEntity } from './identity.entities';
 import { CarrierEntity } from './shipping.entities';
 import { WarehouseEntity } from './warehouse.entities';
@@ -34,6 +34,11 @@ export class OrderEntity {
   @Column({ type: 'enum', enum: OrderStatus })
   status!: OrderStatus;
 
+  /** Payment state for the order (PENDING/PAID/…) — surfaced on the
+   *  GraphQL `Order` model and set to PENDING on create. */
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
+  paymentStatus!: PaymentStatus;
+
   @Column({ type: 'int', default: 1 })
   @Index('idx_orders_tenantId')
   tenantId!: number;
@@ -52,11 +57,13 @@ export class OrderEntity {
   @Column({ type: 'int', nullable: true })
   carrierId?: number | null;
   @ManyToOne(() => CarrierEntity)
+  @JoinColumn({ name: "carrierId" })
   carrier?: CarrierEntity | null;
 
   @Column({ type: 'int', nullable: true })
   warehouseId?: number | null;
   @ManyToOne(() => WarehouseEntity, (w) => w.orders)
+  @JoinColumn({ name: "warehouseId" })
   warehouse?: WarehouseEntity | null;
 
   @OneToMany('ShipmentEntity', (s: any) => s.order)

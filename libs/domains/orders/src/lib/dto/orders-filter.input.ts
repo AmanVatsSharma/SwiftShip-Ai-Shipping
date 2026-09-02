@@ -1,5 +1,5 @@
 import { InputType, Field, Int } from '@nestjs/graphql';
-import { OrderStatus } from './order.model';
+import { OrderStatus } from '../order.model';
 import {
   IsEnum,
   IsInt,

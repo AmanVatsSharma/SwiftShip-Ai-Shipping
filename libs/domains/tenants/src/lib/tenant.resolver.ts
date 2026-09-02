@@ -9,12 +9,14 @@ import {
   OnboardingResult,
   OnboardingUser,
 } from './invite.model';
-import type {
+// Value imports (not `import type`) — GraphQL @Args reflection needs the
+// runtime class reference.
+import {
   AssignRoleInput,
   CreateTenantInput,
   UpdateTenantInput,
 } from './tenant.input';
-import type {
+import {
   InviteTeamMemberInput,
   OnboardTenantInput,
   SubAccountInput,

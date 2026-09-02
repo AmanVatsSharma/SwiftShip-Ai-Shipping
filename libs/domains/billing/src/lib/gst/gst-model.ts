@@ -10,49 +10,49 @@ import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
 @ObjectType()
 export class GstInvoice {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => String)
-  invoiceId: string;
+  invoiceId!: string;
 
   @Field(() => Int)
-  tenantId: number;
+  tenantId!: number;
 
   @Field(() => String)
-  hsnCode: string;
+  hsnCode!: string;
 
   @Field(() => String, { nullable: true })
   supplyDescription?: string | null;
 
   @Field(() => Float)
-  taxableValue: number;
+  taxableValue!: number;
 
   @Field(() => Float)
-  taxRate: number;
+  taxRate!: number;
 
   @Field(() => Float)
-  cgstAmount: number;
+  cgstAmount!: number;
 
   @Field(() => Float)
-  sgstAmount: number;
+  sgstAmount!: number;
 
   @Field(() => Float)
-  igstAmount: number;
+  igstAmount!: number;
 
   @Field(() => Float)
-  totalTax: number;
+  totalTax!: number;
 
   @Field(() => Float)
-  totalAmount: number;
+  totalAmount!: number;
 
   @Field(() => String)
-  gstType: string;
+  gstType!: string;
 
   @Field(() => String)
-  supplierState: string;
+  supplierState!: string;
 
   @Field(() => String)
-  placeOfSupply: string;
+  placeOfSupply!: string;
 
   @Field(() => String, { nullable: true })
   supplierGstin?: string | null;
@@ -61,40 +61,40 @@ export class GstInvoice {
   recipientGstin?: string | null;
 
   @Field(() => Boolean)
-  isInterState: boolean;
+  isInterState!: boolean;
 
   @Field(() => Date)
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field(() => Date)
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 @ObjectType()
 export class GstEwayBill {
   @Field(() => Int)
-  id: number;
+  id!: number;
 
   @Field(() => Int)
-  shipmentId: number;
+  shipmentId!: number;
 
   @Field(() => Int)
-  tenantId: number;
+  tenantId!: number;
 
   @Field(() => String)
-  ewbNo: string;
+  ewbNo!: string;
 
   @Field(() => String)
-  provider: string;
+  provider!: string;
 
   @Field(() => String)
-  status: string;
+  status!: string;
 
   @Field(() => Date)
-  validFrom: Date;
+  validFrom!: Date;
 
   @Field(() => Date)
-  validTo: Date;
+  validTo!: Date;
 
   @Field(() => String, { nullable: true })
   vehicleNo?: string | null;
@@ -112,10 +112,10 @@ export class GstEwayBill {
   providerRef?: string | null;
 
   @Field(() => Date)
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field(() => Date)
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 /**
@@ -126,16 +126,16 @@ export class GstEwayBill {
 @ObjectType()
 export class EwayBillThresholdCheck {
   @Field(() => Boolean)
-  required: boolean;
+  required!: boolean;
 
   @Field(() => Float)
-  threshold: number;
+  threshold!: number;
 
   @Field(() => Float)
-  invoiceValue: number;
+  invoiceValue!: number;
 
   @Field(() => Boolean)
-  isInterState: boolean;
+  isInterState!: boolean;
 
   @Field(() => String, { nullable: true })
   reason?: string | null;

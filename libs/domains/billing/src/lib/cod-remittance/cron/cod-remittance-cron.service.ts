@@ -27,7 +27,6 @@ import { Injectable, Logger } from '@nestjs/common';
 // @nestjs/schedule is installed at the host-app level; the lib only
 // needs the type for the Cron decorator. The dashboard lib uses the
 // same pattern.
-// @ts-expect-error - @nestjs/schedule is a host-app dep, not in lib's node_modules
 import { Cron } from '@nestjs/schedule';
 import {
   BankCodRemittanceEntity,

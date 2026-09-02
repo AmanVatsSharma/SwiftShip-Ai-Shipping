@@ -148,6 +148,8 @@ describe('SS-026 ChannelSyncService', () => {
       credentials: { shop: 'bad.myshopify.com', accessToken: 'shpat_x' },
     });
     adapter.nextPullError = new Error('platform 500');
+    // Only the BAD tenant's pulls fail; tenant 7 keeps working.
+    adapter.nextPullErrorTenantId = 8;
     // Tenant 7: a working pull; tenant 8: failing pull.
     const results = await svc.syncAllChannels(7, 'products');
     // We only filter by tenantId=7, so only the OK connection
@@ -281,6 +283,17 @@ class FakeAdapter implements EcomChannelAdapter {
   }> = [];
   nextTestResult?: ChannelConnectionStatusReport;
   nextPullError?: Error;
+  /** Tenant the nextPullError applies to; undefined = every tenant. */
+  nextPullErrorTenantId?: number;
+
+  /** True when the configured nextPullError applies to this tenant. */
+  private failPullFor(tenantId: number): boolean {
+    return (
+      !!this.nextPullError &&
+      (this.nextPullErrorTenantId === undefined ||
+        this.nextPullErrorTenantId === tenantId)
+    );
+  }
 
   async testConnection(_tenantId: number): Promise<ChannelConnectionStatusReport> {
     this.testConnectionCalls++;
@@ -289,11 +302,11 @@ class FakeAdapter implements EcomChannelAdapter {
   }
 
   async pullProducts(
-    _tenantId: number,
+    tenantId: number,
     cursor?: string,
   ): Promise<{ items: PulledProduct[]; nextCursor?: string | null }> {
     this.pullProductsCalls++;
-    if (this.nextPullError) throw this.nextPullError;
+    if (this.failPullFor(tenantId)) throw this.nextPullError!;
     if (!cursor) {
       return this.productPages.shift() ?? { items: [], nextCursor: null };
     }
@@ -301,12 +314,12 @@ class FakeAdapter implements EcomChannelAdapter {
   }
 
   async pullOrders(
-    _tenantId: number,
+    tenantId: number,
     _since: Date,
     _cursor?: string,
   ): Promise<{ items: PulledOrder[]; nextCursor?: string | null }> {
     this.pullOrdersCalls++;
-    if (this.nextPullError) throw this.nextPullError;
+    if (this.failPullFor(tenantId)) throw this.nextPullError!;
     return this.orderPages.shift() ?? { items: [], nextCursor: null };
   }
 
