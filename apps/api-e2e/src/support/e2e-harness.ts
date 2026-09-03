@@ -50,7 +50,15 @@ export async function createE2eApp(): Promise<INestApplication> {
     imports: [AppModule],
   }).compile();
   const app = moduleRef.createNestApplication();
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // NOTE: no whitelist:true here — main.ts dropped it (it strips GraphQL
+  // input fields without class-validator decorators; SS-102). transform-only
+  // pipe mirrors the production bootstrap's coercion behavior.
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
   await app.init();
   return app;
 }
