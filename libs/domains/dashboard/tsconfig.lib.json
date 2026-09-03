@@ -12,10 +12,6 @@
   ],
   "exclude": [
     "**/*.spec.ts",
-    "**/*.test.ts",
-    "src/lib/dashboard.module.ts",
-    "src/lib/dashboard.service.ts",
-    "src/lib/dashboard.resolver.ts",
-    "src/lib/dashboard.model.ts"
+    "**/*.test.ts"
   ]
 }

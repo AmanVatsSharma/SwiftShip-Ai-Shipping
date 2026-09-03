@@ -1,596 +1,453 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  CarrierEntity,
+  OrderEntity,
+  OrderStatus,
+  ShipmentEntity,
+  ShipmentStatus,
+  SYSTEM_TENANT_ID,
+  getCurrentTenantId,
+} from '@swiftship/platform-typeorm';
+import {
+  CarrierPerformance,
+  CarrierPerformanceAnalytics,
+  DashboardStats,
+  RevenueAnalytics,
+  RevenueByStatus,
+  RevenueTrend,
+  SlaMetrics,
+  StatusBreakdown,
+} from './dashboard.model';
 
 /**
- * Dashboard Service
- * 
- * Provides comprehensive analytics and metrics for the SwiftShip AI dashboard.
- * 
- * Features:
- * - Revenue analytics (total, by period, trends)
- * - Carrier performance metrics
- * - Delivery time analytics
- * - Return rate analytics
- * - Order trends
- * - Shipment trends
- * - Geographic analytics
- * - Customer insights
- * 
- * All metrics are computed efficiently using Prisma aggregations and grouped queries.
+ * Dashboard Service (TypeORM-native port, SS-103)
+ *
+ * Ported from the legacy `src/dashboard/dashboard.service.ts` + the
+ * `totalSales` query of `src/orders/orders.service.ts` (both Prisma-based).
+ * Prisma aggregations were mapped to TypeORM query builders per
+ * MIGRATION.md §7:
+ *
+ *   prisma.order.aggregate({_sum})   → orders QP SUM(...) getRawOne()
+ *   prisma.order.groupBy             → orders QB GROUP BY status getRawMany()
+ *   prisma.shipment.count({where})   → shipments QB COUNT getRawOne()
+ *
+ * Every query is tenant-scoped via the ALS helper `getCurrentTenantId()`
+ * (bound per-request by `TenantContextMiddleware`; see
+ * `apps/api/src/tenant-context.middleware.ts`). `SYSTEM_TENANT_ID` (-1)
+ * bypasses the filter for jobs / migrations. All queries are read-only.
  */
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(OrderEntity)
+    private readonly orders: Repository<OrderEntity>,
+    @InjectRepository(ShipmentEntity)
+    private readonly shipments: Repository<ShipmentEntity>,
+    @InjectRepository(CarrierEntity)
+    private readonly carriers: Repository<CarrierEntity>,
+  ) {}
 
   /**
-   * Get comprehensive revenue analytics
-   * 
-   * Returns:
-   * - Total revenue (all time)
-   * - Revenue by period (daily, weekly, monthly)
-   * - Revenue trends
-   * - Average order value
-   * - Revenue by status
+   * Resolve the current tenantId and refuse the call when no tenant is
+   * bound (mirrors `typeorm-billing.service.ts#requireTenantId`).
+   * Returns `SYSTEM_TENANT_ID` untouched — the callers skip the tenant
+   * filter for system contexts.
    */
-  async getRevenueAnalytics(startDate?: Date, endDate?: Date) {
-    console.log('[DashboardService] getRevenueAnalytics', { startDate, endDate });
-
-    const dateFilter: any = {};
-    if (startDate || endDate) {
-      dateFilter.createdAt = {};
-      if (startDate) dateFilter.createdAt.gte = startDate;
-      if (endDate) dateFilter.createdAt.lte = endDate;
+  private requireTenantId(): number {
+    const tid = getCurrentTenantId();
+    if (tid === undefined || tid === null) {
+      throw new BadRequestException(
+        'Tenant context required for dashboard analytics',
+      );
     }
+    return Number(tid);
+  }
 
-    // Total revenue from paid orders
-    const totalRevenue = await this.prisma.order.aggregate({
-      where: {
-        ...dateFilter,
-        status: 'PAID',
-      },
-      _sum: {
-        total: true,
-      },
-    });
+  /** Apply the tenant filter to an aliased query builder (skip for system). */
+  private scopeTenant<T>(qb: T, tenantId: number, alias: string): T {
+    if (tenantId !== SYSTEM_TENANT_ID) {
+      (qb as any).andWhere(`${alias}.tenantId = :tenantId`, { tenantId });
+    }
+    return qb;
+  }
 
-    // Revenue by status
-    const revenueByStatus = await this.prisma.order.groupBy({
-      by: ['status'],
-      where: dateFilter,
-      _sum: {
-        total: true,
-      },
-      _count: {
-        id: true,
-      },
-    });
+  /** Apply the optional createdAt window (legacy `dateFilter` equivalent). */
+  private scopeDateWindow<T>(
+    qb: T,
+    alias: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): T {
+    if (startDate) (qb as any).andWhere(`${alias}.createdAt >= :start`, { start: startDate });
+    if (endDate) (qb as any).andWhere(`${alias}.createdAt <= :end`, { end: endDate });
+    return qb;
+  }
 
-    // Revenue trends (daily for last 30 days)
+  // -------------------------------------------------------------------------
+  // revenueAnalytics
+  // -------------------------------------------------------------------------
+
+  /**
+   * Comprehensive revenue analytics. Faithful port of the legacy
+   * `getRevenueAnalytics`: total revenue (PAID orders), revenue by status,
+   * daily revenue trends (last 30 days or from `startDate`), average order
+   * value and paid order count.
+   */
+  async getRevenueAnalytics(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<RevenueAnalytics> {
+    const tenantId = this.requireTenantId();
+
+    // Total revenue / avg order value / order count from PAID orders.
+    const paidAgg = await this.scopeDateWindow(
+      this.scopeTenant(
+        this.orders
+          .createQueryBuilder('o')
+          .select('COALESCE(SUM(o.total), 0)', 'total')
+          .addSelect('COALESCE(AVG(o.total), 0)', 'avg')
+          .addSelect('COUNT(o.id)', 'count'),
+        tenantId,
+        'o',
+      ),
+      'o',
+      startDate,
+      endDate,
+    )
+      .andWhere('o.status = :paid', { paid: OrderStatus.PAID })
+      .getRawOne<{ total: string; avg: string; count: string }>();
+
+    // Revenue by status (all statuses, same window).
+    const byStatusRaw = await this.scopeDateWindow(
+      this.scopeTenant(
+        this.orders
+          .createQueryBuilder('o')
+          .select('o.status', 'status')
+          .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+          .addSelect('COUNT(o.id)', 'orderCount'),
+        tenantId,
+        'o',
+      ),
+      'o',
+      startDate,
+      endDate,
+    )
+      .groupBy('o.status')
+      .getRawMany<{ status: OrderStatus; revenue: string; orderCount: string }>();
+
+    // Daily revenue trends (PAID only; default window = last 30 days —
+    // mirrors the legacy behaviour of defaulting the trend window to
+    // 30 days back while the aggregates cover all time).
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const dailyRevenue = await this.prisma.order.findMany({
-      where: {
-        ...dateFilter,
-        status: 'PAID',
-        createdAt: {
-          gte: startDate || thirtyDaysAgo,
-        },
-      },
-      select: {
-        total: true,
-        createdAt: true,
-      },
-    });
-
-    // Group by day
-    const revenueByDay = this.groupByDay(dailyRevenue, 'createdAt', 'total');
-
-    // Average order value
-    const avgOrderValue = await this.prisma.order.aggregate({
-      where: {
-        ...dateFilter,
-        status: 'PAID',
-      },
-      _avg: {
-        total: true,
-      },
-    });
-
-    // Order count
-    const orderCount = await this.prisma.order.count({
-      where: {
-        ...dateFilter,
-        status: 'PAID',
-      },
-    });
+    const trendStart = startDate ?? thirtyDaysAgo;
+    const dailyRows = await this.scopeTenant(
+      this.orders
+        .createQueryBuilder('o')
+        .select('o.total', 'total')
+        .addSelect('o.createdAt', 'createdAt'),
+      tenantId,
+      'o',
+    )
+      .andWhere('o.status = :paid', { paid: OrderStatus.PAID })
+      .andWhere('o.createdAt >= :trendStart', { trendStart })
+      .andWhere('o.createdAt <= :end', { end: endDate ?? new Date('2999-01-01') })
+      .getRawMany<{ total: string | number; createdAt: Date | string }>();
 
     return {
-      totalRevenue: totalRevenue._sum.total || 0,
-      averageOrderValue: avgOrderValue._avg.total || 0,
-      orderCount,
-      revenueByStatus: revenueByStatus.map((r) => ({
-        status: r.status,
-        revenue: r._sum.total || 0,
-        orderCount: r._count.id,
-      })),
-      revenueTrends: revenueByDay,
+      totalRevenue: Number(paidAgg?.total ?? 0),
+      averageOrderValue: Number(paidAgg?.avg ?? 0),
+      orderCount: Number(paidAgg?.count ?? 0),
+      paidOrderCount: Number(paidAgg?.count ?? 0),
+      revenueByStatus: byStatusRaw.map(
+        (r): RevenueByStatus => ({
+          status: String(r.status),
+          revenue: Number(r.revenue ?? 0),
+          orderCount: Number(r.orderCount ?? 0),
+        }),
+      ),
+      revenueTrends: this.groupByDay(
+        dailyRows.map((r) => ({
+          total: Number(r.total ?? 0),
+          createdAt: new Date(r.createdAt),
+        })),
+      ),
     };
   }
 
-  /**
-   * Get carrier performance metrics
-   * 
-   * Returns:
-   * - Shipments by carrier
-   * - Delivery success rate by carrier
-   * - Average delivery time by carrier
-   * - On-time delivery percentage
-   * - Carrier scorecard
-   */
-  async getCarrierPerformance(startDate?: Date, endDate?: Date) {
-    console.log('[DashboardService] getCarrierPerformance', { startDate, endDate });
+  // -------------------------------------------------------------------------
+  // carrierPerformance
+  // -------------------------------------------------------------------------
 
-    const dateFilter: any = {};
-    if (startDate || endDate) {
-      dateFilter.createdAt = {};
-      if (startDate) dateFilter.createdAt.gte = startDate;
-      if (endDate) dateFilter.createdAt.lte = endDate;
+  /**
+   * Carrier performance metrics. Faithful port of the legacy
+   * `getCarrierPerformance`: per-carrier shipment counts, delivery
+   * success rate, average delivery time (shippedAt → deliveredAt, day
+   * ceiling) and the five-status breakdown, plus a summary block.
+   */
+  async getCarrierPerformance(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<CarrierPerformanceAnalytics> {
+    const tenantId = this.requireTenantId();
+
+    const carrierRows = await this.scopeCarrierTenant(
+      this.carriers.createQueryBuilder('c'),
+      tenantId,
+    )
+      .select('c.id', 'id')
+      .addSelect('c.name', 'name')
+      .getRawMany<{ id: number | string; name: string }>();
+
+    const shipmentQb = this.shipments
+      .createQueryBuilder('s')
+      .select('s.carrierId', 'carrierId')
+      .addSelect('s.status', 'status')
+      .addSelect('s.shippedAt', 'shippedAt')
+      .addSelect('s.deliveredAt', 'deliveredAt');
+    this.scopeTenant(shipmentQb, tenantId, 's');
+    if (startDate) shipmentQb.andWhere('s.createdAt >= :start', { start: startDate });
+    if (endDate) shipmentQb.andWhere('s.createdAt <= :end', { end: endDate });
+    const shipmentRows = await shipmentQb.getRawMany<{
+      carrierId: number | string;
+      status: ShipmentStatus;
+      shippedAt: Date | string | null;
+      deliveredAt: Date | string | null;
+    }>();
+
+    const byCarrier = new Map<number, typeof shipmentRows>();
+    for (const row of shipmentRows) {
+      const cid = Number(row.carrierId);
+      const list = byCarrier.get(cid) ?? [];
+      list.push(row);
+      byCarrier.set(cid, list);
     }
 
-    // Get all carriers with shipment counts
-    const carriers = await this.prisma.carrier.findMany({
-      include: {
-        shipments: {
-          where: dateFilter,
-        },
-      },
+    const performance: CarrierPerformance[] = carrierRows.map((carrier) => {
+      const shipments = byCarrier.get(Number(carrier.id)) ?? [];
+      const totalShipments = shipments.length;
+      const deliveredShipments = shipments.filter(
+        (s) => s.status === ShipmentStatus.DELIVERED,
+      ).length;
+      const cancelledShipments = shipments.filter(
+        (s) => s.status === ShipmentStatus.CANCELLED,
+      ).length;
+
+      // Average delivery time for delivered shipments (both timestamps set).
+      const deliveredWithTimes = shipments.filter(
+        (s) =>
+          s.status === ShipmentStatus.DELIVERED && s.shippedAt && s.deliveredAt,
+      );
+      const avgDeliveryTime =
+        deliveredWithTimes.length > 0
+          ? deliveredWithTimes.reduce((sum, s) => {
+              const days = Math.ceil(
+                (new Date(s.deliveredAt!).getTime() -
+                  new Date(s.shippedAt!).getTime()) /
+                  (1000 * 60 * 60 * 24),
+              );
+              return sum + days;
+            }, 0) / deliveredWithTimes.length
+          : null;
+
+      const deliverySuccessRate =
+        totalShipments > 0 ? (deliveredShipments / totalShipments) * 100 : 0;
+
+      const statusBreakdown: StatusBreakdown = {
+        PENDING: shipments.filter((s) => s.status === ShipmentStatus.PENDING)
+          .length,
+        SHIPPED: shipments.filter((s) => s.status === ShipmentStatus.SHIPPED)
+          .length,
+        IN_TRANSIT: shipments.filter(
+          (s) => s.status === ShipmentStatus.IN_TRANSIT,
+        ).length,
+        DELIVERED: deliveredShipments,
+        CANCELLED: cancelledShipments,
+      };
+
+      return {
+        carrierId: Number(carrier.id),
+        carrierName: carrier.name,
+        totalShipments,
+        deliveredShipments,
+        cancelledShipments,
+        deliverySuccessRate:
+          Math.round(deliverySuccessRate * 100) / 100,
+        averageDeliveryTimeDays:
+          avgDeliveryTime !== null
+            ? Math.round(avgDeliveryTime * 100) / 100
+            : null,
+        statusBreakdown,
+      };
     });
-
-    // Calculate metrics per carrier
-    const performance = await Promise.all(
-      carriers.map(async (carrier) => {
-        const shipments = carrier.shipments;
-        const totalShipments = shipments.length;
-        const deliveredShipments = shipments.filter((s) => s.status === 'DELIVERED').length;
-        const cancelledShipments = shipments.filter((s) => s.status === 'CANCELLED').length;
-
-        // Calculate average delivery time for delivered shipments
-        const deliveredWithTimes = shipments.filter(
-          (s) => s.status === 'DELIVERED' && s.shippedAt && s.deliveredAt
-        );
-        const avgDeliveryTime =
-          deliveredWithTimes.length > 0
-            ? deliveredWithTimes.reduce((sum, s) => {
-                const days = Math.ceil(
-                  (s.deliveredAt!.getTime() - s.shippedAt!.getTime()) / (1000 * 60 * 60 * 24)
-                );
-                return sum + days;
-              }, 0) / deliveredWithTimes.length
-            : null;
-
-        // Delivery success rate
-        const deliverySuccessRate =
-          totalShipments > 0 ? (deliveredShipments / totalShipments) * 100 : 0;
-
-        // Status breakdown
-        const statusBreakdown = {
-          PENDING: shipments.filter((s) => s.status === 'PENDING').length,
-          SHIPPED: shipments.filter((s) => s.status === 'SHIPPED').length,
-          IN_TRANSIT: shipments.filter((s) => s.status === 'IN_TRANSIT').length,
-          DELIVERED: deliveredShipments,
-          CANCELLED: cancelledShipments,
-        };
-
-        return {
-          carrierId: carrier.id,
-          carrierName: carrier.name,
-          totalShipments,
-          deliveredShipments,
-          cancelledShipments,
-          deliverySuccessRate: Math.round(deliverySuccessRate * 100) / 100,
-          averageDeliveryTimeDays: avgDeliveryTime ? Math.round(avgDeliveryTime * 100) / 100 : null,
-          statusBreakdown,
-        };
-      })
-    );
 
     return {
       carriers: performance,
       summary: {
-        totalCarriers: carriers.length,
-        totalShipments: performance.reduce((sum, p) => sum + p.totalShipments, 0),
+        totalCarriers: carrierRows.length,
+        totalShipments: performance.reduce(
+          (sum, p) => sum + p.totalShipments,
+          0,
+        ),
         averageDeliverySuccessRate:
           performance.length > 0
-            ? performance.reduce((sum, p) => sum + p.deliverySuccessRate, 0) / performance.length
+            ? performance.reduce((sum, p) => sum + p.deliverySuccessRate, 0) /
+              performance.length
             : 0,
       },
     };
   }
 
-  /**
-   * Get delivery time analytics
-   * 
-   * Returns:
-   * - Average delivery time
-   * - Delivery time distribution
-   * - On-time delivery percentage
-   * - Delivery time trends
-   */
-  async getDeliveryTimeAnalytics(startDate?: Date, endDate?: Date) {
-    console.log('[DashboardService] getDeliveryTimeAnalytics', { startDate, endDate });
-
-    const dateFilter: any = {};
-    if (startDate || endDate) {
-      dateFilter.deliveredAt = {};
-      if (startDate) dateFilter.deliveredAt.gte = startDate;
-      if (endDate) dateFilter.deliveredAt.lte = endDate;
-    }
-
-    // Get delivered shipments with delivery times
-    const deliveredShipments = await this.prisma.shipment.findMany({
-      where: {
-        ...dateFilter,
-        status: 'DELIVERED',
-        shippedAt: { not: null },
-        deliveredAt: { not: null },
-      },
-      select: {
-        shippedAt: true,
-        deliveredAt: true,
-        carrierId: true,
-      },
-    });
-
-    // Calculate delivery times in days
-    const deliveryTimes = deliveredShipments.map((s) => {
-      const days = Math.ceil(
-        (s.deliveredAt!.getTime() - s.shippedAt!.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return days;
-    });
-
-    if (deliveryTimes.length === 0) {
-      return {
-        averageDeliveryTimeDays: null,
-        medianDeliveryTimeDays: null,
-        deliveryTimeDistribution: {},
-        onTimeDeliveryPercentage: null,
-        totalDeliveredShipments: 0,
-      };
-    }
-
-    // Calculate average
-    const averageDeliveryTime =
-      deliveryTimes.reduce((sum, days) => sum + days, 0) / deliveryTimes.length;
-
-    // Calculate median
-    const sorted = [...deliveryTimes].sort((a, b) => a - b);
-    const medianDeliveryTime =
-      sorted.length % 2 === 0
-        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-        : sorted[Math.floor(sorted.length / 2)];
-
-    // Distribution by days
-    const distribution: Record<number, number> = {};
-    deliveryTimes.forEach((days) => {
-      distribution[days] = (distribution[days] || 0) + 1;
-    });
-
-    // On-time delivery (assuming 5 days is standard)
-    const onTimeThreshold = 5;
-    const onTimeDeliveries = deliveryTimes.filter((days) => days <= onTimeThreshold).length;
-    const onTimePercentage = (onTimeDeliveries / deliveryTimes.length) * 100;
-
-    return {
-      averageDeliveryTimeDays: Math.round(averageDeliveryTime * 100) / 100,
-      medianDeliveryTimeDays: Math.round(medianDeliveryTime * 100) / 100,
-      deliveryTimeDistribution: distribution,
-      onTimeDeliveryPercentage: Math.round(onTimePercentage * 100) / 100,
-      totalDeliveredShipments: deliveryTimes.length,
-    };
-  }
+  // -------------------------------------------------------------------------
+  // slaMetrics
+  // -------------------------------------------------------------------------
 
   /**
-   * Get return rate analytics
-   * 
-   * Returns:
-   * - Total returns
-   * - Return rate percentage
-   * - Returns by status
-   * - Returns by reason
-   * - Return trends
+   * SLA metrics summary. Faithful port of the legacy `getSlaMetrics`:
+   * one grouped count query replaces the six Prisma `count()` calls.
    */
-  async getReturnAnalytics(startDate?: Date, endDate?: Date) {
-    console.log('[DashboardService] getReturnAnalytics', { startDate, endDate });
+  async getSlaMetrics(): Promise<SlaMetrics> {
+    const tenantId = this.requireTenantId();
 
-    const dateFilter: any = {};
-    if (startDate || endDate) {
-      dateFilter.createdAt = {};
-      if (startDate) dateFilter.createdAt.gte = startDate;
-      if (endDate) dateFilter.createdAt.lte = endDate;
-    }
+    const rows = await this.scopeTenant(
+      this.shipments
+        .createQueryBuilder('s')
+        .select('s.status', 'status')
+        .addSelect('COUNT(s.id)', 'count'),
+      tenantId,
+      's',
+    )
+      .groupBy('s.status')
+      .getRawMany<{ status: ShipmentStatus; count: string }>();
 
-    // Total returns
-    const totalReturns = await this.prisma.return.count({
-      where: dateFilter,
-    });
-
-    // Total orders in same period
-    const totalOrders = await this.prisma.order.count({
-      where: dateFilter,
-    });
-
-    // Return rate
-    const returnRate = totalOrders > 0 ? (totalReturns / totalOrders) * 100 : 0;
-
-    // Returns by status
-    const returnsByStatus = await this.prisma.return.groupBy({
-      by: ['status'],
-      where: dateFilter,
-      _count: {
-        id: true,
-      },
-    });
-
-    // Returns by reason (if we had a reason field with categories)
-    // For now, we'll use the reason field as-is
-    const returnsWithReasons = await this.prisma.return.findMany({
-      where: dateFilter,
-      select: {
-        reason: true,
-        status: true,
-      },
-    });
-
-    // Group by reason (simple keyword matching)
-    const returnsByReason: Record<string, number> = {};
-    returnsWithReasons.forEach((r) => {
-      const key = r.reason.toLowerCase();
-      returnsByReason[key] = (returnsByReason[key] || 0) + 1;
-    });
-
-    return {
-      totalReturns,
-      totalOrders,
-      returnRate: Math.round(returnRate * 100) / 100,
-      returnsByStatus: returnsByStatus.map((r) => ({
-        status: r.status,
-        count: r._count.id,
-      })),
-      returnsByReason: Object.entries(returnsByReason)
-        .map(([reason, count]) => ({ reason, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10), // Top 10 reasons
-    };
-  }
-
-  /**
-   * Get order trends
-   * 
-   * Returns:
-   * - Orders by day/week/month
-   * - Order growth rate
-   * - Orders by status over time
-   */
-  async getOrderTrends(period: 'day' | 'week' | 'month' = 'day', days: number = 30) {
-    console.log('[DashboardService] getOrderTrends', { period, days });
-
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-
-    const orders = await this.prisma.order.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
-      select: {
-        createdAt: true,
-        status: true,
-        total: true,
-      },
-    });
-
-    // Group by period
-    const grouped = this.groupByPeriod(orders, 'createdAt', period);
-
-    return {
-      period,
-      trends: grouped,
-      totalOrders: orders.length,
-      growthRate: this.calculateGrowthRate(grouped),
-    };
-  }
-
-  /**
-   * Get shipment trends
-   * 
-   * Returns:
-   * - Shipments by day/week/month
-   * - Shipment growth rate
-   * - Shipments by status over time
-   */
-  async getShipmentTrends(period: 'day' | 'week' | 'month' = 'day', days: number = 30) {
-    console.log('[DashboardService] getShipmentTrends', { period, days });
-
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-
-    const shipments = await this.prisma.shipment.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
-      select: {
-        createdAt: true,
-        status: true,
-      },
-    });
-
-    // Group by period
-    const grouped = this.groupByPeriod(shipments, 'createdAt', period);
-
-    return {
-      period,
-      trends: grouped,
-      totalShipments: shipments.length,
-      growthRate: this.calculateGrowthRate(grouped),
-    };
-  }
-
-  /**
-   * Get SLA metrics summary
-   * 
-   * Returns:
-   * - Total shipments
-   * - Delivered shipments
-   * - In transit shipments
-   * - Shipped shipments
-   * - Pending shipments
-   */
-  async getSlaMetrics() {
-    console.log('[DashboardService] getSlaMetrics');
-
-    const total = await this.prisma.shipment.count();
-    const delivered = await this.prisma.shipment.count({
-      where: { status: 'DELIVERED' },
-    });
-    const inTransit = await this.prisma.shipment.count({
-      where: { status: 'IN_TRANSIT' },
-    });
-    const shipped = await this.prisma.shipment.count({
-      where: { status: 'SHIPPED' },
-    });
-    const pending = await this.prisma.shipment.count({
-      where: { status: 'PENDING' },
-    });
-    const cancelled = await this.prisma.shipment.count({
-      where: { status: 'CANCELLED' },
-    });
+    const counts = new Map<string, number>(
+      rows.map((r) => [String(r.status), Number(r.count ?? 0)]),
+    );
+    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
+    const delivered = counts.get(ShipmentStatus.DELIVERED) ?? 0;
 
     return {
       total,
       delivered,
-      inTransit,
-      shipped,
-      pending,
-      cancelled,
-      deliveryRate: total > 0 ? Math.round((delivered / total) * 10000) / 100 : 0,
+      inTransit: counts.get(ShipmentStatus.IN_TRANSIT) ?? 0,
+      shipped: counts.get(ShipmentStatus.SHIPPED) ?? 0,
+      pending: counts.get(ShipmentStatus.PENDING) ?? 0,
+      cancelled: counts.get(ShipmentStatus.CANCELLED) ?? 0,
+      deliveryRate:
+        total > 0 ? Math.round((delivered / total) * 10000) / 100 : 0,
     };
   }
 
+  // -------------------------------------------------------------------------
+  // totalSales
+  // -------------------------------------------------------------------------
+
   /**
-   * Get courier scorecards
-   * 
-   * Returns:
-   * - Performance metrics grouped by carrier
+   * Total sales from paid orders. Port of the legacy
+   * `ordersService.getTotalSales()` (backed the `totalSales` GraphQL
+   * query in `src/orders/orders.resolver.ts`).
    */
-  async getCourierScorecards() {
-    console.log('[DashboardService] getCourierScorecards');
+  async getTotalSales(): Promise<number> {
+    const tenantId = this.requireTenantId();
 
-    const groups = await this.prisma.shipment.groupBy({
-      by: ['carrierId', 'status'],
-      _count: {
-        status: true,
-      },
-    });
+    const row = await this.scopeTenant(
+      this.orders
+        .createQueryBuilder('o')
+        .select('COALESCE(SUM(o.total), 0)', 'total'),
+      tenantId,
+      'o',
+    )
+      .andWhere('o.status = :paid', { paid: OrderStatus.PAID })
+      .getRawOne<{ total: string }>();
 
-    // Get carrier names
-    const carriers = await this.prisma.carrier.findMany({
-      select: {
-        id: true,
-        name: true,
-      },
-    });
-
-    const carrierMap = new Map(carriers.map((c) => [c.id, c.name]));
-
-    // Transform to carrier scorecards
-    const scorecards: Record<number, any> = {};
-    groups.forEach((group) => {
-      if (!scorecards[group.carrierId]) {
-        scorecards[group.carrierId] = {
-          carrierId: group.carrierId,
-          carrierName: carrierMap.get(group.carrierId) || 'Unknown',
-          statusBreakdown: {},
-        };
-      }
-      scorecards[group.carrierId].statusBreakdown[group.status] = group._count.status;
-    });
-
-    return Object.values(scorecards);
+    return Number(row?.total ?? 0);
   }
 
+  // -------------------------------------------------------------------------
+  // dashboardStats (composite — no legacy resolver existed)
+  // -------------------------------------------------------------------------
+
   /**
-   * Helper: Group data by day
+   * Composite snapshot documented in READY_FEATURES.md. There was no
+   * legacy `dashboardStats` resolver (see the SS-103 bead) — this is an
+   * honest composite of the ported primitives above, not new math.
    */
-  private groupByDay<T>(data: T[], dateField: keyof T, valueField: keyof T): Array<{ date: string; value: number }> {
+  async getDashboardStats(): Promise<DashboardStats> {
+    const tenantId = this.requireTenantId();
+
+    const orderAgg = await this.scopeTenant(
+      this.orders
+        .createQueryBuilder('o')
+        .select('COUNT(o.id)', 'count')
+        .addSelect(
+          'COALESCE(SUM(CASE WHEN o.status = :paid THEN o.total ELSE 0 END), 0)',
+          'sales',
+        )
+        .setParameter('paid', OrderStatus.PAID),
+      tenantId,
+      'o',
+    ).getRawOne<{ count: string; sales: string }>();
+
+    const shipmentRows = await this.scopeTenant(
+      this.shipments
+        .createQueryBuilder('s')
+        .select('s.status', 'status')
+        .addSelect('COUNT(s.id)', 'count'),
+      tenantId,
+      's',
+    )
+      .groupBy('s.status')
+      .getRawMany<{ status: ShipmentStatus; count: string }>();
+
+    const counts = new Map<string, number>(
+      shipmentRows.map((r) => [String(r.status), Number(r.count ?? 0)]),
+    );
+    const totalShipments = [...counts.values()].reduce(
+      (sum, n) => sum + n,
+      0,
+    );
+    const delivered = counts.get(ShipmentStatus.DELIVERED) ?? 0;
+
+    return {
+      totalOrders: Number(orderAgg?.count ?? 0),
+      totalShipments,
+      totalSales: Number(orderAgg?.sales ?? 0),
+      deliveredShipments: delivered,
+      pendingShipments: counts.get(ShipmentStatus.PENDING) ?? 0,
+      deliveryRate:
+        totalShipments > 0
+          ? Math.round((delivered / totalShipments) * 10000) / 100
+          : 0,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // helpers
+  // -------------------------------------------------------------------------
+
+  /**
+   * Helper: group (total, createdAt) rows by calendar day.
+   * Port of the legacy `groupByDay`.
+   */
+  private groupByDay(
+    data: Array<{ total: number; createdAt: Date }>,
+  ): RevenueTrend[] {
     const grouped: Record<string, number> = {};
-    data.forEach((item) => {
-      const date = item[dateField] as any;
-      if (date instanceof Date) {
-        const dateStr = date.toISOString().split('T')[0];
-        const value = (item[valueField] as any) || 0;
-        grouped[dateStr] = (grouped[dateStr] || 0) + value;
+    for (const item of data) {
+      if (item.createdAt instanceof Date && !Number.isNaN(item.createdAt.getTime())) {
+        const dateStr = item.createdAt.toISOString().split('T')[0];
+        grouped[dateStr] = (grouped[dateStr] ?? 0) + (item.total ?? 0);
       }
-    });
+    }
     return Object.entries(grouped)
       .map(([date, value]) => ({ date, value }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  /**
-   * Helper: Group data by period (day/week/month)
-   */
-  private groupByPeriod<T>(
-    data: T[],
-    dateField: keyof T,
-    period: 'day' | 'week' | 'month'
-  ): Array<{ period: string; count: number }> {
-    const grouped: Record<string, number> = {};
-    data.forEach((item) => {
-      const date = item[dateField] as any;
-      if (date instanceof Date) {
-        let periodKey: string;
-        if (period === 'day') {
-          periodKey = date.toISOString().split('T')[0];
-        } else if (period === 'week') {
-          const week = this.getWeek(date);
-          periodKey = `${date.getFullYear()}-W${week}`;
-        } else {
-          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        }
-        grouped[periodKey] = (grouped[periodKey] || 0) + 1;
-      }
-    });
-    return Object.entries(grouped)
-      .map(([period, count]) => ({ period, count }))
-      .sort((a, b) => a.period.localeCompare(b.period));
-  }
-
-  /**
-   * Helper: Get week number
-   */
-  private getWeek(date: Date): number {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  }
-
-  /**
-   * Helper: Calculate growth rate
-   */
-  private calculateGrowthRate(trends: Array<{ period: string; count: number }>): number {
-    if (trends.length < 2) return 0;
-    const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
-    const secondHalf = trends.slice(Math.floor(trends.length / 2));
-    const firstAvg = firstHalf.reduce((sum, t) => sum + t.count, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((sum, t) => sum + t.count, 0) / secondHalf.length;
-    if (firstAvg === 0) return secondAvg > 0 ? 100 : 0;
-    return Math.round(((secondAvg - firstAvg) / firstAvg) * 10000) / 100;
+  /** Carrier queries are aliased `c` — thin wrapper for `scopeTenant`. */
+  private scopeCarrierTenant<T>(qb: T, tenantId: number): T {
+    return this.scopeTenant(qb, tenantId, 'c');
   }
 }

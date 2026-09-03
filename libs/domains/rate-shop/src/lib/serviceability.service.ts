@@ -1,5 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  PincodeZoneEntity,
+  WarehouseCoverageEntity,
+} from '@swiftship/platform-typeorm';
+import {
+  ServiceabilityCheckResult,
+  WarehouseCoverageInfo,
+  ZoneInfo,
+} from './rate-shop.model';
 
 export interface ServiceabilityParams {
   originPincode: string;
@@ -7,80 +17,65 @@ export interface ServiceabilityParams {
   warehouseId?: number;
 }
 
-export interface ServiceabilityResult {
-  serviceable: boolean;
-  originZone?: { pincode: string; zone?: string | null; oda?: boolean };
-  destinationZone?: { pincode: string; zone?: string | null; oda?: boolean };
-  warehouseCoverage?: {
-    warehouseId: number;
-    pincode: string;
-    tatDays?: number | null;
-    isOda: boolean;
-    odaFee?: number | null;
-  } | null;
-}
-
+/**
+ * ServiceabilityService (TypeORM-native port, SS-103)
+ *
+ * Ported from the legacy `src/rate-shop/serviceability.service.ts`
+ * (Prisma → TypeORM per MIGRATION.md §7):
+ *
+ *   prisma.pincodeZone.findUnique      → pincodeZones.findOne({ pincode })
+ *   prisma.warehouseCoverage.findUnique→ warehouseCoverages.findOne({ warehouseId, pincode })
+ *
+ * Semantics (faithful to the legacy service, and deliberately honest):
+ *
+ *  - A pincode is "known" when a row exists in `pincode_zones`.
+ *  - `serviceable` is true ONLY when both pincodes are known. When
+ *    `pincode_zones` is empty (e.g. a fresh dev database) every check
+ *    answers `serviceable: false` with null zone info — "unknown" is
+ *    never reported as serviceable. Zone letters default to null here;
+ *    the `ZoneResolverService` (platform/rate-math) is the component
+ *    that applies the 'D' default for pricing.
+ *  - Zone lookups are keyed by pincode only (not tenant-scoped), which
+ *    matches `ZoneResolverService` semantics — pincode→zone is carrier
+ *    reference data, not tenant data.
+ *  - When `warehouseId` is passed, the `warehouse_coverage` row for the
+ *    destination pincode is included (TAT days / ODA flag / ODA fee).
+ *    That table has no tenant column; warehouse ownership is enforced
+ *    by the warehouses domain at write time.
+ */
 @Injectable()
 export class ServiceabilityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(PincodeZoneEntity)
+    private readonly pincodeZones: Repository<PincodeZoneEntity>,
+    @InjectRepository(WarehouseCoverageEntity)
+    private readonly warehouseCoverages: Repository<WarehouseCoverageEntity>,
+  ) {}
 
-  async check(params: ServiceabilityParams): Promise<ServiceabilityResult> {
+  async check(params: ServiceabilityParams): Promise<ServiceabilityCheckResult> {
     const { originPincode, destinationPincode, warehouseId } = params;
     if (!originPincode || !destinationPincode) {
       return { serviceable: false };
     }
 
     const [originZone, destinationZone, coverage] = await Promise.all([
-      this.prisma.pincodeZone.findUnique({ where: { pincode: originPincode } }),
-      this.prisma.pincodeZone.findUnique({
-        where: { pincode: destinationPincode },
-      }),
+      this.pincodeZones.findOne({ where: { pincode: originPincode } }),
+      this.pincodeZones.findOne({ where: { pincode: destinationPincode } }),
       warehouseId
-        ? this.prisma.warehouseCoverage.findUnique({
-            where: {
-              warehouseId_pincode: {
-                warehouseId,
-                pincode: destinationPincode,
-              },
-            },
+        ? this.warehouseCoverages.findOne({
+            where: { warehouseId, pincode: destinationPincode },
           })
         : null,
     ]);
 
-    if (!originZone || !destinationZone) {
-      return {
-        serviceable: false,
-        originZone: originZone
-          ? {
-              pincode: originZone.pincode,
-              zone: originZone.zone,
-              oda: originZone.oda,
-            }
-          : undefined,
-        destinationZone: destinationZone
-          ? {
-              pincode: destinationZone.pincode,
-              zone: destinationZone.zone,
-              oda: destinationZone.oda,
-            }
-          : undefined,
-        warehouseCoverage: coverage ? this.mapCoverage(coverage) : null,
-      };
-    }
+    const toZoneInfo = (z: PincodeZoneEntity | null): ZoneInfo | null =>
+      z ? { pincode: z.pincode, zone: z.zone, oda: z.oda } : null;
 
     return {
-      serviceable: true,
-      originZone: {
-        pincode: originZone.pincode,
-        zone: originZone.zone,
-        oda: originZone.oda,
-      },
-      destinationZone: {
-        pincode: destinationZone.pincode,
-        zone: destinationZone.zone,
-        oda: destinationZone.oda,
-      },
-      warehouseCoverage: coverage ? this.mapCoverage(coverage) : null,
+      serviceable: Boolean(originZone && destinationZone),
+      originZone: toZoneInfo(originZone),
+      destinationZone: toZoneInfo(destinationZone),
+      warehouseCoverage: this.mapCoverage(coverage),
     };
   }
 
@@ -97,7 +92,10 @@ export class ServiceabilityService {
     return result.serviceable;
   }
 
-  private mapCoverage(coverage: any) {
+  private mapCoverage(
+    coverage: WarehouseCoverageEntity | null,
+  ): WarehouseCoverageInfo | null {
+    if (!coverage) return null;
     return {
       warehouseId: coverage.warehouseId,
       pincode: coverage.pincode,

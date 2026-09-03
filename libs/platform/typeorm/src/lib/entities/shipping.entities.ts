@@ -164,6 +164,7 @@ export class ShippingLabelEntity {
   @Column({ type: 'int' })
   shipmentId!: number;
   @OneToOne(() => ShipmentEntity, (s) => s.label)
+  @JoinColumn({ name: 'shipmentId' })
   shipment?: ShipmentEntity;
 
   @Column({ type: 'varchar', length: 64 })

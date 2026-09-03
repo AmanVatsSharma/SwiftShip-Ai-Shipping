@@ -20,13 +20,19 @@ export class TenantGuard implements CanActivate {
   constructor(private readonly tenants: TenantService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const httpReq = context.switchToHttp?.().getRequest?.() as
-      | RequestWithTenant
-      | undefined;
-    const gqlReq = context.getArgByIndex?.(0) as
+    // GraphQL resolver args are (root, args, context, info) — the Express
+    // request lives on the CONTEXT (index 2) because our GraphQLModule
+    // context factory is `({ req }) => ({ req })`. Reading index 0 (root)
+    // silently yielded undefined and 403'd every guarded mutation (found
+    // by the e2e money-path suites).
+    const gqlContext = context.getArgByIndex?.(2) as
       | { req?: RequestWithTenant }
       | undefined;
-    const req = httpReq ?? gqlReq?.req;
+    const req: RequestWithTenant | undefined =
+      gqlContext?.req ??
+      (context.switchToHttp?.().getRequest?.() as
+        | RequestWithTenant
+        | undefined);
 
     if (!req) {
       throw new ForbiddenException('No request context');

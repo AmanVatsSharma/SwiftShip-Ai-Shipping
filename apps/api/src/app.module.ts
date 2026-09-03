@@ -54,6 +54,13 @@ import { ManifestsModule as ManifestsLibModule } from '../../../libs/domains/man
 import { PickupsModule as PickupsLibModule } from '../../../libs/domains/pickups/src/lib/pickups.module';
 import { TenantModule } from '@swiftship/domains-tenants';
 
+// SS-103: dashboard analytics (`dashboardStats` / `revenueAnalytics` /
+// `carrierPerformance` / `slaMetrics` / `totalSales`) and the plain rate
+// shop + serviceability (`rateShop` / `checkServiceability`) — TypeORM
+// ports of the legacy src/ resolvers into the domain libs.
+import { DashboardLibModule } from '@swiftship/domains-dashboard';
+import { RateShopLibModule } from '@swiftship/domains-rate-shop';
+
 // App-level glue
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -155,6 +162,8 @@ import { RateShopPublicModule } from './rate-shop/rate-shop.public.module';
     NdrLibModule,
     ManifestsLibModule,
     PickupsLibModule,
+    DashboardLibModule,
+    RateShopLibModule,
     AuthLibModule,
     QueuesModule,
     PlatformCarriersModule,

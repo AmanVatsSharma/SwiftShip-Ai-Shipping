@@ -1,10 +1,22 @@
-// SS-decommission (2026-08): the legacy `src/dashboard/*` re-exports were
-// removed — that tree no longer compiles (it still referenced the deleted
-// PrismaCompat shim). The courier scorecard below is the TypeORM-native
-// source of truth. The old `dashboardStats` / `revenueAnalytics` /
-// `carrierPerformance` / `slaMetrics` / `totalSales` GraphQL queries are
-// unwired until ported into this lib — tracked as a follow-up bead
-// (see STATUS.md §3).
+// SS-103 (2026-09): the legacy `src/dashboard/*` analytics queries are
+// ported into this lib as TypeORM-native code (`DashboardLibModule`):
+// `dashboardStats`, `revenueAnalytics`, `carrierPerformance`,
+// `slaMetrics`, `totalSales`. The courier scorecard feature below
+// (TypeORM + BullMQ) remains the source of truth for scorecards.
+export { DashboardLibModule } from './lib/dashboard.module';
+export { DashboardService } from './lib/dashboard.service';
+export { DashboardResolver } from './lib/dashboard.resolver';
+export {
+  DashboardStats,
+  RevenueAnalytics,
+  RevenueByStatus,
+  RevenueTrend,
+  CarrierPerformance,
+  CarrierPerformanceAnalytics,
+  CarrierPerformanceSummary,
+  SlaMetrics,
+  StatusBreakdown,
+} from './lib/dashboard.model';
 
 // Courier scorecard feature (TypeORM + BullMQ).
 // Re-exported from the lib so consumers can `import { CourierScoreModule } from '@swiftship/domains-dashboard'`.

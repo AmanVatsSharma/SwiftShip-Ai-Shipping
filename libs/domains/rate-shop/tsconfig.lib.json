@@ -12,10 +12,6 @@
   ],
   "exclude": [
     "**/*.spec.ts",
-    "**/*.test.ts",
-    "src/lib/rate-shop.module.ts",
-    "src/lib/rate-shop.service.ts",
-    "src/lib/rate-shop.resolver.ts",
-    "src/lib/serviceability.service.ts"
+    "**/*.test.ts"
   ]
 }

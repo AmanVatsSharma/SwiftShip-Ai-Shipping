@@ -1,8 +1,22 @@
 import { ObjectType, Field, Float, Int } from '@nestjs/graphql';
 
+/**
+ * GraphQL models for the dashboard analytics queries (SS-103).
+ *
+ * Ported from the legacy `src/dashboard/dashboard.model.ts` (Prisma era)
+ * to the TypeORM-native dashboard lib. Only the models backing the
+ * documented surface (READY_FEATURES.md) are kept:
+ * `dashboardStats`, `revenueAnalytics`, `carrierPerformance`,
+ * `slaMetrics`, `totalSales`.
+ *
+ * NOTE: every `@Field` on a non-trivial / nullable / union position uses
+ * an explicit type function — `emitDecoratorMetadata` cannot reflect
+ * `T | null` unions (this exact pattern crashed the app before).
+ */
+
 @ObjectType()
 export class RevenueByStatus {
-  @Field()
+  @Field(() => String)
   status!: string;
 
   @Field(() => Float)
@@ -14,7 +28,7 @@ export class RevenueByStatus {
 
 @ObjectType()
 export class RevenueTrend {
-  @Field()
+  @Field(() => String)
   date!: string;
 
   @Field(() => Float)
@@ -29,8 +43,16 @@ export class RevenueAnalytics {
   @Field(() => Float)
   averageOrderValue!: number;
 
+  /** Orders in the filter window with status PAID. */
   @Field(() => Int)
   orderCount!: number;
+
+  /**
+   * Alias kept for the admin-portal dashboard card (`paidOrderCount`);
+   * identical to `orderCount` — both count PAID orders.
+   */
+  @Field(() => Int)
+  paidOrderCount!: number;
 
   @Field(() => [RevenueByStatus])
   revenueByStatus!: RevenueByStatus[];
@@ -62,7 +84,7 @@ export class CarrierPerformance {
   @Field(() => Int)
   carrierId!: number;
 
-  @Field()
+  @Field(() => String)
   carrierName!: string;
 
   @Field(() => Int)
@@ -106,99 +128,6 @@ export class CarrierPerformanceAnalytics {
 }
 
 @ObjectType()
-export class DeliveryTimeAnalytics {
-  @Field(() => Float, { nullable: true })
-  averageDeliveryTimeDays!: number | null;
-
-  @Field(() => Float, { nullable: true })
-  medianDeliveryTimeDays!: number | null;
-
-  @Field(() => String, { nullable: true })
-  deliveryTimeDistribution!: string; // JSON string
-
-  @Field(() => Float, { nullable: true })
-  onTimeDeliveryPercentage!: number | null;
-
-  @Field(() => Int)
-  totalDeliveredShipments!: number;
-}
-
-@ObjectType()
-export class ReturnsByStatus {
-  @Field()
-  status!: string;
-
-  @Field(() => Int)
-  count!: number;
-}
-
-@ObjectType()
-export class ReturnsByReason {
-  @Field()
-  reason!: string;
-
-  @Field(() => Int)
-  count!: number;
-}
-
-@ObjectType()
-export class ReturnAnalytics {
-  @Field(() => Int)
-  totalReturns!: number;
-
-  @Field(() => Int)
-  totalOrders!: number;
-
-  @Field(() => Float)
-  returnRate!: number;
-
-  @Field(() => [ReturnsByStatus])
-  returnsByStatus!: ReturnsByStatus[];
-
-  @Field(() => [ReturnsByReason])
-  returnsByReason!: ReturnsByReason[];
-}
-
-@ObjectType()
-export class TrendData {
-  @Field()
-  period!: string;
-
-  @Field(() => Int)
-  count!: number;
-}
-
-@ObjectType()
-export class OrderTrends {
-  @Field()
-  period!: string;
-
-  @Field(() => [TrendData])
-  trends!: TrendData[];
-
-  @Field(() => Int)
-  totalOrders!: number;
-
-  @Field(() => Float)
-  growthRate!: number;
-}
-
-@ObjectType()
-export class ShipmentTrends {
-  @Field()
-  period!: string;
-
-  @Field(() => [TrendData])
-  trends!: TrendData[];
-
-  @Field(() => Int)
-  totalShipments!: number;
-
-  @Field(() => Float)
-  growthRate!: number;
-}
-
-@ObjectType()
 export class SlaMetrics {
   @Field(() => Int)
   total!: number;
@@ -222,14 +151,31 @@ export class SlaMetrics {
   deliveryRate!: number;
 }
 
+/**
+ * Composite snapshot for the `dashboardStats` query.
+ *
+ * This query was documented in READY_FEATURES.md but never had a resolver
+ * in the legacy tree; it is implemented here as an honest composite of
+ * the ported analytics primitives (order/shipment counts + sales total +
+ * SLA-style delivery rate) rather than inventing new metrics.
+ */
 @ObjectType()
-export class CourierScorecard {
-  @Field(() => Int)
-  carrierId!: number;
+export class DashboardStats {
+  @Field(() => Int, { description: 'Total orders for the tenant' })
+  totalOrders!: number;
 
-  @Field()
-  carrierName!: string;
+  @Field(() => Int, { description: 'Total shipments for the tenant' })
+  totalShipments!: number;
 
-  @Field(() => String)
-  statusBreakdown!: string; // JSON string
+  @Field(() => Float, { description: 'Sum of order totals with status PAID (INR)' })
+  totalSales!: number;
+
+  @Field(() => Int, { description: 'Shipments currently in DELIVERED state' })
+  deliveredShipments!: number;
+
+  @Field(() => Int, { description: 'Shipments currently in PENDING state' })
+  pendingShipments!: number;
+
+  @Field(() => Float, { description: 'Delivered / total shipments, percent' })
+  deliveryRate!: number;
 }
