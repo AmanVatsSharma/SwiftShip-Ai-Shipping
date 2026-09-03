@@ -43,7 +43,11 @@ export class RateCacheService {
     try {
       const cached = await this.redis.get(fullKey);
       if (!cached) return null;
-      return JSON.parse(cached) as CachedRateQuote[];
+      // Revive `expiresAt` — JSON.stringify flattens Dates to strings, and
+      // callers (and the cache TTL test) treat it as a real Date.
+      return JSON.parse(cached, (k, v) =>
+        k === 'expiresAt' && typeof v === 'string' ? new Date(v) : v,
+      ) as CachedRateQuote[];
     } catch (err) {
       console.warn(
         `[RateCacheService] getCachedQuotes failed for ${fullKey}: ${(err as Error).message}`,

@@ -1,4 +1,4 @@
-import { TenantContext } from '@swiftship/domains-tenants';
+import { bindTenantContext } from '@swiftship/platform-typeorm';
 import {
   RateCacheService,
   RATE_CACHE_TTL_SECONDS,
@@ -53,13 +53,13 @@ const sampleQuote = (overrides: Partial<CachedRateQuote> = {}): CachedRateQuote 
 
 describe('RateCacheService', () => {
   let redis: FakeRedis;
-  let tenant: TenantContext;
+  let tenantId: number | undefined;
   let service: RateCacheService;
 
   beforeEach(() => {
     redis = new FakeRedis();
-    tenant = new TenantContext();
-    service = new RateCacheService(redis as any, tenant);
+    tenantId = undefined;
+    service = new RateCacheService(redis as any);
   });
 
   describe('getCachedQuotes', () => {
@@ -113,38 +113,38 @@ describe('RateCacheService', () => {
 
   describe('buildKey', () => {
     it('uses tenantId from TenantContext', () => {
-      tenant.setTenant(42);
-      const key = service.buildKey({
+      tenantId = 42;
+      const key = bindTenantContext(tenantId, () => service.buildKey({
         originPincode: '110001',
         destinationPincode: '560001',
         weightGrams: 500,
         paymentMethod: 'PREPAID',
         carrierCode: 'SANDBOX',
-      });
+      }));
       expect(key.startsWith('rate:42:')).toBe(true);
     });
 
     it("uses 'all' for carrierCode when undefined", () => {
-      tenant.setTenant(7);
-      const key = service.buildKey({
+      tenantId = 7;
+      const key = bindTenantContext(tenantId, () => service.buildKey({
         originPincode: '110001',
         destinationPincode: '560001',
         weightGrams: 500,
         paymentMethod: 'PREPAID',
         // carrierCode intentionally omitted
-      });
+      }));
       expect(key.endsWith(':all')).toBe(true);
       expect(key).toBe('rate:7:110001:560001:500:PREPAID:all');
     });
 
     it('falls back to tenant 1 when TenantContext is empty', () => {
-      const key = service.buildKey({
+      const key = bindTenantContext(tenantId, () => service.buildKey({
         originPincode: '110001',
         destinationPincode: '560001',
         weightGrams: 500,
         paymentMethod: 'COD',
         carrierCode: 'SANDBOX',
-      });
+      }));
       expect(key.startsWith('rate:1:')).toBe(true);
       expect(key).toBe('rate:1:110001:560001:500:COD:SANDBOX');
     });

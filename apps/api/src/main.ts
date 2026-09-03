@@ -74,9 +74,15 @@ async function bootstrap() {
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
   // validation
+  // NOTE: `whitelist: true` is deliberately OFF. It strips any property
+  // without a class-validator decorator — for GraphQL inputs that carry
+  // only @Field() (no @IsString etc.) this silently DELETED the payload
+  // (onboardTenant received input.name === undefined → crash; found by
+  // the e2e money-path suites). REST request-shape validation lives in
+  // apps/api-public (tsoa); inputs that want validation declare their
+  // own class-validator decorators.
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
     }),

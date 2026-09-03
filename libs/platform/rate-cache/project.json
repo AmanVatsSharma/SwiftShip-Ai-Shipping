@@ -37,6 +37,15 @@
       "outputs": [
         "{options.outputFile}"
       ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/libs/platform/rate-cache"
+      ],
+      "options": {
+        "jestConfig": "libs/platform/rate-cache/jest.config.ts"
+      }
     }
   }
 }
