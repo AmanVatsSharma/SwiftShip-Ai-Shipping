@@ -217,7 +217,10 @@ describe('KYC → COD gate → invoice → GST breakdown (e2e)', () => {
           taxRate: 18,
           supplierState: 'Karnataka',
           placeOfSupply: 'Karnataka',
-          supplierGstin: GSTIN,
+          // No supplierGstin: the fixture GSTIN's state code is 27
+          // (Maharashtra) which would classify this as INTER-state and
+          // route the whole tax into IGST. Omitting it keeps the
+          // intra-state CGST+SGST split this test asserts.
         },
       },
       apiKey: stack.apiKey,

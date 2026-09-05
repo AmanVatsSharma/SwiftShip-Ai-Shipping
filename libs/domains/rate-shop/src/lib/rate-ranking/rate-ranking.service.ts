@@ -220,7 +220,15 @@ export class RateRankingService {
     });
 
     // Per-axis ranks (1 = best on that axis).
-    const costRanks = this.rankBy(enriched, (e) => e.quote.rate, 'asc');
+    // Cost axis ranks by EFFECTIVE cost (rate + expected RTO loss), not the
+    // raw rate — a carrier with a higher sticker price but a much lower RTO
+    // penalty is the genuinely cheaper choice for 'cheapest' (found by the
+    // e2e cheapest-strategy suite).
+    const costRanks = this.rankBy(
+      enriched,
+      (e) => e.effectiveCostPaise,
+      'asc',
+    );
     const slaRanks = this.rankBy(
       enriched,
       (e) => e.quote.estimatedDays.max,
