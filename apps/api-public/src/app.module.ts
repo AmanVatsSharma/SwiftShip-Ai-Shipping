@@ -14,23 +14,23 @@ import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 
 // Platform
-import { TypeormModule } from '../../../libs/platform/typeorm/src/lib/typeorm.module';
+import { TypeormModule } from '../../../../libs/platform/typeorm/src/lib/typeorm.module';
 import { configureTenantContext } from '@swiftship/platform-typeorm';
-import { AuthLibModule } from '../../../libs/platform/auth/src/lib/auth.module';
-import { QueuesModule } from '../../../libs/platform/queues/src/lib/queues.module';
-import { CarriersLibModule } from '../../../libs/platform/carriers/src/lib/carriers.module';
-import { RateCacheModule } from '../../../libs/platform/rate-cache/src/lib/rate-cache.module';
-import { ConfigLibModule } from '../../../libs/platform/config/src/lib/config.module';
+import { AuthLibModule } from '../../../../libs/platform/auth/src/lib/auth.module';
+import { QueuesModule } from '../../../../libs/platform/queues/src/lib/queues.module';
+import { CarriersLibModule } from '../../../../libs/platform/carriers/src/lib/carriers.module';
+import { RateCacheModule } from '../../../../libs/platform/rate-cache/src/lib/rate-cache.module';
+import { ConfigLibModule } from '../../../../libs/platform/config/src/lib/config.module';
 
 // Observability
-import { ObservabilityModule } from '../../../libs/observability/src/lib/observability.module';
-import { MetricsController } from '../../../libs/observability/src/lib/metrics.controller';
+import { ObservabilityModule } from '../../../../libs/observability/src/lib/observability.module';
+import { MetricsController } from '../../../../libs/observability/src/lib/metrics.controller';
 
 // Domain libs
-import { OrdersLibModule } from '../../../libs/domains/orders/src/lib/orders.module';
-import { ShipmentsLibModule } from '../../../libs/domains/shipments/src/lib/shipments.module';
-import { WarehousesLibModule } from '../../../libs/domains/warehouses/src/lib/warehouses.module';
-import { BillingLibModule } from '../../../libs/domains/billing/src/lib/billing.module';
+import { OrdersLibModule } from '../../../../libs/domains/orders/src/lib/orders.module';
+import { ShipmentsLibModule } from '../../../../libs/domains/shipments/src/lib/shipments.module';
+import { WarehousesLibModule } from '../../../../libs/domains/warehouses/src/lib/warehouses.module';
+import { BillingLibModule } from '../../../../libs/domains/billing/src/lib/billing.module';
 import { TenantModule } from '@swiftship/domains-tenants';
 import { RateRankingModule } from '@swiftship/domains-rate-shop';
 import { TenantKeyBootstrap } from './auth/tenant-key.bootstrap';

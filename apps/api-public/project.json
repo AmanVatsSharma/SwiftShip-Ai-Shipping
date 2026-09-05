@@ -25,7 +25,8 @@
             "input": "apps/api-public/public",
             "output": "public"
           }
-        ]
+        ],
+        "webpackConfig": "apps/api-public/webpack.config.js"
       }
     },
     "serve": {

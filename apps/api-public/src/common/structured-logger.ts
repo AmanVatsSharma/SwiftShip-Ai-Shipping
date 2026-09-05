@@ -4,7 +4,7 @@
  * the new app's `main.ts` independent of the observability lib's
  * internal layout.
  */
-import { StructuredLogger } from '../../../libs/observability/src/lib/logger.service';
+import { StructuredLogger } from '../../../../libs/observability/src/lib/logger.service';
 
 export function structuredLogger(): StructuredLogger {
   return new StructuredLogger();
