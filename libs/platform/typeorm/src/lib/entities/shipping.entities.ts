@@ -540,7 +540,7 @@ export class EwayBillEntity {
   @JoinColumn({ name: 'shipmentId' })
   shipment?: ShipmentEntity;
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   invoiceId?: string | null;
   // Owning side of the Invoice↔EwayBill OneToOne (this table holds the FK).
   // billing.entities imports THIS file, so the target class is resolved
