@@ -337,6 +337,7 @@ export class PickupEntity {
   @Column({ type: 'int' })
   shipmentId!: number;
   @OneToOne(() => ShipmentEntity, (s) => s.pickup)
+  @JoinColumn({ name: 'shipmentId' })
   shipment?: ShipmentEntity;
 
   @Column({ type: 'timestamp' })
@@ -415,6 +416,7 @@ export class NdrCaseEntity {
   @Column({ type: 'int' })
   shipmentId!: number;
   @OneToOne(() => ShipmentEntity, (s) => s.ndrCase)
+  @JoinColumn({ name: 'shipmentId' })
   shipment?: ShipmentEntity;
 
   @Column({ type: 'int', default: 1 })
@@ -535,6 +537,7 @@ export class EwayBillEntity {
   @Column({ type: 'int' })
   shipmentId!: number;
   @OneToOne(() => ShipmentEntity, (s) => s.ewayBill)
+  @JoinColumn({ name: 'shipmentId' })
   shipment?: ShipmentEntity;
 
   @Column({ type: 'varchar', length: 64, nullable: true })

@@ -491,6 +491,135 @@ type ChannelSyncJob {
   updatedAt: DateTime!
 }
 
+type RateShopQuote {
+  """Human-readable carrier name"""
+  carrier: String!
+
+  """Carrier code (e.g. DELHIVERY)"""
+  carrierCode: String!
+
+  """STANDARD | EXPRESS | SAME_DAY | OVERNIGHT"""
+  serviceType: String!
+  rate: Int!
+  currency: String!
+  etaDaysMin: Int!
+  etaDaysMax: Int!
+
+  """COD accepted for this quote"""
+  codAvailable: Boolean!
+
+  """Pickup available for this quote"""
+  pickupAvailable: Boolean!
+
+  """Quote expiry timestamp"""
+  expiresAt: DateTime!
+  metadata: String
+}
+
+type ZoneInfo {
+  pincode: String!
+  zone: String
+
+  """Out-of-Delivery-Area (ODA) flag"""
+  oda: Boolean!
+}
+
+type WarehouseCoverageInfo {
+  warehouseId: Int!
+  pincode: String!
+  tatDays: Int
+  isOda: Boolean!
+  odaFee: Float
+}
+
+type ServiceabilityCheckResult {
+  """True only when both pincodes are mapped in pincode_zones"""
+  serviceable: Boolean!
+  originZone: ZoneInfo
+  destinationZone: ZoneInfo
+  warehouseCoverage: WarehouseCoverageInfo
+}
+
+type RevenueByStatus {
+  status: String!
+  revenue: Float!
+  orderCount: Int!
+}
+
+type RevenueTrend {
+  date: String!
+  value: Float!
+}
+
+type RevenueAnalytics {
+  totalRevenue: Float!
+  averageOrderValue: Float!
+  orderCount: Int!
+  paidOrderCount: Int!
+  revenueByStatus: [RevenueByStatus!]!
+  revenueTrends: [RevenueTrend!]!
+}
+
+type StatusBreakdown {
+  PENDING: Int!
+  SHIPPED: Int!
+  IN_TRANSIT: Int!
+  DELIVERED: Int!
+  CANCELLED: Int!
+}
+
+type CarrierPerformance {
+  carrierId: Int!
+  carrierName: String!
+  totalShipments: Int!
+  deliveredShipments: Int!
+  cancelledShipments: Int!
+  deliverySuccessRate: Float!
+  averageDeliveryTimeDays: Float
+  statusBreakdown: StatusBreakdown!
+}
+
+type CarrierPerformanceSummary {
+  totalCarriers: Int!
+  totalShipments: Int!
+  averageDeliverySuccessRate: Float!
+}
+
+type CarrierPerformanceAnalytics {
+  carriers: [CarrierPerformance!]!
+  summary: CarrierPerformanceSummary!
+}
+
+type SlaMetrics {
+  total: Int!
+  delivered: Int!
+  inTransit: Int!
+  shipped: Int!
+  pending: Int!
+  cancelled: Int!
+  deliveryRate: Float!
+}
+
+type DashboardStats {
+  """Total orders for the tenant"""
+  totalOrders: Int!
+
+  """Total shipments for the tenant"""
+  totalShipments: Int!
+
+  """Sum of order totals with status PAID (INR)"""
+  totalSales: Float!
+
+  """Shipments currently in DELIVERED state"""
+  deliveredShipments: Int!
+
+  """Shipments currently in PENDING state"""
+  pendingShipments: Int!
+
+  """Delivered / total shipments, percent"""
+  deliveryRate: Float!
+}
+
 type RateRanking {
   position: Int!
   score: Float!
@@ -769,7 +898,9 @@ type Query {
   ordersByUser(userId: Int!): [Order!]!
   ordersByStatus(status: OrderStatus!): [Order!]!
   filterOrders(filter: OrdersFilterInput!): [Order!]!
-  totalSales: String!
+
+  """Get total sales amount from paid orders"""
+  totalSales: Float!
   tenant(id: ID!): Tenant
   tenants(status: String, tier: String, search: String, limit: Float = 50, offset: Float = 0): [Tenant!]!
   wallet(tenantId: ID!): Wallet
@@ -883,6 +1014,28 @@ type Query {
   manifest(id: Int!): ManifestEntity
   onboardingState(userId: Int!): OnboardingStateModel!
 
+  """Composite dashboard snapshot (orders, shipments, sales, delivery rate)"""
+  dashboardStats: DashboardStats!
+
+  """Get comprehensive revenue analytics"""
+  revenueAnalytics(startDate: String, endDate: String): RevenueAnalytics!
+
+  """Get carrier performance metrics"""
+  carrierPerformance(startDate: String, endDate: String): CarrierPerformanceAnalytics!
+
+  """Get SLA metrics summary"""
+  slaMetrics: SlaMetrics!
+
+  """
+  Shop rates from every non-OPEN carrier (Redis cache + circuit breaker). Un-ranked — use rankedRateShop for strategy sorting.
+  """
+  rateShop(request: RateShopRequestInput!): [RateShopQuote!]!
+
+  """
+  Check serviceability for an origin/destination pincode pair. Serviceable only when both pincodes are mapped in pincode_zones; unknown pincodes are honestly reported as not serviceable.
+  """
+  checkServiceability(params: ServiceabilityParamsInput!): ServiceabilityCheckResult!
+
   """List all channel connections for the tenant."""
   channelConnections(tenantId: Int!): [ChannelConnection!]!
 
@@ -989,6 +1142,32 @@ input DateRangeInput {
 
   """ISO-8601 end date (inclusive; clamped to end-of-day)."""
   to: String!
+}
+
+input RateShopRequestInput {
+  """Origin pincode (6-digit Indian postal code)"""
+  originPincode: String!
+
+  """Destination pincode"""
+  destinationPincode: String!
+
+  """Shippable weight in grams"""
+  weightGrams: Int!
+  paymentMethod: String! = "PREPAID"
+  declaredValuePaise: Int
+  lengthCm: Float
+  widthCm: Float
+  heightCm: Float
+  courierCode: String
+}
+
+input ServiceabilityParamsInput {
+  """Origin pincode"""
+  originPincode: String!
+
+  """Destination pincode"""
+  destinationPincode: String!
+  warehouseId: Int
 }
 
 type Mutation {

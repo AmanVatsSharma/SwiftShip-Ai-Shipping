@@ -2,6 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 // Value import (not `import type`) — required for DI param reflection.
 import { TenantService } from './tenant.service';
+import { ApiKeyService } from './api-key.service';
 import { TenantContext } from './tenant.context';
 
 export interface TenantRequest extends Request {
@@ -15,19 +16,22 @@ const AUTH_HEADER = 'authorization';
 export class TenantMiddleware implements NestMiddleware {
   constructor(
     private readonly tenants: TenantService,
+    private readonly apiKeys: ApiKeyService,
     private readonly tenantContext: TenantContext,
   ) {}
 
   async use(req: TenantRequest, _res: Response, next: NextFunction): Promise<void> {
     const apiKey = this.headerValue(req.headers[API_KEY_HEADER]);
     if (apiKey) {
-      const [prefix, hashedKey] = apiKey.split('.', 2);
-      if (prefix && hashedKey) {
-        const tenant = await this.tenants.findByApiKey(prefix, hashedKey);
-        if (tenant) {
-          req.tenantId = tenant.id;
-          this.tenantContext.setTenant(tenant.id, tenant.tier);
-        }
+      // Full verify (prefix lookup + bcrypt compare) via ApiKeyService —
+      // TenantService.findByApiKey was a SS-005 stub that always returned
+      // null, silently breaking every API-key-authenticated request
+      // (found by the e2e money-path suites).
+      const tenantId = await this.apiKeys.verify(apiKey);
+      if (tenantId != null) {
+        const tenant = await this.tenants.findById(tenantId);
+        req.tenantId = tenantId;
+        this.tenantContext.setTenant(tenantId, tenant.tier);
       }
       return next();
     }

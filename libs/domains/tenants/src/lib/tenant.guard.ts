@@ -38,7 +38,13 @@ export class TenantGuard implements CanActivate {
       throw new ForbiddenException('No request context');
     }
 
-    const tenantId = req.tenantId ?? req.user?.tenantId;
+    // Accept every tenant-bearing shape in play: the TenantMiddleware's
+    // req.tenantId (API key / JWT flows), and JWT user claims — apps mint
+    // both `tenantId` and the platform-auth `sub`+`tenantId` pair.
+    const user = req.user as
+      | { tenantId?: number; sub?: number; userId?: number }
+      | undefined;
+    const tenantId = req.tenantId ?? user?.tenantId;
     if (!tenantId) {
       throw new ForbiddenException('No tenant context');
     }
