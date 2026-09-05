@@ -42,7 +42,7 @@ import {
   type TenantStack,
 } from './support/e2e-harness';
 
-const PAN = 'ABCDE1234F';
+const PAN = 'ABCFE1234F';
 const GSTIN = validGstinForPan(PAN); // 27ABCDE1234F1Z<checksum>
 
 async function tryCreateCodOrder(

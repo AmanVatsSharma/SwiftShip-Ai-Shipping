@@ -216,6 +216,10 @@ export async function seedSandboxCarrier(
 ): Promise<CarrierEntity> {
   const ds = app.get(DataSource);
   const repo = ds.getRepository(CarrierEntity);
+  // Idempotent: parallel suites share the DB and carriers_name is globally
+  // unique — if another suite already seeded SANDBOX, reuse that row.
+  const existing = await repo.findOne({ where: { name: 'SANDBOX' } });
+  if (existing) return existing;
   return repo.save(
     repo.create({
       // `name` must equal the adapter code the CarrierAdapterService
@@ -252,6 +256,10 @@ export async function seedUser(
 ): Promise<UserEntity> {
   const ds = app.get(DataSource);
   const repo = ds.getRepository(UserEntity);
+  // Idempotent on email — users_email is globally unique and parallel
+  // suites can race the seed.
+  const existing = await repo.findOne({ where: { email } });
+  if (existing) return existing;
   const passwordHash = password ? await bcrypt.hash(password, 4) : undefined;
   return repo.save(
     repo.create({

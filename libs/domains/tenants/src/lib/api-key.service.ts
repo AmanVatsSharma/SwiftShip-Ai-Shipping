@@ -78,23 +78,27 @@ export class ApiKeyService {
     const old = await this.apiKeys.findOne({ where: { id: oldKeyId } });
     if (!old) throw new NotFoundException(`ApiKey ${oldKeyId} not found`);
 
-    old.isActive = false;
-    await this.apiKeys.save(old);
-
     // Re-generate a random secret but keep the same public prefix so callers
     // that hard-coded the prefix can still discover the key.
     const random = this.randomBase62(PLAINTEXT_RANDOM_BYTES);
     const plainText = `${API_KEY_PREFIX_LIVE}${random}`;
     const hashedKey = await bcrypt.hash(plainText, BCRYPT_ROUNDS);
 
-    const entity = this.apiKeys.create({
-      tenantId: old.tenantId,
-      prefix: old.prefix,
-      hashedKey,
-      isActive: true,
-      lastUsedAt: null,
+    // idx_tenant_api_keys_prefix is UNIQUE across active AND inactive rows,
+    // so 'deactivate old + insert new with same prefix' violated it (found
+    // by the e2e rotateApiKey suite). Swap atomically instead: delete the
+    // old row and insert the replacement in one transaction.
+    const saved = await this.apiKeys.manager.transaction(async (em) => {
+      await em.remove(TenantApiKeyEntity, old);
+      const entity = em.create(TenantApiKeyEntity, {
+        tenantId: old.tenantId,
+        prefix: old.prefix,
+        hashedKey,
+        isActive: true,
+        lastUsedAt: null,
+      });
+      return em.save(TenantApiKeyEntity, entity);
     });
-    const saved = await this.apiKeys.save(entity);
     return { entity: saved, plainText, prefix: old.prefix };
   }
 
