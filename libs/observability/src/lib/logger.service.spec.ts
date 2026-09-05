@@ -1,5 +1,8 @@
 import { StructuredLogger } from './logger.service';
-import { runWithCorrelation, getCorrelationContext } from './correlation/context';
+import {
+  runWithCorrelation,
+  getCorrelationContext,
+} from './correlation/context';
 
 describe('StructuredLogger (SS-028)', () => {
   let logSpy: jest.SpyInstance;
@@ -31,7 +34,12 @@ describe('StructuredLogger (SS-028)', () => {
   it('propagates correlation / trace ids from AsyncLocalStorage', () => {
     const logger = new StructuredLogger();
     runWithCorrelation(
-      { correlationId: 'corr-1', traceId: 'trace-1', spanId: 'span-1', tenantId: 42 },
+      {
+        correlationId: 'corr-1',
+        traceId: 'trace-1',
+        spanId: 'span-1',
+        tenantId: 42,
+      },
       () => {
         logger.log('inside ALS');
       },

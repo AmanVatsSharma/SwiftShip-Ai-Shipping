@@ -52,12 +52,15 @@ export const bindTenantContext = <T>(
 /**
  * Resolve the current tenantId, honouring system overrides.
  */
-export const getCurrentTenantId = (): number | typeof SYSTEM_TENANT_ID | undefined => {
+export const getCurrentTenantId = ():
+  | number
+  | typeof SYSTEM_TENANT_ID
+  | undefined => {
   const override = tenantAls.getStore();
   if (override === SYSTEM_TENANT_ID) return SYSTEM_TENANT_ID;
   if (override !== undefined) return override;
   if (!getTenantIdFn) return undefined;
   const resolved = getTenantIdFn();
   if (resolved === undefined || resolved === null) return undefined;
-  return Number(resolved) as number;
+  return Number(resolved);
 };

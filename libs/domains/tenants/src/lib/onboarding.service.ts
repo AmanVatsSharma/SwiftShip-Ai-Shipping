@@ -64,9 +64,7 @@ export class OnboardingService {
     const slug = this.slugify(input.name);
     const existing = await this.tenants.findOne({ where: { slug } });
     if (existing) {
-      throw new ConflictException(
-        `Tenant with slug '${slug}' already exists`,
-      );
+      throw new ConflictException(`Tenant with slug '${slug}' already exists`);
     }
 
     // Step 1: create tenant (TRIAL + STARTER)
@@ -101,21 +99,22 @@ export class OnboardingService {
     } catch (err) {
       // Don't fail onboarding if the wallet hookup has a transient issue —
       // SS-004 will reconcile via the onboarding idempotency key on retry.
-      // eslint-disable-next-line no-console
+
       console.warn(
         `Free-credit top-up failed for tenant ${savedTenant.id}: ${(err as Error).message}`,
       );
     }
 
     // Step 4: create the default API key
-    const { entity: apiKeyEntity, plainText } =
-      await this.apiKeyService.create(savedTenant.id);
+    const { entity: apiKeyEntity, plainText } = await this.apiKeyService.create(
+      savedTenant.id,
+    );
 
     // Step 5: set default feature flags
     await this.setDefaultFlags(savedTenant.id);
 
     // Step 7: emit a `tenant.onboarded` event (stubbed)
-    // eslint-disable-next-line no-console
+
     console.log(`Event emitted: tenant.onboarded ${savedTenant.id}`);
 
     return {
@@ -145,9 +144,7 @@ export class OnboardingService {
    * Create a team invite — single-use token, expires in 7 days.
    * SS-005: logs instead of emailing.
    */
-  async inviteTeamMember(
-    input: InviteTeamMemberInput,
-  ): Promise<InviteEntity> {
+  async inviteTeamMember(input: InviteTeamMemberInput): Promise<InviteEntity> {
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
@@ -162,7 +159,7 @@ export class OnboardingService {
     await this.invites.save(invite);
 
     // Stub: log the invite instead of sending
-    // eslint-disable-next-line no-console
+
     console.log(
       `Would email invite link with token=${token} to ${input.email} (role=${input.role}) for tenant=${input.tenantId}`,
     );
@@ -184,14 +181,10 @@ export class OnboardingService {
     });
     if (invite && invite.acceptedAt !== null) {
       // already accepted — treat as consumed
-      throw new BadRequestException(
-        'Invite not found or already used/expired',
-      );
+      throw new BadRequestException('Invite not found or already used/expired');
     }
     if (!invite) {
-      throw new BadRequestException(
-        'Invite not found or already used/expired',
-      );
+      throw new BadRequestException('Invite not found or already used/expired');
     }
 
     const member = this.invites.manager.create(TenantMemberEntity, {
@@ -233,9 +226,7 @@ export class OnboardingService {
     const slug = this.slugify(input.name);
     const existing = await this.tenants.findOne({ where: { slug } });
     if (existing) {
-      throw new ConflictException(
-        `Tenant with slug '${slug}' already exists`,
-      );
+      throw new ConflictException(`Tenant with slug '${slug}' already exists`);
     }
 
     const childTenant = this.tenants.create({

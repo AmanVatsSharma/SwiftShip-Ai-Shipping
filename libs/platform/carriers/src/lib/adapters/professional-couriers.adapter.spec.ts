@@ -40,7 +40,9 @@ describe('ProfessionalCouriersAdapter', () => {
       const actions = await adapter.getNdrActions('PCA123456');
 
       const codes = actions.map((a) => a.code).sort();
-      expect(codes).toEqual(expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS', 'CANCEL']));
+      expect(codes).toEqual(
+        expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS', 'CANCEL']),
+      );
     });
   });
 });

@@ -4,7 +4,11 @@ describe('FedExIndiaAdapter', () => {
   let adapter: FedExIndiaAdapter;
 
   beforeEach(() => {
-    adapter = new FedExIndiaAdapter('test-client-id', 'test-client-secret', 'test-account-number');
+    adapter = new FedExIndiaAdapter(
+      'test-client-id',
+      'test-client-secret',
+      'test-account-number',
+    );
   });
 
   describe('getRates', () => {
@@ -21,7 +25,9 @@ describe('FedExIndiaAdapter', () => {
       expect(quotes.length).toBeGreaterThan(0);
       expect(quotes[0].carrierCode).toBe('fedex-india');
       expect(quotes[0].carrier).toBe('FedEx India');
-      expect(quotes[0].serviceType).toMatch(/STANDARD|EXPRESS|SAME_DAY|OVERNIGHT/);
+      expect(quotes[0].serviceType).toMatch(
+        /STANDARD|EXPRESS|SAME_DAY|OVERNIGHT/,
+      );
       expect(quotes[0].currency).toBe('INR');
       expect(quotes[0].estimatedDays).toMatchObject({
         min: expect.any(Number),
@@ -107,7 +113,9 @@ describe('FedExIndiaAdapter', () => {
 
       expect(actions.length).toBeGreaterThan(0);
       expect(actions[0]).toMatchObject({
-        code: expect.stringMatching(/REATTEMPT|CHANGE_ADDRESS|CANCEL|OPEN_DISPUTE/),
+        code: expect.stringMatching(
+          /REATTEMPT|CHANGE_ADDRESS|CANCEL|OPEN_DISPUTE/,
+        ),
         label: expect.any(String),
         requiresCustomerInput: expect.any(Boolean),
       });
@@ -123,7 +131,7 @@ describe('FedExIndiaAdapter', () => {
         expect(actions.length).toBeGreaterThan(0);
 
         // Verify specific code mappings
-        const labels = actions.map(a => a.label);
+        const labels = actions.map((a) => a.label);
         expect(labels).toContain('Update delivery address'); // AHS → CHANGE_ADDRESS
         expect(labels).toContain('Reattempt delivery'); // CDX → REATTEMPT
         expect(labels).toContain('Cancel and RTO'); // RCX → CANCEL
@@ -141,7 +149,9 @@ describe('FedExIndiaAdapter', () => {
         collectedAt: new Date().toISOString(),
       };
 
-      await expect(adapter.markCodCollected(input)).rejects.toThrow('NotImplementedError');
+      await expect(adapter.markCodCollected(input)).rejects.toThrow(
+        'NotImplementedError',
+      );
     });
   });
 

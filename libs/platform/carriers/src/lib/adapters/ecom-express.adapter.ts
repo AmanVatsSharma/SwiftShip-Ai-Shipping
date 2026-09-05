@@ -39,14 +39,22 @@ export class EcomExpressAdapter implements CarrierAdapter {
   private readonly maxRetries: number = 3;
   private readonly retryDelay: number = 1000;
 
-  constructor(username: string, password: string, baseUrl: string = 'https://clconnect.ecomexpress.in') {
+  constructor(
+    username: string,
+    password: string,
+    baseUrl: string = 'https://clconnect.ecomexpress.in',
+  ) {
     if (!username || !password) {
       throw new Error('Ecom Express username and password are required');
     }
     this.username = username;
     this.password = password;
     this.baseUrl = baseUrl;
-    console.log('[EcomExpressAdapter] Initialized', { baseUrl, hasUsername: !!username, hasPassword: !!password });
+    console.log('[EcomExpressAdapter] Initialized', {
+      baseUrl,
+      hasUsername: !!username,
+      hasPassword: !!password,
+    });
   }
 
   async generateLabel(req: CarrierLabelRequest): Promise<CarrierLabelResponse> {
@@ -59,16 +67,24 @@ export class EcomExpressAdapter implements CarrierAdapter {
     });
 
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for Ecom Express label generation');
+      throw new Error(
+        'Delivery address is required for Ecom Express label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for Ecom Express label generation');
+      throw new Error(
+        'Package weight is required for Ecom Express label generation',
+      );
     }
 
     try {
       const payload = this.buildLabelPayload(req);
-      const response = await this.makeRequestWithRetry('POST', '/apiv2/manifest', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/apiv2/manifest',
+        payload,
+      );
       const labelData = this.parseLabelResponse(response.data, req);
 
       console.log('[EcomExpressAdapter] generateLabel success', {
@@ -88,7 +104,9 @@ export class EcomExpressAdapter implements CarrierAdapter {
   }
 
   async trackShipment(trackingNumber: string): Promise<TrackingResponse> {
-    console.log('[EcomExpressAdapter] trackShipment request', { trackingNumber });
+    console.log('[EcomExpressAdapter] trackShipment request', {
+      trackingNumber,
+    });
 
     if (!trackingNumber) {
       throw new Error('Tracking number is required');
@@ -97,9 +115,12 @@ export class EcomExpressAdapter implements CarrierAdapter {
     try {
       const response = await this.makeRequestWithRetry(
         'GET',
-        `/apiv2/track?awb=${encodeURIComponent(trackingNumber)}`
+        `/apiv2/track?awb=${encodeURIComponent(trackingNumber)}`,
       );
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[EcomExpressAdapter] trackShipment success', {
         trackingNumber,
@@ -124,8 +145,14 @@ export class EcomExpressAdapter implements CarrierAdapter {
     }
   }
 
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[EcomExpressAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[EcomExpressAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     try {
       const payload = {
@@ -134,7 +161,9 @@ export class EcomExpressAdapter implements CarrierAdapter {
       };
 
       await this.makeRequestWithRetry('POST', '/apiv2/cancel', payload);
-      console.log('[EcomExpressAdapter] cancelShipment success', { trackingNumber });
+      console.log('[EcomExpressAdapter] cancelShipment success', {
+        trackingNumber,
+      });
       return true;
     } catch (error) {
       console.error('[EcomExpressAdapter] cancelShipment failed', {
@@ -149,7 +178,10 @@ export class EcomExpressAdapter implements CarrierAdapter {
     console.log('[EcomExpressAdapter] voidLabel request', { labelNumber });
 
     try {
-      await this.makeRequestWithRetry('POST', `/apiv2/label/${encodeURIComponent(labelNumber)}/void`);
+      await this.makeRequestWithRetry(
+        'POST',
+        `/apiv2/label/${encodeURIComponent(labelNumber)}/void`,
+      );
       console.log('[EcomExpressAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
@@ -187,7 +219,10 @@ export class EcomExpressAdapter implements CarrierAdapter {
       params.append('origin_pin', req.originPincode);
       params.append('destination_pin', req.destinationPincode);
       params.append('weight', String(req.weightGrams / 1000));
-      params.append('payment_mode', req.paymentMethod === 'COD' ? 'COD' : 'Prepaid');
+      params.append(
+        'payment_mode',
+        req.paymentMethod === 'COD' ? 'COD' : 'Prepaid',
+      );
 
       const response = await this.makeFormRequest(
         'POST',
@@ -197,9 +232,12 @@ export class EcomExpressAdapter implements CarrierAdapter {
 
       return this.parseRateResponse(response.data, req);
     } catch (error) {
-      console.error('[EcomExpressAdapter] getRates failed, using fallback rate card', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[EcomExpressAdapter] getRates failed, using fallback rate card',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return [this.buildFallbackRateQuote(req)];
     }
   }
@@ -209,7 +247,9 @@ export class EcomExpressAdapter implements CarrierAdapter {
    *
    * API Endpoint: POST /apiv2/pincodeServiceability
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[EcomExpressAdapter] getServiceability request', input);
 
     try {
@@ -226,27 +266,44 @@ export class EcomExpressAdapter implements CarrierAdapter {
       );
 
       const data = response.data ?? {};
-      const serviceableFlag = data?.serviceable ?? data?.status ?? data?.is_serviceable;
+      const serviceableFlag =
+        data?.serviceable ?? data?.status ?? data?.is_serviceable;
       const codAvailable = data?.cod ?? data?.cod_available ?? true;
       const prepaidAvailable = data?.prepaid ?? data?.prepaid_available ?? true;
 
-      const serviceable = serviceableFlag === true || serviceableFlag === 'Y' || serviceableFlag === 'YES';
+      const serviceable =
+        serviceableFlag === true ||
+        serviceableFlag === 'Y' ||
+        serviceableFlag === 'YES';
 
       return {
         serviceable,
-        codAvailable: serviceable && (codAvailable === true || codAvailable === 'Y' || codAvailable === 'YES'),
-        prepaidAvailable: serviceable && (prepaidAvailable === true || prepaidAvailable === 'Y' || prepaidAvailable === 'YES'),
+        codAvailable:
+          serviceable &&
+          (codAvailable === true ||
+            codAvailable === 'Y' ||
+            codAvailable === 'YES'),
+        prepaidAvailable:
+          serviceable &&
+          (prepaidAvailable === true ||
+            prepaidAvailable === 'Y' ||
+            prepaidAvailable === 'YES'),
         estimatedDays: { min: 2, max: 5 },
         reason: serviceable ? undefined : 'PINCODE_NOT_SERVICEABLE',
       };
     } catch (error) {
-      console.error('[EcomExpressAdapter] getServiceability failed, returning fallback', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[EcomExpressAdapter] getServiceability failed, returning fallback',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
 
       // Ecom Express is one of the larger India-wide networks — be optimistic
       // on transient failures and let the live rate call still try the route.
-      const valid = /^\d{6}$/.test(input.originPincode) && /^\d{6}$/.test(input.destinationPincode);
+      const valid =
+        /^\d{6}$/.test(input.originPincode) &&
+        /^\d{6}$/.test(input.destinationPincode);
       return {
         serviceable: valid,
         codAvailable: valid,
@@ -277,11 +334,18 @@ export class EcomExpressAdapter implements CarrierAdapter {
       params.append('shipments', input.shipmentIds.join(','));
     }
 
-    const response = await this.makeFormRequest('POST', '/apiv2/pickup_request', params.toString());
+    const response = await this.makeFormRequest(
+      'POST',
+      '/apiv2/pickup_request',
+      params.toString(),
+    );
 
     const data = response.data ?? {};
     const pickupId = String(
-      data?.pickup_id ?? data?.pickupId ?? data?.request_id ?? `EE-PICKUP-${Date.now()}`,
+      data?.pickup_id ??
+        data?.pickupId ??
+        data?.request_id ??
+        `EE-PICKUP-${Date.now()}`,
     );
 
     return {
@@ -308,7 +372,11 @@ export class EcomExpressAdapter implements CarrierAdapter {
       params.append('reason', input.reason);
     }
 
-    await this.makeFormRequest('POST', '/apiv2/pickup_cancel', params.toString());
+    await this.makeFormRequest(
+      'POST',
+      '/apiv2/pickup_cancel',
+      params.toString(),
+    );
   }
 
   /**
@@ -350,16 +418,27 @@ export class EcomExpressAdapter implements CarrierAdapter {
 
       const data = response.data ?? {};
       const ndrCode: string =
-        data?.NDRCode ?? data?.ndr_code ?? data?.ndrCode ?? data?.reason_code ?? '';
+        data?.NDRCode ??
+        data?.ndr_code ??
+        data?.ndrCode ??
+        data?.reason_code ??
+        '';
       const ndrReason: string =
-        data?.NDRReason ?? data?.ndr_reason ?? data?.ndrReason ?? data?.reason ?? '';
+        data?.NDRReason ??
+        data?.ndr_reason ??
+        data?.ndrReason ??
+        data?.reason ??
+        '';
 
       return this.buildNdrActionsForCode(ndrCode, ndrReason);
     } catch (error) {
-      console.error('[EcomExpressAdapter] getNdrActions failed, returning canonical defaults', {
-        shipmentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[EcomExpressAdapter] getNdrActions failed, returning canonical defaults',
+        {
+          shipmentId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.buildNdrActionsForCode('', '');
     }
   }
@@ -368,7 +447,10 @@ export class EcomExpressAdapter implements CarrierAdapter {
   // Private helpers
   // -----------------------------------------------------------------------
 
-  private buildNdrActionsForCode(ndrCode: string, ndrReason: string): NdrActionOption[] {
+  private buildNdrActionsForCode(
+    ndrCode: string,
+    ndrReason: string,
+  ): NdrActionOption[] {
     const code = (ndrCode || '').toUpperCase();
     const reason = ndrReason || ndrCode;
 
@@ -437,7 +519,11 @@ export class EcomExpressAdapter implements CarrierAdapter {
 
   private parseRateResponse(data: any, req: RateQuoteRequest): RateQuote[] {
     const total = Number(
-      data?.total_amount ?? data?.totalAmount ?? data?.tariff ?? data?.rate ?? 0,
+      data?.total_amount ??
+        data?.totalAmount ??
+        data?.tariff ??
+        data?.rate ??
+        0,
     );
 
     if (total > 0) {
@@ -461,12 +547,18 @@ export class EcomExpressAdapter implements CarrierAdapter {
     return [this.buildFallbackRateQuote(req, data)];
   }
 
-  private buildFallbackRateQuote(req: RateQuoteRequest, rawResponse?: unknown): RateQuote {
+  private buildFallbackRateQuote(
+    req: RateQuoteRequest,
+    rawResponse?: unknown,
+  ): RateQuote {
     // Ecom Express surface rate card: ₹49 base + ₹30 per kg + COD surcharge.
     const weightKg = req.weightGrams / 1000;
     const base = 49;
     const perKg = 30;
-    const codSurcharge = req.paymentMethod === 'COD' ? Math.max(40, req.declaredValue ? 0 : 40) : 0;
+    const codSurcharge =
+      req.paymentMethod === 'COD'
+        ? Math.max(40, req.declaredValue ? 0 : 40)
+        : 0;
     const fallbackRate = Math.round(base + weightKg * perKg + codSurcharge);
 
     return {
@@ -501,16 +593,18 @@ export class EcomExpressAdapter implements CarrierAdapter {
         phone: delivery.phone,
         country: delivery.country || 'India',
       },
-      shipper: pickup ? {
-        name: pickup.name,
-        address: pickup.addressLine1,
-        address2: pickup.addressLine2 || '',
-        city: pickup.city,
-        state: pickup.state,
-        pincode: pickup.pincode,
-        phone: pickup.phone,
-        country: pickup.country || 'India',
-      } : undefined,
+      shipper: pickup
+        ? {
+            name: pickup.name,
+            address: pickup.addressLine1,
+            address2: pickup.addressLine2 || '',
+            city: pickup.city,
+            state: pickup.state,
+            pincode: pickup.pincode,
+            phone: pickup.phone,
+            country: pickup.country || 'India',
+          }
+        : undefined,
       shipment: {
         weight: (pkg.weight / 1000).toFixed(2),
         ...(pkg.length && { length: pkg.length.toString() }),
@@ -523,8 +617,12 @@ export class EcomExpressAdapter implements CarrierAdapter {
     };
   }
 
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
-    const awbNumber = data?.awb || data?.waybill_number || data?.tracking_number;
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
+    const awbNumber =
+      data?.awb || data?.waybill_number || data?.tracking_number;
     const labelUrl = data?.label_url || data?.label_pdf;
     const shipmentData = data?.shipment || data;
 
@@ -537,20 +635,27 @@ export class EcomExpressAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: shipmentData?.service_type || 'Ecom Express',
       awbNumber: awbNumber || labelNumber,
-      trackingUrl: awbNumber ? `https://www.ecomexpress.in/track/${awbNumber}` : undefined,
+      trackingUrl: awbNumber
+        ? `https://www.ecomexpress.in/track/${awbNumber}`
+        : undefined,
       estimatedDelivery: shipmentData?.estimated_delivery_date
         ? new Date(shipmentData.estimated_delivery_date)
         : undefined,
     };
   }
 
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const shipment = data?.shipment || data;
     const trackingHistory = shipment?.tracking_history || shipment?.scans || [];
 
     const latestEvent = trackingHistory[trackingHistory.length - 1] || {};
 
-    const status = this.mapEcomStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapEcomStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     const events = trackingHistory.map((event: any) => ({
       status: this.mapEcomStatus(event.status || event.scan_type),
@@ -565,9 +670,13 @@ export class EcomExpressAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestEvent?.sub_status || latestEvent?.scan_type,
-      description: latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
-      location: latestEvent?.location || latestEvent?.city || shipment?.destination,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      description:
+        latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
+      location:
+        latestEvent?.location || latestEvent?.city || shipment?.destination,
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events,
     };
   }
@@ -576,28 +685,36 @@ export class EcomExpressAdapter implements CarrierAdapter {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
     if (s.includes('transit') || s.includes('it')) return 'IN_TRANSIT';
-    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu')) return 'SHIPPED';
+    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu'))
+      return 'SHIPPED';
     if (s.includes('pending') || s.includes('created')) return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
 
-  private async makeRequestWithRetry(method: 'GET' | 'POST', endpoint: string, data?: any): Promise<any> {
+  private async makeRequestWithRetry(
+    method: 'GET' | 'POST',
+    endpoint: string,
+    data?: any,
+  ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[EcomExpressAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[EcomExpressAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -613,14 +730,21 @@ export class EcomExpressAdapter implements CarrierAdapter {
         const response = await axios(config);
 
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
 
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[EcomExpressAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -631,10 +755,13 @@ export class EcomExpressAdapter implements CarrierAdapter {
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
 
         if (attempt < this.maxRetries) {
-          console.warn(`[EcomExpressAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[EcomExpressAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         }
       }
@@ -656,7 +783,7 @@ export class EcomExpressAdapter implements CarrierAdapter {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     const config: any = {
@@ -670,13 +797,17 @@ export class EcomExpressAdapter implements CarrierAdapter {
     const response = await axios(config);
 
     if (response.data?.error || response.data?.errors) {
-      throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+      throw new Error(
+        `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+      );
     }
 
     return response;
   }
 
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `ECOM-${req.shipmentId}-${Date.now()}`;
 
     console.warn('[EcomExpressAdapter] Using fallback label generation', {
@@ -696,6 +827,6 @@ export class EcomExpressAdapter implements CarrierAdapter {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

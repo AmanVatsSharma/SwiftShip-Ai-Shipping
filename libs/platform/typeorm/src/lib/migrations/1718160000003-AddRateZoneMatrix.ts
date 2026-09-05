@@ -68,7 +68,9 @@ export class AddRateZoneMatrix1718160000003 implements MigrationInterface {
         for (const destZone of zones) {
           // Same-zone (A→A) is cheapest; cross-zone (A→E) is most expensive.
           // Placeholder formula: 99 INR base + 11 INR per zone step.
-          const zoneStep = Math.abs(zones.indexOf(destZone) - zones.indexOf(originZone));
+          const zoneStep = Math.abs(
+            zones.indexOf(destZone) - zones.indexOf(originZone),
+          );
           const baseRatePaise = (99 + zoneStep * 11) * 100;
           await queryRunner.query(
             `INSERT INTO "rate_zone_matrix"

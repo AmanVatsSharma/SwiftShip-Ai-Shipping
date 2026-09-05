@@ -79,7 +79,10 @@ describe('OnboardingService', () => {
       nextAction: 'Submit KYC details',
     });
     expect(states.save).toHaveBeenCalledTimes(1);
-    expect(out).toMatchObject({ userId: 99, status: OnboardingStatus.NOT_STARTED });
+    expect(out).toMatchObject({
+      userId: 99,
+      status: OnboardingStatus.NOT_STARTED,
+    });
   });
 
   // ----------------------------------------------------------------

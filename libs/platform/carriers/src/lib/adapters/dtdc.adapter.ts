@@ -17,12 +17,12 @@ import axios, { AxiosError } from 'axios';
 
 /**
  * DTDC Carrier Adapter
- * 
+ *
  * Implements integration with DTDC Express & Logistics API.
  * DTDC is one of India's largest express logistics providers.
- * 
+ *
  * API Documentation: https://www.dtdc.in/api-docs
- * 
+ *
  * Flow:
  * 1. Label Generation: Creates shipment and generates AWB label
  * 2. Tracking: Fetches real-time tracking updates
@@ -37,14 +37,22 @@ export class DtdcAdapter implements CarrierAdapter {
   private readonly maxRetries: number = 3;
   private readonly retryDelay: number = 1000;
 
-  constructor(clientId: string, apiKey: string, baseUrl: string = 'https://www.dtdc.in') {
+  constructor(
+    clientId: string,
+    apiKey: string,
+    baseUrl: string = 'https://www.dtdc.in',
+  ) {
     if (!clientId || !apiKey) {
       throw new Error('DTDC client ID and API key are required');
     }
     this.clientId = clientId;
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
-    console.log('[DtdcAdapter] Initialized', { baseUrl, hasClientId: !!clientId, hasApiKey: !!apiKey });
+    console.log('[DtdcAdapter] Initialized', {
+      baseUrl,
+      hasClientId: !!clientId,
+      hasApiKey: !!apiKey,
+    });
   }
 
   async generateLabel(req: CarrierLabelRequest): Promise<CarrierLabelResponse> {
@@ -66,7 +74,11 @@ export class DtdcAdapter implements CarrierAdapter {
 
     try {
       const payload = this.buildLabelPayload(req);
-      const response = await this.makeRequestWithRetry('POST', '/api/shipment/create', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/shipment/create',
+        payload,
+      );
       const labelData = this.parseLabelResponse(response.data, req);
 
       console.log('[DtdcAdapter] generateLabel success', {
@@ -95,9 +107,12 @@ export class DtdcAdapter implements CarrierAdapter {
     try {
       const response = await this.makeRequestWithRetry(
         'GET',
-        `/api/tracking/${encodeURIComponent(trackingNumber)}`
+        `/api/tracking/${encodeURIComponent(trackingNumber)}`,
       );
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[DtdcAdapter] trackShipment success', {
         trackingNumber,
@@ -122,8 +137,14 @@ export class DtdcAdapter implements CarrierAdapter {
     }
   }
 
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[DtdcAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[DtdcAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     try {
       const payload = {
@@ -147,7 +168,10 @@ export class DtdcAdapter implements CarrierAdapter {
     console.log('[DtdcAdapter] voidLabel request', { labelNumber });
 
     try {
-      await this.makeRequestWithRetry('POST', `/api/label/${encodeURIComponent(labelNumber)}/void`);
+      await this.makeRequestWithRetry(
+        'POST',
+        `/api/label/${encodeURIComponent(labelNumber)}/void`,
+      );
       console.log('[DtdcAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
@@ -188,17 +212,28 @@ export class DtdcAdapter implements CarrierAdapter {
         weight: weightKg.toFixed(2),
         payment_type: req.paymentMethod, // 'PREPAID' | 'COD'
       };
-      const response = await this.makeRequestWithRetry('POST', '/api/dtdc/rate', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/dtdc/rate',
+        payload,
+      );
       const rate = this.parseRateFromResponse(response.data);
       if (rate !== null) {
-        return [this.buildRateQuote(req, 'STANDARD', rate, true, response.data)];
+        return [
+          this.buildRateQuote(req, 'STANDARD', rate, true, response.data),
+        ];
       }
-      console.warn('[DtdcAdapter] getRates could not parse rate, using static rate card');
+      console.warn(
+        '[DtdcAdapter] getRates could not parse rate, using static rate card',
+      );
       return [this.fallbackRate(req, 'STANDARD')];
     } catch (error) {
-      console.warn('[DtdcAdapter] getRates live call failed, using static rate card', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.warn(
+        '[DtdcAdapter] getRates live call failed, using static rate card',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return [this.fallbackRate(req, 'STANDARD')];
     }
   }
@@ -213,7 +248,9 @@ export class DtdcAdapter implements CarrierAdapter {
    * report the pincode as not serviceable. Callers can retry or fall back
    * to a different carrier.
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[DtdcAdapter] getServiceability request', {
       origin: input.originPincode,
       dest: input.destinationPincode,
@@ -250,9 +287,12 @@ export class DtdcAdapter implements CarrierAdapter {
         estimatedDays: { min: 2, max: 5 },
       };
     } catch (error) {
-      console.warn('[DtdcAdapter] getServiceability live call failed, defaulting to unserviceable', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.warn(
+        '[DtdcAdapter] getServiceability live call failed, defaulting to unserviceable',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return {
         serviceable: false,
         codAvailable: false,
@@ -293,7 +333,11 @@ export class DtdcAdapter implements CarrierAdapter {
 
     try {
       // Endpoint: POST /api/dtdc/pickup
-      const response = await this.makeRequestWithRetry('POST', '/api/dtdc/pickup', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/dtdc/pickup',
+        payload,
+      );
       const pickupId =
         response.data?.pickup_id ||
         response.data?.PickupID ||
@@ -306,9 +350,12 @@ export class DtdcAdapter implements CarrierAdapter {
         trackingUrl: `https://www.dtdc.in/track?pickup=${pickupId}`,
       };
     } catch (error) {
-      console.warn('[DtdcAdapter] schedulePickup live call failed, generating synthetic pickup id', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.warn(
+        '[DtdcAdapter] schedulePickup live call failed, generating synthetic pickup id',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       // Fallback: surface a deterministic local pickup id so callers can
       // still proceed. Real reconciliation is handled by a queue worker.
       return {
@@ -340,13 +387,22 @@ export class DtdcAdapter implements CarrierAdapter {
         pickup_id: input.pickupId,
         reason: input.reason || 'Cancelled by customer',
       };
-      await this.makeRequestWithRetry('POST', '/api/dtdc/pickupcancel', payload);
-      console.log('[DtdcAdapter] cancelPickup success', { pickupId: input.pickupId });
-    } catch (error) {
-      console.warn('[DtdcAdapter] cancelPickup live call failed (treating as no-op)', {
+      await this.makeRequestWithRetry(
+        'POST',
+        '/api/dtdc/pickupcancel',
+        payload,
+      );
+      console.log('[DtdcAdapter] cancelPickup success', {
         pickupId: input.pickupId,
-        error: error instanceof Error ? error.message : 'Unknown error',
       });
+    } catch (error) {
+      console.warn(
+        '[DtdcAdapter] cancelPickup live call failed (treating as no-op)',
+        {
+          pickupId: input.pickupId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       // Per the SS-007 spec, cancelPickup should resolve even on carrier failure
       // so the calling service can complete its local state transition.
     }
@@ -379,12 +435,17 @@ export class DtdcAdapter implements CarrierAdapter {
         reference: input.reference,
       };
       await this.makeRequestWithRetry('POST', '/api/dtdc/codupdate', payload);
-      console.log('[DtdcAdapter] markCodCollected success', { awbNumber: input.awbNumber });
-    } catch (error) {
-      console.warn('[DtdcAdapter] markCodCollected live call failed (no-op fallback)', {
+      console.log('[DtdcAdapter] markCodCollected success', {
         awbNumber: input.awbNumber,
-        error: error instanceof Error ? error.message : 'Unknown error',
       });
+    } catch (error) {
+      console.warn(
+        '[DtdcAdapter] markCodCollected live call failed (no-op fallback)',
+        {
+          awbNumber: input.awbNumber,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       // No-op: per the SS-007 spec this is a no-op-style implementation.
     }
   }
@@ -424,7 +485,8 @@ export class DtdcAdapter implements CarrierAdapter {
         code: 'CHANGE_ADDRESS',
         label: 'Address incorrect — update and reattempt',
         requiresCustomerInput: true,
-        description: 'DTDC reported an incorrect address; customer must provide a corrected one.',
+        description:
+          'DTDC reported an incorrect address; customer must provide a corrected one.',
       },
       CUS_REFUSED: {
         code: 'CANCEL',
@@ -446,10 +508,13 @@ export class DtdcAdapter implements CarrierAdapter {
         return [dtdcReasonMap[reasonCode]];
       }
     } catch (error) {
-      console.warn('[DtdcAdapter] getNdrActions live call failed, returning default action set', {
-        shipmentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.warn(
+        '[DtdcAdapter] getNdrActions live call failed, returning default action set',
+        {
+          shipmentId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
     }
 
     // Fallback: return the full set of 4 canonical actions so the calling
@@ -511,7 +576,8 @@ export class DtdcAdapter implements CarrierAdapter {
       data?.data?.rate,
     ];
     for (const c of candidates) {
-      const n = typeof c === 'string' ? parseFloat(c) : (typeof c === 'number' ? c : NaN);
+      const n =
+        typeof c === 'string' ? parseFloat(c) : typeof c === 'number' ? c : NaN;
       if (!Number.isNaN(n) && n > 0) return n;
     }
     return null;
@@ -557,7 +623,12 @@ export class DtdcAdapter implements CarrierAdapter {
     const perKg = 45;
     const codSurcharge = req.paymentMethod === 'COD' ? 50 : 0;
     const rate = baseRate + Math.ceil(weightKg) * perKg + codSurcharge;
-    return this.buildRateQuote(req, serviceType, rate, req.paymentMethod === 'COD');
+    return this.buildRateQuote(
+      req,
+      serviceType,
+      rate,
+      req.paymentMethod === 'COD',
+    );
   }
 
   /**
@@ -589,7 +660,8 @@ export class DtdcAdapter implements CarrierAdapter {
       data?.data?.reason_code,
     ];
     for (const c of candidates) {
-      if (typeof c === 'string' && c.trim().length > 0) return c.trim().toUpperCase();
+      if (typeof c === 'string' && c.trim().length > 0)
+        return c.trim().toUpperCase();
     }
     return null;
   }
@@ -612,16 +684,18 @@ export class DtdcAdapter implements CarrierAdapter {
         phone: delivery.phone,
         country: delivery.country || 'India',
       },
-      shipper: pickup ? {
-        name: pickup.name,
-        address: pickup.addressLine1,
-        address2: pickup.addressLine2 || '',
-        city: pickup.city,
-        state: pickup.state,
-        pincode: pickup.pincode,
-        phone: pickup.phone,
-        country: pickup.country || 'India',
-      } : undefined,
+      shipper: pickup
+        ? {
+            name: pickup.name,
+            address: pickup.addressLine1,
+            address2: pickup.addressLine2 || '',
+            city: pickup.city,
+            state: pickup.state,
+            pincode: pickup.pincode,
+            phone: pickup.phone,
+            country: pickup.country || 'India',
+          }
+        : undefined,
       shipment: {
         weight: (pkg.weight / 1000).toFixed(2),
         ...(pkg.length && { length: pkg.length.toString() }),
@@ -634,8 +708,12 @@ export class DtdcAdapter implements CarrierAdapter {
     };
   }
 
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
-    const awbNumber = data?.awb || data?.waybill_number || data?.tracking_number;
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
+    const awbNumber =
+      data?.awb || data?.waybill_number || data?.tracking_number;
     const labelUrl = data?.label_url || data?.label_pdf;
     const shipmentData = data?.shipment || data;
 
@@ -648,20 +726,27 @@ export class DtdcAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: shipmentData?.service_type || 'DTDC Express',
       awbNumber: awbNumber || labelNumber,
-      trackingUrl: awbNumber ? `https://www.dtdc.in/track/${awbNumber}` : undefined,
-      estimatedDelivery: shipmentData?.estimated_delivery_date 
+      trackingUrl: awbNumber
+        ? `https://www.dtdc.in/track/${awbNumber}`
+        : undefined,
+      estimatedDelivery: shipmentData?.estimated_delivery_date
         ? new Date(shipmentData.estimated_delivery_date)
         : undefined,
     };
   }
 
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const shipment = data?.shipment || data;
     const trackingHistory = shipment?.tracking_history || shipment?.scans || [];
 
     const latestEvent = trackingHistory[trackingHistory.length - 1] || {};
 
-    const status = this.mapDtdcStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapDtdcStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     const events = trackingHistory.map((event: any) => ({
       status: this.mapDtdcStatus(event.status || event.scan_type),
@@ -676,9 +761,13 @@ export class DtdcAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestEvent?.sub_status || latestEvent?.scan_type,
-      description: latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
-      location: latestEvent?.location || latestEvent?.city || shipment?.destination,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      description:
+        latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
+      location:
+        latestEvent?.location || latestEvent?.city || shipment?.destination,
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events,
     };
   }
@@ -687,29 +776,37 @@ export class DtdcAdapter implements CarrierAdapter {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
     if (s.includes('transit') || s.includes('it')) return 'IN_TRANSIT';
-    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu')) return 'SHIPPED';
+    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu'))
+      return 'SHIPPED';
     if (s.includes('pending') || s.includes('created')) return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
 
-  private async makeRequestWithRetry(method: 'GET' | 'POST', endpoint: string, data?: any): Promise<any> {
+  private async makeRequestWithRetry(
+    method: 'GET' | 'POST',
+    endpoint: string,
+    data?: any,
+  ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
+      Accept: 'application/json',
+      Authorization: `Bearer ${this.apiKey}`,
     };
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[DtdcAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[DtdcAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -725,14 +822,21 @@ export class DtdcAdapter implements CarrierAdapter {
         const response = await axios(config);
 
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[DtdcAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -741,7 +845,7 @@ export class DtdcAdapter implements CarrierAdapter {
         }
 
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        
+
         if (attempt < this.maxRetries) {
           console.warn(`[DtdcAdapter] Request failed, retrying in ${delay}ms`, {
             attempt,
@@ -755,9 +859,11 @@ export class DtdcAdapter implements CarrierAdapter {
     throw lastError || new Error('Request failed after retries');
   }
 
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `DTDC-${req.shipmentId}-${Date.now()}`;
-    
+
     console.warn('[DtdcAdapter] Using fallback label generation', {
       shipmentId: req.shipmentId,
       labelNumber,
@@ -775,6 +881,6 @@ export class DtdcAdapter implements CarrierAdapter {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

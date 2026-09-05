@@ -47,9 +47,7 @@ export class WalletResolver {
   }
 
   @Mutation(() => Wallet, { name: 'lockFunds' })
-  async lockFunds(
-    @Args('input') input: LockFundsInput,
-  ): Promise<WalletEntity> {
+  async lockFunds(@Args('input') input: LockFundsInput): Promise<WalletEntity> {
     return this.wallets.lockFunds(input);
   }
 

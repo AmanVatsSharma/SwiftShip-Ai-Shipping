@@ -4,7 +4,11 @@ describe('DtdcAdapter', () => {
   let adapter: DtdcAdapter;
 
   beforeEach(() => {
-    adapter = new DtdcAdapter('test-customer-code', 'test-license-key', 'https://api.dtdc.in');
+    adapter = new DtdcAdapter(
+      'test-customer-code',
+      'test-license-key',
+      'https://api.dtdc.in',
+    );
   });
 
   describe('getRates', () => {
@@ -58,7 +62,7 @@ describe('DtdcAdapter', () => {
 
       // On fallback we get the full 4-action set; the important thing is
       // that CANCEL is one of the options offered to the customer.
-      const cancel = actions.find(a => a.code === 'CANCEL');
+      const cancel = actions.find((a) => a.code === 'CANCEL');
       expect(cancel).toBeDefined();
       expect(cancel!.code).toBe('CANCEL');
     });
@@ -75,7 +79,7 @@ describe('DtdcAdapter', () => {
 
       const actions = await localAdapter.getNdrActions('DTDC-AWB-ADDR-1');
 
-      const changeAddress = actions.find(a => a.code === 'CHANGE_ADDRESS');
+      const changeAddress = actions.find((a) => a.code === 'CHANGE_ADDRESS');
       expect(changeAddress).toBeDefined();
       expect(changeAddress!.code).toBe('CHANGE_ADDRESS');
       expect(changeAddress!.requiresCustomerInput).toBe(true);
@@ -90,7 +94,7 @@ describe('DtdcAdapter', () => {
 
       const actions = await localAdapter.getNdrActions('DTDC-AWB-FALLBACK-1');
 
-      const codes = actions.map(a => a.code);
+      const codes = actions.map((a) => a.code);
       expect(codes).toContain('REATTEMPT');
       expect(codes).toContain('CHANGE_ADDRESS');
       expect(codes).toContain('CANCEL');

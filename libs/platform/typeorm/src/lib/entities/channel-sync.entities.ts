@@ -25,7 +25,11 @@ import {
 @Entity({ name: 'channel_connections' })
 @Index('idx_channel_connections_tenant', ['tenantId'])
 @Index('idx_channel_connections_status', ['status'])
-@Index('uq_channel_connections_tenant_platform_ext', ['tenantId', 'platform', 'externalAccountId'], { unique: true })
+@Index(
+  'uq_channel_connections_tenant_platform_ext',
+  ['tenantId', 'platform', 'externalAccountId'],
+  { unique: true },
+)
 export class ChannelConnectionEntity {
   @PrimaryGeneratedColumn()
   id!: number;

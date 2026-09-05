@@ -19,18 +19,18 @@ import axios, { AxiosError } from 'axios';
 
 /**
  * Xpressbees Carrier Adapter
- * 
+ *
  * Implements integration with Xpressbees shipping API for label generation,
  * tracking, and shipment management.
- * 
+ *
  * API Documentation: https://xpressbees.com/api-docs
- * 
+ *
  * Flow:
  * 1. Label Generation: Creates shipment and generates AWB label
  * 2. Tracking: Fetches real-time tracking updates
  * 3. Cancellation: Cancels shipments before pickup
  * 4. Label Voiding: Voids labels that haven't been used
- * 
+ *
  * Error Handling:
  * - Retries failed requests with exponential backoff
  * - Validates API responses
@@ -44,17 +44,23 @@ export class XpressbeesAdapter implements CarrierAdapter {
   private readonly maxRetries: number = 3;
   private readonly retryDelay: number = 1000; // 1 second
 
-  constructor(token?: string, baseUrl: string = 'https://shipment.xpressbees.com') {
+  constructor(
+    token?: string,
+    baseUrl: string = 'https://shipment.xpressbees.com',
+  ) {
     this.token = token;
     this.baseUrl = baseUrl;
-    console.log('[XpressbeesAdapter] Initialized', { baseUrl, hasToken: !!token });
+    console.log('[XpressbeesAdapter] Initialized', {
+      baseUrl,
+      hasToken: !!token,
+    });
   }
 
   /**
    * Generate a shipping label via Xpressbees API
-   * 
+   *
    * API Endpoint: POST /api/v1/shipments/create
-   * 
+   *
    * @param req - Label generation request with shipment details
    * @returns Label response with AWB number and label URL
    */
@@ -70,28 +76,34 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
     // Validate required fields
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for Xpressbees label generation');
+      throw new Error(
+        'Delivery address is required for Xpressbees label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for Xpressbees label generation');
+      throw new Error(
+        'Package weight is required for Xpressbees label generation',
+      );
     }
 
     // If no token, use fallback
     if (!this.token) {
-      console.warn('[XpressbeesAdapter] No token provided, using fallback label generation');
+      console.warn(
+        '[XpressbeesAdapter] No token provided, using fallback label generation',
+      );
       return this.generateFallbackLabel(req);
     }
 
     try {
       // Build Xpressbees API payload
       const payload = this.buildLabelPayload(req);
-      
+
       // Make API call with retry logic
       const response = await this.makeRequestWithRetry(
         'POST',
         '/api/v1/shipments/create',
-        payload
+        payload,
       );
 
       // Parse response
@@ -106,15 +118,19 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
       return labelData;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[XpressbeesAdapter] generateLabel failed', {
         shipmentId: req.shipmentId,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+              }
+            : undefined,
       });
 
       // Fallback: Generate deterministic label number for graceful degradation
@@ -125,14 +141,16 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
   /**
    * Track a shipment via Xpressbees API
-   * 
+   *
    * API Endpoint: GET /api/v1/tracking/{trackingNumber}
-   * 
+   *
    * @param trackingNumber - AWB/tracking number to track
    * @returns Tracking response with current status and events
    */
   async trackShipment(trackingNumber: string): Promise<TrackingResponse> {
-    console.log('[XpressbeesAdapter] trackShipment request', { trackingNumber });
+    console.log('[XpressbeesAdapter] trackShipment request', {
+      trackingNumber,
+    });
 
     if (!trackingNumber) {
       throw new Error('Tracking number is required');
@@ -140,7 +158,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
     // If no token, use fallback
     if (!this.token) {
-      console.warn('[XpressbeesAdapter] No token provided, using fallback tracking');
+      console.warn(
+        '[XpressbeesAdapter] No token provided, using fallback tracking',
+      );
       return this.generateFallbackTracking(trackingNumber);
     }
 
@@ -148,11 +168,14 @@ export class XpressbeesAdapter implements CarrierAdapter {
       // Make API call with retry logic
       const response = await this.makeRequestWithRetry(
         'GET',
-        `/api/v1/tracking/${encodeURIComponent(trackingNumber)}`
+        `/api/v1/tracking/${encodeURIComponent(trackingNumber)}`,
       );
 
       // Parse tracking response
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[XpressbeesAdapter] trackShipment success', {
         trackingNumber,
@@ -162,14 +185,18 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
       return trackingData;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[XpressbeesAdapter] trackShipment failed', {
         trackingNumber,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+              }
+            : undefined,
       });
 
       // Return fallback tracking response on error
@@ -179,18 +206,26 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
   /**
    * Cancel a shipment via Xpressbees API
-   * 
+   *
    * API Endpoint: POST /api/v1/shipments/{trackingNumber}/cancel
-   * 
+   *
    * @param trackingNumber - AWB/tracking number to cancel
    * @param reason - Optional cancellation reason
    * @returns True if cancellation successful
    */
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[XpressbeesAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[XpressbeesAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     if (!this.token) {
-      console.warn('[XpressbeesAdapter] No token provided, cannot cancel shipment');
+      console.warn(
+        '[XpressbeesAdapter] No token provided, cannot cancel shipment',
+      );
       return false;
     }
 
@@ -202,13 +237,16 @@ export class XpressbeesAdapter implements CarrierAdapter {
       await this.makeRequestWithRetry(
         'POST',
         `/api/v1/shipments/${encodeURIComponent(trackingNumber)}/cancel`,
-        payload
+        payload,
       );
 
-      console.log('[XpressbeesAdapter] cancelShipment success', { trackingNumber });
+      console.log('[XpressbeesAdapter] cancelShipment success', {
+        trackingNumber,
+      });
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[XpressbeesAdapter] cancelShipment failed', {
         trackingNumber,
         error: errorMessage,
@@ -219,9 +257,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
   /**
    * Void a label via Xpressbees API
-   * 
+   *
    * API Endpoint: POST /api/v1/labels/{labelNumber}/void
-   * 
+   *
    * @param labelNumber - Label/AWB number to void
    * @returns True if voiding successful
    */
@@ -236,13 +274,14 @@ export class XpressbeesAdapter implements CarrierAdapter {
     try {
       await this.makeRequestWithRetry(
         'POST',
-        `/api/v1/labels/${encodeURIComponent(labelNumber)}/void`
+        `/api/v1/labels/${encodeURIComponent(labelNumber)}/void`,
       );
 
       console.log('[XpressbeesAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[XpressbeesAdapter] voidLabel failed', {
         labelNumber,
         error: errorMessage,
@@ -270,7 +309,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
         consignee_city: delivery.city,
         consignee_state: delivery.state,
         consignee_country: delivery.country || 'India',
-        ...(delivery.addressLine2 && { consignee_address2: delivery.addressLine2 }),
+        ...(delivery.addressLine2 && {
+          consignee_address2: delivery.addressLine2,
+        }),
       },
       // Package details
       weight: (pkg.weight / 1000).toFixed(2), // Convert grams to kg
@@ -305,7 +346,10 @@ export class XpressbeesAdapter implements CarrierAdapter {
   /**
    * Parse Xpressbees label generation response
    */
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     // Xpressbees API response structure
     const awbNumber = data?.awb || data?.awb_number || data?.tracking_number;
     const labelUrl = data?.label_url || data?.label || data?.label_pdf;
@@ -320,8 +364,10 @@ export class XpressbeesAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: shipmentData?.service_type || 'XB Standard',
       awbNumber: awbNumber || labelNumber,
-      trackingUrl: awbNumber ? `https://xpressbees.com/track/${awbNumber}` : undefined,
-      estimatedDelivery: shipmentData?.estimated_delivery_date 
+      trackingUrl: awbNumber
+        ? `https://xpressbees.com/track/${awbNumber}`
+        : undefined,
+      estimatedDelivery: shipmentData?.estimated_delivery_date
         ? new Date(shipmentData.estimated_delivery_date)
         : undefined,
     };
@@ -330,15 +376,21 @@ export class XpressbeesAdapter implements CarrierAdapter {
   /**
    * Parse Xpressbees tracking response
    */
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     // Xpressbees tracking response structure
     const shipment = data?.shipment || data;
-    const trackingHistory = shipment?.tracking_history || shipment?.events || [];
+    const trackingHistory =
+      shipment?.tracking_history || shipment?.events || [];
 
     const latestEvent = trackingHistory[trackingHistory.length - 1] || {};
 
     // Map Xpressbees status to our status
-    const status = this.mapXpressbeesStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapXpressbeesStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     // Build events from tracking history
     const events = trackingHistory.map((event: any) => ({
@@ -354,9 +406,11 @@ export class XpressbeesAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestEvent?.sub_status || latestEvent?.scan_type,
-      description: latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
-      location: latestEvent?.location || latestEvent?.city || shipment?.destination,
-      occurredAt: latestEvent?.timestamp 
+      description:
+        latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
+      location:
+        latestEvent?.location || latestEvent?.city || shipment?.destination,
+      occurredAt: latestEvent?.timestamp
         ? new Date(latestEvent.timestamp)
         : new Date(),
       events,
@@ -368,23 +422,35 @@ export class XpressbeesAdapter implements CarrierAdapter {
    */
   private mapXpressbeesStatus(xpressbeesStatus: string): string {
     const status = (xpressbeesStatus || '').toLowerCase();
-    
+
     if (status.includes('delivered') || status.includes('dl')) {
       return 'DELIVERED';
     }
-    if (status.includes('transit') || status.includes('in_transit') || status.includes('it')) {
+    if (
+      status.includes('transit') ||
+      status.includes('in_transit') ||
+      status.includes('it')
+    ) {
       return 'IN_TRANSIT';
     }
-    if (status.includes('shipped') || status.includes('pickup') || status.includes('pu')) {
+    if (
+      status.includes('shipped') ||
+      status.includes('pickup') ||
+      status.includes('pu')
+    ) {
       return 'SHIPPED';
     }
-    if (status.includes('pending') || status.includes('created') || status.includes('cr')) {
+    if (
+      status.includes('pending') ||
+      status.includes('created') ||
+      status.includes('cr')
+    ) {
       return 'PENDING';
     }
     if (status.includes('cancel') || status.includes('void')) {
       return 'CANCELLED';
     }
-    
+
     return 'UNKNOWN';
   }
 
@@ -394,12 +460,12 @@ export class XpressbeesAdapter implements CarrierAdapter {
   private async makeRequestWithRetry(
     method: 'GET' | 'POST',
     endpoint: string,
-    data?: any
+    data?: any,
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     // Add authorization header if token is available
@@ -411,11 +477,14 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[XpressbeesAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[XpressbeesAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -432,15 +501,22 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
         // Check for API-level errors in response
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
+
         // Don't retry on 4xx errors (client errors)
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[XpressbeesAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -450,18 +526,24 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
         // Calculate delay with exponential backoff
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        
+
         if (attempt < this.maxRetries) {
-          console.warn(`[XpressbeesAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[XpressbeesAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         } else {
-          console.error('[XpressbeesAdapter] Request failed after all retries', {
-            attempts: this.maxRetries,
-            error: lastError.message,
-          });
+          console.error(
+            '[XpressbeesAdapter] Request failed after all retries',
+            {
+              attempts: this.maxRetries,
+              error: lastError.message,
+            },
+          );
         }
       }
     }
@@ -472,9 +554,11 @@ export class XpressbeesAdapter implements CarrierAdapter {
   /**
    * Generate fallback label when API fails or token not available
    */
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `XBE-${req.shipmentId}-${Date.now()}`;
-    
+
     console.warn('[XpressbeesAdapter] Using fallback label generation', {
       shipmentId: req.shipmentId,
       labelNumber,
@@ -508,7 +592,7 @@ export class XpressbeesAdapter implements CarrierAdapter {
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -570,7 +654,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
       return rateList.map((r: any) => ({
         carrier: 'Xpressbees',
         carrierCode: 'xpressbees',
-        serviceType: this.mapServiceType(r.serviceType ?? r.service_type ?? r.product),
+        serviceType: this.mapServiceType(
+          r.serviceType ?? r.service_type ?? r.product,
+        ),
         rate: Number(r.price ?? r.rate ?? 0),
         currency: 'INR',
         estimatedDays: this.parseEtd(r.etd ?? r.estimated_delivery),
@@ -580,9 +666,12 @@ export class XpressbeesAdapter implements CarrierAdapter {
         rawResponse: r,
       }));
     } catch (error) {
-      console.error('[XpressbeesAdapter] getRates live call failed, using fallback', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[XpressbeesAdapter] getRates live call failed, using fallback',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getFallbackRates(req);
     }
   }
@@ -597,7 +686,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
    * @param input - Serviceability request
    * @returns Serviceability result with cod_available + prepaid_available
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[XpressbeesAdapter] getServiceability request', {
       origin: input.originPincode,
       destination: input.destinationPincode,
@@ -605,7 +696,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
     });
 
     // Known-good fallback path (offline deterministic): 6-digit pincodes
-    const valid = /^\d{6}$/.test(input.originPincode) && /^\d{6}$/.test(input.destinationPincode);
+    const valid =
+      /^\d{6}$/.test(input.originPincode) &&
+      /^\d{6}$/.test(input.destinationPincode);
     if (!valid) {
       return {
         serviceable: false,
@@ -715,7 +808,10 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
       const data = response.data ?? {};
       const pickupId = String(
-        data.pickup_id ?? data.pickupId ?? data.id ?? `XBE-PICKUP-${Date.now()}`,
+        data.pickup_id ??
+          data.pickupId ??
+          data.id ??
+          `XBE-PICKUP-${Date.now()}`,
       );
 
       return {
@@ -723,7 +819,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
         pickupDate: input.pickupDate,
         pickupTimeSlot: input.pickupTimeSlot,
         trackingUrl:
-          data.tracking_url ?? data.trackingUrl ?? `https://www.xpressbees.com/track/${pickupId}`,
+          data.tracking_url ??
+          data.trackingUrl ??
+          `https://www.xpressbees.com/track/${pickupId}`,
       };
     } catch (error) {
       console.error('[XpressbeesAdapter] schedulePickup failed', {
@@ -764,9 +862,15 @@ export class XpressbeesAdapter implements CarrierAdapter {
         ...(input.reason && { reason: input.reason }),
       };
 
-      await this.makeRequestWithRetry('POST', '/api/users/cancelPickup', payload);
+      await this.makeRequestWithRetry(
+        'POST',
+        '/api/users/cancelPickup',
+        payload,
+      );
 
-      console.log('[XpressbeesAdapter] cancelPickup success', { pickupId: input.pickupId });
+      console.log('[XpressbeesAdapter] cancelPickup success', {
+        pickupId: input.pickupId,
+      });
     } catch (error) {
       console.error('[XpressbeesAdapter] cancelPickup failed', {
         pickupId: input.pickupId,
@@ -808,7 +912,11 @@ export class XpressbeesAdapter implements CarrierAdapter {
         collected_at: input.collectedAt,
       };
 
-      await this.makeRequestWithRetry('POST', '/api/users/markCODCollected', payload);
+      await this.makeRequestWithRetry(
+        'POST',
+        '/api/users/markCODCollected',
+        payload,
+      );
 
       console.log('[XpressbeesAdapter] markCodCollected success', {
         awb: input.awbNumber,
@@ -886,7 +994,9 @@ export class XpressbeesAdapter implements CarrierAdapter {
 
       const options: NdrActionOption[] = [];
       for (const item of rawList) {
-        const nativeCode = String(item.code ?? item.action_code ?? item.action ?? '').toUpperCase();
+        const nativeCode = String(
+          item.code ?? item.action_code ?? item.action ?? '',
+        ).toUpperCase();
         const mapped = canonicalMap[nativeCode];
         if (mapped) {
           options.push({
@@ -938,7 +1048,12 @@ export class XpressbeesAdapter implements CarrierAdapter {
         codAvailable: req.paymentMethod === 'COD',
         pickupAvailable: true,
         expiresAt,
-        rawResponse: { source: 'static_fallback', weightKg, zoneSurcharge, codSurcharge },
+        rawResponse: {
+          source: 'static_fallback',
+          weightKg,
+          zoneSurcharge,
+          codSurcharge,
+        },
       },
       {
         carrier: 'Xpressbees',
@@ -962,7 +1077,8 @@ export class XpressbeesAdapter implements CarrierAdapter {
     const v = String(s ?? '').toLowerCase();
     if (v.includes('same') || v.includes('sdd')) return 'SAME_DAY';
     if (v.includes('over') || v.includes('next')) return 'OVERNIGHT';
-    if (v.includes('express') || v.includes('priority') || v.includes('xp')) return 'EXPRESS';
+    if (v.includes('express') || v.includes('priority') || v.includes('xp'))
+      return 'EXPRESS';
     return 'STANDARD';
   }
 
@@ -983,7 +1099,10 @@ export class XpressbeesAdapter implements CarrierAdapter {
       }
       const date = new Date(etd);
       if (!isNaN(date.getTime())) {
-        const days = Math.max(0, Math.round((date.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+        const days = Math.max(
+          0,
+          Math.round((date.getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
+        );
         return { min: days, max: days };
       }
     }

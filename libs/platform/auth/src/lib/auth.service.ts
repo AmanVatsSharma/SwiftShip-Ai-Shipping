@@ -9,10 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, createHash } from 'crypto';
-import {
-  UserEntity,
-  RefreshTokenEntity,
-} from '@swiftship/platform-typeorm';
+import { UserEntity, RefreshTokenEntity } from '@swiftship/platform-typeorm';
 
 /**
  * Auth Service (TypeORM-backed).
@@ -55,7 +52,10 @@ export class AuthService {
   }
 
   // ---- registration
-  async register(input: { email: string; password: string; name?: string }) {    const existing = await this.users.findOne({ where: { email: input.email } });
+  async register(input: { email: string; password: string; name?: string }) {
+    const existing = await this.users.findOne({
+      where: { email: input.email },
+    });
     if (existing) throw new BadRequestException('Email already in use');
 
     const passwordHash = await bcrypt.hash(input.password, 12);
@@ -78,7 +78,8 @@ export class AuthService {
       where: { email },
       relations: ['roles'],
     });
-    if (!user || !user.password) throw new UnauthorizedException('Invalid credentials');
+    if (!user || !user.password)
+      throw new UnauthorizedException('Invalid credentials');
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
@@ -124,8 +125,14 @@ export class AuthService {
   }
 
   async confirmPasswordReset(token: string, newPassword: string) {
-    const user = await this.users.findOne({ where: { passwordResetToken: token } });
-    if (!user || !user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+    const user = await this.users.findOne({
+      where: { passwordResetToken: token },
+    });
+    if (
+      !user ||
+      !user.passwordResetExpires ||
+      user.passwordResetExpires < new Date()
+    ) {
       throw new BadRequestException('Invalid or expired reset token');
     }
     user.password = await bcrypt.hash(newPassword, 12);

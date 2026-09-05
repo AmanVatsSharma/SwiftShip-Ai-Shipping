@@ -1,4 +1,9 @@
-import { Injectable, Scope, ConsoleLogger, LoggerService } from '@nestjs/common';
+import {
+  Injectable,
+  Scope,
+  ConsoleLogger,
+  LoggerService,
+} from '@nestjs/common';
 import {
   getCorrelationContext,
   runWithCorrelation,
@@ -75,22 +80,21 @@ export class StructuredLogger extends ConsoleLogger implements LoggerService {
       msg: typeof message === 'string' ? message : safeStringify(message),
       pid: process.pid,
     };
-    if (correlation.correlationId) record.correlationId = correlation.correlationId;
+    if (correlation.correlationId)
+      record.correlationId = correlation.correlationId;
     if (correlation.traceId) record.traceId = correlation.traceId;
     if (correlation.spanId) record.spanId = correlation.spanId;
-    if (correlation.tenantId !== undefined) record.tenantId = correlation.tenantId;
+    if (correlation.tenantId !== undefined)
+      record.tenantId = correlation.tenantId;
     if (correlation.userId !== undefined) record.userId = correlation.userId;
     if (trace) record.trace = trace;
 
     const out = JSON.stringify(record);
     if (level === 'error' || level === 'fatal') {
-      // eslint-disable-next-line no-console
       console.error(out);
     } else if (level === 'warn') {
-      // eslint-disable-next-line no-console
       console.error(out);
     } else {
-      // eslint-disable-next-line no-console
       console.log(out);
     }
   }
@@ -131,7 +135,10 @@ export class StructuredLogger extends ConsoleLogger implements LoggerService {
     trace: { traceId: string; spanId: string },
     fn: () => T | Promise<T>,
   ): T | Promise<T> {
-    return runWithCorrelation({ traceId: trace.traceId, spanId: trace.spanId }, fn);
+    return runWithCorrelation(
+      { traceId: trace.traceId, spanId: trace.spanId },
+      fn,
+    );
   }
 }
 

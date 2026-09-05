@@ -35,6 +35,9 @@ export class UpdateOnboardingInput {
   @Field({ nullable: true })
   blockedReason?: string;
 
-  @Field({ nullable: true, description: 'Serialized JSON string to merge into metadata' })
+  @Field({
+    nullable: true,
+    description: 'Serialized JSON string to merge into metadata',
+  })
   metadataJson?: string;
 }

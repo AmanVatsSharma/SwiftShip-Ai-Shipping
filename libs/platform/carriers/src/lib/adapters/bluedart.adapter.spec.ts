@@ -10,7 +10,11 @@ describe('BlueDartAdapter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    adapter = new BlueDartAdapter('test-api-key', 'test-login-id', 'https://apigateway.bluedart.com');
+    adapter = new BlueDartAdapter(
+      'test-api-key',
+      'test-login-id',
+      'https://apigateway.bluedart.com',
+    );
   });
 
   describe('getRates', () => {
@@ -55,17 +59,19 @@ describe('BlueDartAdapter', () => {
       const quotes = await adapter.getRates(req);
 
       expect(quotes).toHaveLength(2);
-      const serviceTypes = quotes.map(q => q.serviceType).sort();
+      const serviceTypes = quotes.map((q) => q.serviceType).sort();
       expect(serviceTypes).toEqual(['EXPRESS', 'STANDARD']);
       // Air ETA is faster than Surface
-      const air = quotes.find(q => q.serviceType === 'EXPRESS')!;
-      const surface = quotes.find(q => q.serviceType === 'STANDARD')!;
-      expect(air.estimatedDays.max).toBeLessThanOrEqual(surface.estimatedDays.max);
+      const air = quotes.find((q) => q.serviceType === 'EXPRESS')!;
+      const surface = quotes.find((q) => q.serviceType === 'STANDARD')!;
+      expect(air.estimatedDays.max).toBeLessThanOrEqual(
+        surface.estimatedDays.max,
+      );
     });
   });
 
   describe('getServiceability', () => {
-    it('should return { serviceable: false, reason: \'PINCODE_NOT_SERVICEABLE\' } for a known-unserviceable pair', async () => {
+    it("should return { serviceable: false, reason: 'PINCODE_NOT_SERVICEABLE' } for a known-unserviceable pair", async () => {
       const input = {
         originPincode: '110001',
         destinationPincode: '000000',
@@ -93,7 +99,9 @@ describe('BlueDartAdapter', () => {
         reason: 'customer-requested',
       };
 
-      await expect(adapter.cancelPickup(input)).rejects.toBeInstanceOf(NotImplementedError);
+      await expect(adapter.cancelPickup(input)).rejects.toBeInstanceOf(
+        NotImplementedError,
+      );
       await expect(adapter.cancelPickup(input)).rejects.toThrow(
         /cancelPickup is not implemented/i,
       );

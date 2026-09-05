@@ -82,18 +82,26 @@ export class IndiaPostAdapter implements CarrierAdapter {
     });
 
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for India Post label generation');
+      throw new Error(
+        'Delivery address is required for India Post label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for India Post label generation');
+      throw new Error(
+        'Package weight is required for India Post label generation',
+      );
     }
 
     try {
       // In production mode, we would make real API calls
       if (process.env.NODE_ENV === 'production') {
         const payload = this.buildLabelPayload(req);
-        const response = await this.makeRequestWithRetry('POST', '/api/shipments', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/api/shipments',
+          payload,
+        );
         const labelData = this.parseLabelResponse(response.data, req);
 
         console.log('[IndiaPostAdapter] generateLabel success', {
@@ -108,19 +116,25 @@ export class IndiaPostAdapter implements CarrierAdapter {
         return this.generateSandboxLabel(req);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[IndiaPostAdapter] generateLabel failed', {
         shipmentId: req.shipmentId,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+              }
+            : undefined,
       });
 
       // Return deterministic label number for graceful degradation
-      console.warn('[IndiaPostAdapter] Falling back to deterministic label generation');
+      console.warn(
+        '[IndiaPostAdapter] Falling back to deterministic label generation',
+      );
       return this.generateFallbackLabel(req);
     }
   }
@@ -143,9 +157,12 @@ export class IndiaPostAdapter implements CarrierAdapter {
       if (process.env.NODE_ENV === 'production') {
         const response = await this.makeRequestWithRetry(
           'GET',
-          `/api/tracking/${encodeURIComponent(trackingNumber)}`
+          `/api/tracking/${encodeURIComponent(trackingNumber)}`,
         );
-        const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+        const trackingData = this.parseTrackingResponse(
+          response.data,
+          trackingNumber,
+        );
 
         console.log('[IndiaPostAdapter] trackShipment success', {
           trackingNumber,
@@ -159,14 +176,18 @@ export class IndiaPostAdapter implements CarrierAdapter {
         return this.generateMockTracking(trackingNumber);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[IndiaPostAdapter] trackShipment failed', {
         trackingNumber,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+              }
+            : undefined,
       });
 
       // Return mock tracking response on error
@@ -196,9 +217,12 @@ export class IndiaPostAdapter implements CarrierAdapter {
       // No public rate API; use a hand-coded rate card.
       return this.getFallbackRates(req);
     } catch (error) {
-      console.error('[IndiaPostAdapter] getRates failed, falling back to static rate card', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[IndiaPostAdapter] getRates failed, falling back to static rate card',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getFallbackRates(req);
     }
   }
@@ -211,7 +235,9 @@ export class IndiaPostAdapter implements CarrierAdapter {
    * @param input - Serviceability request
    * @returns Serviceability result
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[IndiaPostAdapter] getServiceability request', {
       originPincode: input.originPincode,
       destinationPincode: input.destinationPincode,
@@ -225,8 +251,11 @@ export class IndiaPostAdapter implements CarrierAdapter {
           'GET',
           `https://api.postalpincode.in/pincode/${encodeURIComponent(input.destinationPincode)}`,
         );
-        const data = Array.isArray(response.data) ? response.data[0] : response.data;
-        const serviceable = data?.Status === 'Success' || data?.status === 'Success';
+        const data = Array.isArray(response.data)
+          ? response.data[0]
+          : response.data;
+        const serviceable =
+          data?.Status === 'Success' || data?.status === 'Success';
         return {
           serviceable,
           codAvailable: input.paymentMethod === 'COD' && serviceable, // MO COD is auto-reconciled, not pickup
@@ -328,36 +357,50 @@ export class IndiaPostAdapter implements CarrierAdapter {
         const data = response.data?.tracking || response.data || {};
         const events: any[] = data.events || data.trackingHistory || [];
         const latest = events[events.length - 1] || {};
-        const reason = String(latest.status || latest.description || '').toLowerCase();
+        const reason = String(
+          latest.status || latest.description || '',
+        ).toLowerCase();
         const mapped = this.mapIndiaPostNdrReason(reason);
         return mapped ? [mapped] : this.getDefaultNdrActions();
       }
       return this.getDefaultNdrActions();
     } catch (error) {
-      console.error('[IndiaPostAdapter] getNdrActions failed, returning default actions', {
-        shipmentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[IndiaPostAdapter] getNdrActions failed, returning default actions',
+        {
+          shipmentId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getDefaultNdrActions();
     }
   }
 
   private mapIndiaPostNdrReason(reason: string): NdrActionOption | null {
     if (!reason) return null;
-    if (reason.includes('addressee absent') || reason.includes('not delivered') || reason.includes('customer not available')) {
+    if (
+      reason.includes('addressee absent') ||
+      reason.includes('not delivered') ||
+      reason.includes('customer not available')
+    ) {
       return {
         code: 'REATTEMPT',
         label: 'Reattempt delivery',
         requiresCustomerInput: false,
-        description: 'India Post: Addressee was not available at the time of the delivery attempt.',
+        description:
+          'India Post: Addressee was not available at the time of the delivery attempt.',
       };
     }
-    if (reason.includes('wrong address') || reason.includes('incomplete address')) {
+    if (
+      reason.includes('wrong address') ||
+      reason.includes('incomplete address')
+    ) {
       return {
         code: 'CHANGE_ADDRESS',
         label: 'Change delivery address',
         requiresCustomerInput: true,
-        description: 'India Post: Address is incorrect or incomplete. Please provide a corrected address.',
+        description:
+          'India Post: Address is incorrect or incomplete. Please provide a corrected address.',
       };
     }
     if (reason.includes('refused') || reason.includes('addressee refused')) {
@@ -365,7 +408,8 @@ export class IndiaPostAdapter implements CarrierAdapter {
         code: 'CANCEL',
         label: 'Cancel shipment',
         requiresCustomerInput: false,
-        description: 'India Post: Addressee refused the shipment. Initiate cancellation / RTO.',
+        description:
+          'India Post: Addressee refused the shipment. Initiate cancellation / RTO.',
       };
     }
     return {
@@ -378,16 +422,33 @@ export class IndiaPostAdapter implements CarrierAdapter {
 
   private getDefaultNdrActions(): NdrActionOption[] {
     return [
-      { code: 'REATTEMPT', label: 'Reattempt delivery', requiresCustomerInput: false, description: 'Schedule another delivery attempt.' },
-      { code: 'CHANGE_ADDRESS', label: 'Change delivery address', requiresCustomerInput: true, description: 'Provide a corrected address for reattempt.' },
-      { code: 'CANCEL', label: 'Cancel shipment', requiresCustomerInput: false, description: 'Cancel the shipment and initiate RTO.' },
+      {
+        code: 'REATTEMPT',
+        label: 'Reattempt delivery',
+        requiresCustomerInput: false,
+        description: 'Schedule another delivery attempt.',
+      },
+      {
+        code: 'CHANGE_ADDRESS',
+        label: 'Change delivery address',
+        requiresCustomerInput: true,
+        description: 'Provide a corrected address for reattempt.',
+      },
+      {
+        code: 'CANCEL',
+        label: 'Cancel shipment',
+        requiresCustomerInput: false,
+        description: 'Cancel the shipment and initiate RTO.',
+      },
     ];
   }
 
   private getFallbackRates(req: RateQuoteRequest): RateQuote[] {
     const weightKg = req.weightGrams / 1000;
     // Deterministic Speed Post rate card: base ₹40 + ₹25/kg (COD surcharge +₹20)
-    const baseRate = Math.round(40 + weightKg * 25 + (req.paymentMethod === 'COD' ? 20 : 0));
+    const baseRate = Math.round(
+      40 + weightKg * 25 + (req.paymentMethod === 'COD' ? 20 : 0),
+    );
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     return [
@@ -401,7 +462,12 @@ export class IndiaPostAdapter implements CarrierAdapter {
         codAvailable: req.paymentMethod === 'COD',
         pickupAvailable: false, // Programmatic pickup not available
         expiresAt,
-        rawResponse: { fallback: true, weightKg, paymentMethod: req.paymentMethod, serviceName: 'Speed Post' },
+        rawResponse: {
+          fallback: true,
+          weightKg,
+          paymentMethod: req.paymentMethod,
+          serviceName: 'Speed Post',
+        },
       },
     ];
   }
@@ -450,7 +516,9 @@ export class IndiaPostAdapter implements CarrierAdapter {
         ...(pkg.width && { width: pkg.width.toString() }),
         ...(pkg.height && { height: pkg.height.toString() }),
         ...(pkg.codAmount && { codAmount: pkg.codAmount.toString() }),
-        ...(pkg.declaredValue && { declaredValue: pkg.declaredValue.toString() }),
+        ...(pkg.declaredValue && {
+          declaredValue: pkg.declaredValue.toString(),
+        }),
       },
       service: 'BUSINESS_STANDARD',
       labelFormat: req.format || 'PDF',
@@ -463,7 +531,10 @@ export class IndiaPostAdapter implements CarrierAdapter {
   /**
    * Parse India Post label generation response
    */
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const waybill = data?.waybill || data?.trackingNumber || data?.awbNumber;
     const labelUrl = data?.labelUrl || data?.labelPdf || data?.url;
 
@@ -476,20 +547,29 @@ export class IndiaPostAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: data?.serviceType || 'India Post Business',
       awbNumber: waybill || labelNumber,
-      trackingUrl: waybill ? `https://track.indiapost.gov.in/trackandtrack/CMSWebpages/Tracking-details.jsp?lang=en&reg=${waybill}` : undefined,
-      estimatedDelivery: data?.estimatedDelivery ? new Date(data.estimatedDelivery) : undefined,
+      trackingUrl: waybill
+        ? `https://track.indiapost.gov.in/trackandtrack/CMSWebpages/Tracking-details.jsp?lang=en&reg=${waybill}`
+        : undefined,
+      estimatedDelivery: data?.estimatedDelivery
+        ? new Date(data.estimatedDelivery)
+        : undefined,
     };
   }
 
   /**
    * Parse India Post tracking response
    */
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const tracking = data?.tracking || data?.shipment || {};
     const events = tracking?.events || tracking?.trackingHistory || [];
 
     const latestEvent = events[events.length - 1] || {};
-    const status = this.mapIndiaPostStatus(latestEvent?.status || tracking?.status || 'Unknown');
+    const status = this.mapIndiaPostStatus(
+      latestEvent?.status || tracking?.status || 'Unknown',
+    );
 
     const trackingEvents = events.map((event: any) => ({
       status: this.mapIndiaPostStatus(event.status || event.eventType),
@@ -506,7 +586,9 @@ export class IndiaPostAdapter implements CarrierAdapter {
       subStatus: latestEvent?.subStatus,
       description: latestEvent?.description || latestEvent?.status,
       location: latestEvent?.location || latestEvent?.city,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events: trackingEvents,
     };
   }
@@ -516,11 +598,26 @@ export class IndiaPostAdapter implements CarrierAdapter {
    */
   private mapIndiaPostStatus(status: string): string {
     const s = (status || '').toLowerCase();
-    if (s.includes('delivered') || s.includes('dl') || s.includes('del')) return 'DELIVERED';
-    if (s.includes('transit') || s.includes('in_transit') || s.includes('it') || s.includes('tr')) return 'IN_TRANSIT';
-    if (s.includes('picked_up') || s.includes('pu') || s.includes('pickup')) return 'SHIPPED';
-    if (s.includes('pending') || s.includes('created') || s.includes('cr') || s.includes('re')) return 'PENDING';
-    if (s.includes('cancel') || s.includes('void') || s.includes('cn')) return 'CANCELLED';
+    if (s.includes('delivered') || s.includes('dl') || s.includes('del'))
+      return 'DELIVERED';
+    if (
+      s.includes('transit') ||
+      s.includes('in_transit') ||
+      s.includes('it') ||
+      s.includes('tr')
+    )
+      return 'IN_TRANSIT';
+    if (s.includes('picked_up') || s.includes('pu') || s.includes('pickup'))
+      return 'SHIPPED';
+    if (
+      s.includes('pending') ||
+      s.includes('created') ||
+      s.includes('cr') ||
+      s.includes('re')
+    )
+      return 'PENDING';
+    if (s.includes('cancel') || s.includes('void') || s.includes('cn'))
+      return 'CANCELLED';
     return 'UNKNOWN';
   }
 
@@ -530,14 +627,14 @@ export class IndiaPostAdapter implements CarrierAdapter {
   private async makeRequestWithRetry(
     method: 'GET' | 'POST',
     endpoint: string,
-    data?: any
+    data?: any,
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const apiKey = this.config.get<string>('INDIAPOST_API_KEY');
 
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       'X-API-Key': apiKey,
     };
 
@@ -545,11 +642,14 @@ export class IndiaPostAdapter implements CarrierAdapter {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[IndiaPostAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[IndiaPostAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -566,7 +666,9 @@ export class IndiaPostAdapter implements CarrierAdapter {
 
         // Check for API-level errors in response
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
@@ -574,7 +676,12 @@ export class IndiaPostAdapter implements CarrierAdapter {
         lastError = error instanceof Error ? error : new Error('Unknown error');
 
         // Don't retry on 4xx errors (client errors)
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[IndiaPostAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -586,10 +693,13 @@ export class IndiaPostAdapter implements CarrierAdapter {
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
 
         if (attempt < this.maxRetries) {
-          console.warn(`[IndiaPostAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[IndiaPostAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         } else {
           console.error('[IndiaPostAdapter] Request failed after all retries', {
@@ -618,7 +728,10 @@ export class IndiaPostAdapter implements CarrierAdapter {
       awbNumber: awb,
       trackingUrl: `https://track.indiapost.gov.in/trackandtrack/CMSWebpages/Tracking-details.jsp?lang=en&reg=${awb}`,
       estimatedDelivery: req.packageDetails?.weight
-        ? new Date(Date.now() + (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000)
+        ? new Date(
+            Date.now() +
+              (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000,
+          )
         : undefined,
     };
   }
@@ -664,7 +777,9 @@ export class IndiaPostAdapter implements CarrierAdapter {
   /**
    * Generate fallback label when API fails
    */
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `IPO-${req.shipmentId}-${Date.now()}`;
 
     console.warn('[IndiaPostAdapter] Using fallback label generation', {
@@ -687,6 +802,6 @@ export class IndiaPostAdapter implements CarrierAdapter {
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

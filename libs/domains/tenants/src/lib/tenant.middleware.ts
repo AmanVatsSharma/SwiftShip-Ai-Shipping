@@ -20,7 +20,11 @@ export class TenantMiddleware implements NestMiddleware {
     private readonly tenantContext: TenantContext,
   ) {}
 
-  async use(req: TenantRequest, _res: Response, next: NextFunction): Promise<void> {
+  async use(
+    req: TenantRequest,
+    _res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     const apiKey = this.headerValue(req.headers[API_KEY_HEADER]);
     if (apiKey) {
       // Full verify (prefix lookup + bcrypt compare) via ApiKeyService —
@@ -50,7 +54,9 @@ export class TenantMiddleware implements NestMiddleware {
     next();
   }
 
-  private headerValue(value: string | string[] | undefined): string | undefined {
+  private headerValue(
+    value: string | string[] | undefined,
+  ): string | undefined {
     if (Array.isArray(value)) return value[0];
     return value;
   }

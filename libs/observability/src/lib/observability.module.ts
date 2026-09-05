@@ -43,7 +43,13 @@ import { CorrelationIdMiddleware } from './correlation/correlation-id.middleware
   ],
   providers: [StructuredLogger],
   controllers: [MetricsController],
-  exports: [StructuredLogger, AuditLogModule, SentryModule, OpenTelemetryModule, CorrelationIdModule],
+  exports: [
+    StructuredLogger,
+    AuditLogModule,
+    SentryModule,
+    OpenTelemetryModule,
+    CorrelationIdModule,
+  ],
 })
 export class ObservabilityModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

@@ -18,7 +18,8 @@ export class KycResolver {
   constructor(private readonly kyc: KycService) {}
 
   @Mutation(() => KycRecordModel, {
-    description: 'Submit a KYC payload (PAN, GSTIN, bank). Triggers async verify.',
+    description:
+      'Submit a KYC payload (PAN, GSTIN, bank). Triggers async verify.',
   })
   @UseGuards(TenantGuard)
   async submitKyc(

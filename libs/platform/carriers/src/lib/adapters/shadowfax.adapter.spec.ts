@@ -9,7 +9,11 @@ describe('ShadowfaxAdapter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    adapter = new ShadowfaxAdapter('test-api-key', 'test-secret-key', 'https://api.shadowfax.in');
+    adapter = new ShadowfaxAdapter(
+      'test-api-key',
+      'test-secret-key',
+      'https://api.shadowfax.in',
+    );
   });
 
   describe('getRates', () => {
@@ -78,11 +82,13 @@ describe('ShadowfaxAdapter', () => {
 
       const actions = await adapter.getNdrActions('SF-AWB-001');
 
-      const codes = actions.map(a => a.code);
-      expect(codes).toEqual(expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS']));
+      const codes = actions.map((a) => a.code);
+      expect(codes).toEqual(
+        expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS']),
+      );
 
-      const reattempt = actions.find(a => a.code === 'REATTEMPT')!;
-      const changeAddress = actions.find(a => a.code === 'CHANGE_ADDRESS')!;
+      const reattempt = actions.find((a) => a.code === 'REATTEMPT')!;
+      const changeAddress = actions.find((a) => a.code === 'CHANGE_ADDRESS')!;
       expect(reattempt).toBeDefined();
       expect(changeAddress).toBeDefined();
       // Customer-confirmed address changes require customer input.

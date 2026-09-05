@@ -17,14 +17,14 @@ import { ProfessionalCouriersAdapter } from './adapters/professional-couriers.ad
 
 /**
  * Carrier Adapter Service
- * 
+ *
  * Manages all carrier adapters and provides access to them by carrier code.
- * 
+ *
  * Flow:
  * 1. Initializes all carrier adapters on service construction
  * 2. Registers adapters in a Map for O(1) lookup
  * 3. Provides getAdapter() method to retrieve adapters by code
- * 
+ *
  * Supported Carriers:
  * - SANDBOX: Mock carrier for testing
  * - DELHIVERY: Delhivery Express
@@ -39,7 +39,7 @@ import { ProfessionalCouriersAdapter } from './adapters/professional-couriers.ad
  * - ARAMEX: Aramex India
  * - INDIAPOST: India Post Business
  * - PCA: Professional Couriers
- * 
+ *
  * Configuration:
  * Each carrier requires specific environment variables for authentication.
  * See individual adapter files for required configuration keys.
@@ -64,12 +64,17 @@ export class CarrierAdapterService {
         this.adapters.set(delhivery.code, delhivery);
         console.log('[CarrierAdapterService] Registered DELHIVERY adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize Delhivery adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize Delhivery adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] DELHIVERY_TOKEN not configured, skipping Delhivery adapter');
+      console.warn(
+        '[CarrierAdapterService] DELHIVERY_TOKEN not configured, skipping Delhivery adapter',
+      );
     }
 
     // Xpressbees adapter (works without token, uses fallback)
@@ -79,9 +84,12 @@ export class CarrierAdapterService {
       this.adapters.set(xpressbees.code, xpressbees);
       console.log('[CarrierAdapterService] Registered XPRESSBEES adapter');
     } catch (error) {
-      console.error('[CarrierAdapterService] Failed to initialize Xpressbees adapter', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[CarrierAdapterService] Failed to initialize Xpressbees adapter',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
     }
 
     // BlueDart adapter
@@ -93,12 +101,17 @@ export class CarrierAdapterService {
         this.adapters.set(bluedart.code, bluedart);
         console.log('[CarrierAdapterService] Registered BLUEDART adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize BlueDart adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize BlueDart adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] BLUEDART_API_KEY or BLUEDART_LOGIN_ID not configured, skipping BlueDart adapter');
+      console.warn(
+        '[CarrierAdapterService] BLUEDART_API_KEY or BLUEDART_LOGIN_ID not configured, skipping BlueDart adapter',
+      );
     }
 
     // DTDC adapter
@@ -110,12 +123,17 @@ export class CarrierAdapterService {
         this.adapters.set(dtdc.code, dtdc);
         console.log('[CarrierAdapterService] Registered DTDC adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize DTDC adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize DTDC adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] DTDC_CLIENT_ID or DTDC_API_KEY not configured, skipping DTDC adapter');
+      console.warn(
+        '[CarrierAdapterService] DTDC_CLIENT_ID or DTDC_API_KEY not configured, skipping DTDC adapter',
+      );
     }
 
     // Ecom Express adapter
@@ -127,12 +145,17 @@ export class CarrierAdapterService {
         this.adapters.set(ecom.code, ecom);
         console.log('[CarrierAdapterService] Registered ECOM_EXPRESS adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize Ecom Express adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize Ecom Express adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] ECOM_EXPRESS_USERNAME or ECOM_EXPRESS_PASSWORD not configured, skipping Ecom Express adapter');
+      console.warn(
+        '[CarrierAdapterService] ECOM_EXPRESS_USERNAME or ECOM_EXPRESS_PASSWORD not configured, skipping Ecom Express adapter',
+      );
     }
 
     // Shadowfax adapter
@@ -140,34 +163,55 @@ export class CarrierAdapterService {
     const shadowfaxSecretKey = this.config.get<string>('SHADOWFAX_SECRET_KEY');
     if (shadowfaxApiKey && shadowfaxSecretKey) {
       try {
-        const shadowfax = new ShadowfaxAdapter(shadowfaxApiKey, shadowfaxSecretKey);
+        const shadowfax = new ShadowfaxAdapter(
+          shadowfaxApiKey,
+          shadowfaxSecretKey,
+        );
         this.adapters.set(shadowfax.code, shadowfax);
         console.log('[CarrierAdapterService] Registered SHADOWFAX adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize Shadowfax adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize Shadowfax adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] SHADOWFAX_API_KEY or SHADOWFAX_SECRET_KEY not configured, skipping Shadowfax adapter');
+      console.warn(
+        '[CarrierAdapterService] SHADOWFAX_API_KEY or SHADOWFAX_SECRET_KEY not configured, skipping Shadowfax adapter',
+      );
     }
 
     // FedEx India adapter
     const fedexClientId = this.config.get<string>('FEDEX_INDIA_CLIENT_ID');
-    const fedexClientSecret = this.config.get<string>('FEDEX_INDIA_CLIENT_SECRET');
-    const fedexAccountNumber = this.config.get<string>('FEDEX_INDIA_ACCOUNT_NUMBER');
+    const fedexClientSecret = this.config.get<string>(
+      'FEDEX_INDIA_CLIENT_SECRET',
+    );
+    const fedexAccountNumber = this.config.get<string>(
+      'FEDEX_INDIA_ACCOUNT_NUMBER',
+    );
     if (fedexClientId && fedexClientSecret && fedexAccountNumber) {
       try {
-        const fedex = new FedExIndiaAdapter(fedexClientId, fedexClientSecret, fedexAccountNumber);
+        const fedex = new FedExIndiaAdapter(
+          fedexClientId,
+          fedexClientSecret,
+          fedexAccountNumber,
+        );
         this.adapters.set(fedex.code, fedex);
         console.log('[CarrierAdapterService] Registered FEDEX_INDIA adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize FedEx India adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize FedEx India adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] FEDEX_INDIA_CLIENT_ID, FEDEX_INDIA_CLIENT_SECRET, or FEDEX_INDIA_ACCOUNT_NUMBER not configured, skipping FedEx India adapter');
+      console.warn(
+        '[CarrierAdapterService] FEDEX_INDIA_CLIENT_ID, FEDEX_INDIA_CLIENT_SECRET, or FEDEX_INDIA_ACCOUNT_NUMBER not configured, skipping FedEx India adapter',
+      );
     }
 
     // Gati adapter
@@ -179,12 +223,17 @@ export class CarrierAdapterService {
         this.adapters.set(gati.code, gati);
         console.log('[CarrierAdapterService] Registered GATI adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize Gati adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize Gati adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] GATI_CLIENT_ID or GATI_API_KEY not configured, skipping Gati adapter');
+      console.warn(
+        '[CarrierAdapterService] GATI_CLIENT_ID or GATI_API_KEY not configured, skipping Gati adapter',
+      );
     }
 
     // DHL Express India adapter
@@ -197,16 +246,23 @@ export class CarrierAdapterService {
         this.adapters.set(dhl.code, dhl);
         console.log('[CarrierAdapterService] Registered DHL adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize DHL adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize DHL adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] DHL_CLIENT_ID, DHL_CLIENT_SECRET, or DHL_ACCOUNT_NUMBER not configured, skipping DHL adapter');
+      console.warn(
+        '[CarrierAdapterService] DHL_CLIENT_ID, DHL_CLIENT_SECRET, or DHL_ACCOUNT_NUMBER not configured, skipping DHL adapter',
+      );
     }
 
     // Aramex India adapter
-    const aramexAccountNumber = this.config.get<string>('ARAMEX_ACCOUNT_NUMBER');
+    const aramexAccountNumber = this.config.get<string>(
+      'ARAMEX_ACCOUNT_NUMBER',
+    );
     const aramexUsername = this.config.get<string>('ARAMEX_USERNAME');
     const aramexPassword = this.config.get<string>('ARAMEX_PASSWORD');
     const aramexPin = this.config.get<string>('ARAMEX_PIN');
@@ -216,29 +272,41 @@ export class CarrierAdapterService {
         this.adapters.set(aramex.code, aramex);
         console.log('[CarrierAdapterService] Registered ARAMEX adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize Aramex adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize Aramex adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] ARAMEX_ACCOUNT_NUMBER, ARAMEX_USERNAME, ARAMEX_PASSWORD, or ARAMEX_PIN not configured, skipping Aramex adapter');
+      console.warn(
+        '[CarrierAdapterService] ARAMEX_ACCOUNT_NUMBER, ARAMEX_USERNAME, ARAMEX_PASSWORD, or ARAMEX_PIN not configured, skipping Aramex adapter',
+      );
     }
 
     // India Post Business adapter
     const indiapostApiKey = this.config.get<string>('INDIAPOST_API_KEY');
-    const indiapostCustomerId = this.config.get<string>('INDIAPOST_CUSTOMER_ID');
+    const indiapostCustomerId = this.config.get<string>(
+      'INDIAPOST_CUSTOMER_ID',
+    );
     if (indiapostApiKey && indiapostCustomerId) {
       try {
         const indiapost = new IndiaPostAdapter(this.config);
         this.adapters.set(indiapost.code, indiapost);
         console.log('[CarrierAdapterService] Registered INDIAPOST adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize India Post adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize India Post adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] INDIAPOST_API_KEY or INDIAPOST_CUSTOMER_ID not configured, skipping India Post adapter');
+      console.warn(
+        '[CarrierAdapterService] INDIAPOST_API_KEY or INDIAPOST_CUSTOMER_ID not configured, skipping India Post adapter',
+      );
     }
 
     // Professional Couriers adapter
@@ -250,17 +318,25 @@ export class CarrierAdapterService {
         this.adapters.set(pca.code, pca);
         console.log('[CarrierAdapterService] Registered PCA adapter');
       } catch (error) {
-        console.error('[CarrierAdapterService] Failed to initialize Professional Couriers adapter', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.error(
+          '[CarrierAdapterService] Failed to initialize Professional Couriers adapter',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     } else {
-      console.warn('[CarrierAdapterService] PCA_API_KEY or PCA_USERNAME not configured, skipping Professional Couriers adapter');
+      console.warn(
+        '[CarrierAdapterService] PCA_API_KEY or PCA_USERNAME not configured, skipping Professional Couriers adapter',
+      );
     }
 
-    console.log(`[CarrierAdapterService] Initialization complete. Registered ${this.adapters.size} carrier adapter(s)`, {
-      carriers: Array.from(this.adapters.keys()),
-    });
+    console.log(
+      `[CarrierAdapterService] Initialization complete. Registered ${this.adapters.size} carrier adapter(s)`,
+      {
+        carriers: Array.from(this.adapters.keys()),
+      },
+    );
   }
 
   /**

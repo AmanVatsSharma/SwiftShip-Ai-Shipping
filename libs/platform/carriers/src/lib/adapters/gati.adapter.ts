@@ -17,10 +17,10 @@ import axios, { AxiosError } from 'axios';
 
 /**
  * Gati Carrier Adapter
- * 
+ *
  * Implements integration with Gati Limited API.
  * Gati is a leading express logistics and supply chain solutions provider in India.
- * 
+ *
  * API Documentation: https://www.gati.com/api-docs
  */
 export class GatiAdapter implements CarrierAdapter {
@@ -31,14 +31,22 @@ export class GatiAdapter implements CarrierAdapter {
   private readonly maxRetries: number = 3;
   private readonly retryDelay: number = 1000;
 
-  constructor(clientId: string, apiKey: string, baseUrl: string = 'https://api.gatikwe.com') {
+  constructor(
+    clientId: string,
+    apiKey: string,
+    baseUrl: string = 'https://api.gatikwe.com',
+  ) {
     if (!clientId || !apiKey) {
       throw new Error('Gati client ID and API key are required');
     }
     this.clientId = clientId;
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
-    console.log('[GatiAdapter] Initialized', { baseUrl, hasClientId: !!clientId, hasApiKey: !!apiKey });
+    console.log('[GatiAdapter] Initialized', {
+      baseUrl,
+      hasClientId: !!clientId,
+      hasApiKey: !!apiKey,
+    });
   }
 
   async generateLabel(req: CarrierLabelRequest): Promise<CarrierLabelResponse> {
@@ -60,7 +68,11 @@ export class GatiAdapter implements CarrierAdapter {
 
     try {
       const payload = this.buildLabelPayload(req);
-      const response = await this.makeRequestWithRetry('POST', '/api/shipment/create', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/shipment/create',
+        payload,
+      );
       const labelData = this.parseLabelResponse(response.data, req);
 
       console.log('[GatiAdapter] generateLabel success', {
@@ -89,9 +101,12 @@ export class GatiAdapter implements CarrierAdapter {
     try {
       const response = await this.makeRequestWithRetry(
         'GET',
-        `/api/tracking/${encodeURIComponent(trackingNumber)}`
+        `/api/tracking/${encodeURIComponent(trackingNumber)}`,
       );
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[GatiAdapter] trackShipment success', {
         trackingNumber,
@@ -116,8 +131,14 @@ export class GatiAdapter implements CarrierAdapter {
     }
   }
 
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[GatiAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[GatiAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     try {
       const payload = {
@@ -141,7 +162,10 @@ export class GatiAdapter implements CarrierAdapter {
     console.log('[GatiAdapter] voidLabel request', { labelNumber });
 
     try {
-      await this.makeRequestWithRetry('POST', `/api/label/${encodeURIComponent(labelNumber)}/void`);
+      await this.makeRequestWithRetry(
+        'POST',
+        `/api/label/${encodeURIComponent(labelNumber)}/void`,
+      );
       console.log('[GatiAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
@@ -182,15 +206,22 @@ export class GatiAdapter implements CarrierAdapter {
         ...(req.height && { height: req.height }),
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/api/rate/calculator', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/rate/calculator',
+        payload,
+      );
       const quotes = this.parseRateResponse(response.data, req);
 
       console.log('[GatiAdapter] getRates success', { count: quotes.length });
       return quotes;
     } catch (error) {
-      console.error('[GatiAdapter] getRates failed, falling back to static rate card', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[GatiAdapter] getRates failed, falling back to static rate card',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getFallbackRates(req);
     }
   }
@@ -203,7 +234,9 @@ export class GatiAdapter implements CarrierAdapter {
    * @param input - Serviceability request
    * @returns Serviceability result
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[GatiAdapter] getServiceability request', {
       originPincode: input.originPincode,
       destinationPincode: input.destinationPincode,
@@ -219,15 +252,31 @@ export class GatiAdapter implements CarrierAdapter {
         weight: (input.weightGrams / 1000).toFixed(2),
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/api/pincode/check', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/pincode/check',
+        payload,
+      );
       const data = response.data?.data || response.data || {};
 
-      const serviceable = !!(data.serviceable ?? data.is_serviceable ?? data.cod_available ?? true);
+      const serviceable = !!(
+        data.serviceable ??
+        data.is_serviceable ??
+        data.cod_available ??
+        true
+      );
       const codAvailable = !!(data.cod_available ?? data.cod);
-      const prepaidAvailable = !!(data.prepaid_available ?? data.prepaid ?? true);
+      const prepaidAvailable = !!(
+        data.prepaid_available ??
+        data.prepaid ??
+        true
+      );
       const eta = data.estimated_days || data.transit_days;
       const estimatedDays = eta
-        ? { min: Number(eta.min ?? eta.min_days ?? 1), max: Number(eta.max ?? eta.max_days ?? eta) }
+        ? {
+            min: Number(eta.min ?? eta.min_days ?? 1),
+            max: Number(eta.max ?? eta.max_days ?? eta),
+          }
         : undefined;
 
       return {
@@ -235,7 +284,9 @@ export class GatiAdapter implements CarrierAdapter {
         codAvailable,
         prepaidAvailable,
         estimatedDays,
-        reason: serviceable ? undefined : (data.reason || 'Pincode not serviceable by Gati'),
+        reason: serviceable
+          ? undefined
+          : data.reason || 'Pincode not serviceable by Gati',
       };
     } catch (error) {
       console.error('[GatiAdapter] getServiceability failed', {
@@ -277,7 +328,11 @@ export class GatiAdapter implements CarrierAdapter {
         contact_phone: input.contactPhone,
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/api/pickup/create', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/pickup/create',
+        payload,
+      );
       const data = response.data?.data || response.data || {};
 
       const pickupId = data.pickup_id || data.id || `GATI-PU-${Date.now()}`;
@@ -287,7 +342,8 @@ export class GatiAdapter implements CarrierAdapter {
         pickupId,
         pickupDate: data.pickup_date || input.pickupDate,
         pickupTimeSlot: data.pickup_time_slot || input.pickupTimeSlot,
-        trackingUrl: data.tracking_url || `https://www.gati.com/track/${pickupId}`,
+        trackingUrl:
+          data.tracking_url || `https://www.gati.com/track/${pickupId}`,
       };
     } catch (error) {
       console.error('[GatiAdapter] schedulePickup failed', {
@@ -312,7 +368,9 @@ export class GatiAdapter implements CarrierAdapter {
    * @param input - Cancel pickup request
    */
   async cancelPickup(input: CancelPickupRequest): Promise<void> {
-    console.log('[GatiAdapter] cancelPickup request', { pickupId: input.pickupId });
+    console.log('[GatiAdapter] cancelPickup request', {
+      pickupId: input.pickupId,
+    });
 
     try {
       const payload = {
@@ -322,7 +380,9 @@ export class GatiAdapter implements CarrierAdapter {
       };
 
       await this.makeRequestWithRetry('POST', '/api/pickup/cancel', payload);
-      console.log('[GatiAdapter] cancelPickup success', { pickupId: input.pickupId });
+      console.log('[GatiAdapter] cancelPickup success', {
+        pickupId: input.pickupId,
+      });
     } catch (error) {
       console.error('[GatiAdapter] cancelPickup failed', {
         pickupId: input.pickupId,
@@ -338,7 +398,9 @@ export class GatiAdapter implements CarrierAdapter {
    * supported via the API.
    */
   async markCodCollected(_input: MarkCodRequest): Promise<void> {
-    throw new Error('NotImplementedError: Gati auto-reconciles COD; markCodCollected is not supported via the Gati API');
+    throw new Error(
+      'NotImplementedError: Gati auto-reconciles COD; markCodCollected is not supported via the Gati API',
+    );
   }
 
   /**
@@ -368,17 +430,22 @@ export class GatiAdapter implements CarrierAdapter {
 
       if (rawActions.length > 0) {
         return rawActions
-          .map((a) => this.mapGatiNdrAction(a.reason || a.code || a.reason_code))
+          .map((a) =>
+            this.mapGatiNdrAction(a.reason || a.code || a.reason_code),
+          )
           .filter((a): a is NdrActionOption => a !== null);
       }
 
       // If API returned no actions, return the default menu
       return this.getDefaultNdrActions();
     } catch (error) {
-      console.error('[GatiAdapter] getNdrActions failed, returning default actions', {
-        shipmentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[GatiAdapter] getNdrActions failed, returning default actions',
+        {
+          shipmentId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getDefaultNdrActions();
     }
   }
@@ -393,28 +460,32 @@ export class GatiAdapter implements CarrierAdapter {
           code: 'REATTEMPT',
           label: 'Reattempt delivery',
           requiresCustomerInput: false,
-          description: 'Customer was not available at the time of delivery attempt.',
+          description:
+            'Customer was not available at the time of delivery attempt.',
         };
       case 'ADDRESS_INCORRECT':
         return {
           code: 'CHANGE_ADDRESS',
           label: 'Change delivery address',
           requiresCustomerInput: true,
-          description: 'The provided address could not be located. Please provide a corrected address.',
+          description:
+            'The provided address could not be located. Please provide a corrected address.',
         };
       case 'PHONE_OFF':
         return {
           code: 'REATTEMPT',
           label: 'Reattempt delivery',
           requiresCustomerInput: false,
-          description: 'Customer phone was unreachable. Schedule another delivery attempt.',
+          description:
+            'Customer phone was unreachable. Schedule another delivery attempt.',
         };
       case 'REFUSED':
         return {
           code: 'CANCEL',
           label: 'Cancel shipment',
           requiresCustomerInput: false,
-          description: 'Customer refused to accept the shipment. Initiate cancellation / RTO.',
+          description:
+            'Customer refused to accept the shipment. Initiate cancellation / RTO.',
         };
       default:
         return {
@@ -467,16 +538,18 @@ export class GatiAdapter implements CarrierAdapter {
         phone: delivery.phone,
         country: delivery.country || 'India',
       },
-      shipper: pickup ? {
-        name: pickup.name,
-        address: pickup.addressLine1,
-        address2: pickup.addressLine2 || '',
-        city: pickup.city,
-        state: pickup.state,
-        pincode: pickup.pincode,
-        phone: pickup.phone,
-        country: pickup.country || 'India',
-      } : undefined,
+      shipper: pickup
+        ? {
+            name: pickup.name,
+            address: pickup.addressLine1,
+            address2: pickup.addressLine2 || '',
+            city: pickup.city,
+            state: pickup.state,
+            pincode: pickup.pincode,
+            phone: pickup.phone,
+            country: pickup.country || 'India',
+          }
+        : undefined,
       shipment: {
         weight: (pkg.weight / 1000).toFixed(2),
         ...(pkg.length && { length: pkg.length.toString() }),
@@ -489,8 +562,12 @@ export class GatiAdapter implements CarrierAdapter {
     };
   }
 
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
-    const awbNumber = data?.awb || data?.waybill_number || data?.tracking_number;
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
+    const awbNumber =
+      data?.awb || data?.waybill_number || data?.tracking_number;
     const labelUrl = data?.label_url || data?.label_pdf;
     const shipmentData = data?.shipment || data;
 
@@ -503,20 +580,27 @@ export class GatiAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: shipmentData?.service_type || 'Gati Express',
       awbNumber: awbNumber || labelNumber,
-      trackingUrl: awbNumber ? `https://www.gati.com/track/${awbNumber}` : undefined,
-      estimatedDelivery: shipmentData?.estimated_delivery_date 
+      trackingUrl: awbNumber
+        ? `https://www.gati.com/track/${awbNumber}`
+        : undefined,
+      estimatedDelivery: shipmentData?.estimated_delivery_date
         ? new Date(shipmentData.estimated_delivery_date)
         : undefined,
     };
   }
 
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const shipment = data?.shipment || data;
     const trackingHistory = shipment?.tracking_history || shipment?.scans || [];
 
     const latestEvent = trackingHistory[trackingHistory.length - 1] || {};
 
-    const status = this.mapGatiStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapGatiStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     const events = trackingHistory.map((event: any) => ({
       status: this.mapGatiStatus(event.status || event.scan_type),
@@ -531,9 +615,13 @@ export class GatiAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestEvent?.sub_status || latestEvent?.scan_type,
-      description: latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
-      location: latestEvent?.location || latestEvent?.city || shipment?.destination,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      description:
+        latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
+      location:
+        latestEvent?.location || latestEvent?.city || shipment?.destination,
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events,
     };
   }
@@ -542,7 +630,8 @@ export class GatiAdapter implements CarrierAdapter {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
     if (s.includes('transit') || s.includes('it')) return 'IN_TRANSIT';
-    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu')) return 'SHIPPED';
+    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu'))
+      return 'SHIPPED';
     if (s.includes('pending') || s.includes('created')) return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
@@ -558,10 +647,17 @@ export class GatiAdapter implements CarrierAdapter {
     }
 
     return rawQuotes.map((q) => {
-      const serviceRaw = String(q.service_type || q.service || 'STANDARD').toUpperCase();
-      const allowedServiceTypes = ['STANDARD', 'EXPRESS', 'SAME_DAY', 'OVERNIGHT'] as const;
-      const serviceType = (allowedServiceTypes.find((s) => s === serviceRaw) ||
-        'STANDARD') as RateQuote['serviceType'];
+      const serviceRaw = String(
+        q.service_type || q.service || 'STANDARD',
+      ).toUpperCase();
+      const allowedServiceTypes = [
+        'STANDARD',
+        'EXPRESS',
+        'SAME_DAY',
+        'OVERNIGHT',
+      ] as const;
+      const serviceType =
+        allowedServiceTypes.find((s) => s === serviceRaw) || 'STANDARD';
 
       const eta = q.estimated_days || q.transit_days || { min: 2, max: 5 };
 
@@ -572,7 +668,11 @@ export class GatiAdapter implements CarrierAdapter {
         rate: Number(q.rate ?? q.total_charge ?? q.charge ?? 0),
         currency: 'INR',
         estimatedDays: { min: Number(eta.min ?? 2), max: Number(eta.max ?? 5) },
-        codAvailable: !!(q.cod_available ?? q.cod ?? req.paymentMethod === 'COD'),
+        codAvailable: !!(
+          q.cod_available ??
+          q.cod ??
+          req.paymentMethod === 'COD'
+        ),
         pickupAvailable: !!(q.pickup_available ?? true),
         expiresAt: q.expires_at ? new Date(q.expires_at) : expiresAt,
         rawResponse: q,
@@ -583,7 +683,9 @@ export class GatiAdapter implements CarrierAdapter {
   private getFallbackRates(req: RateQuoteRequest): RateQuote[] {
     const weightKg = req.weightGrams / 1000;
     // Simple deterministic pricing: base ₹100 + ₹60/kg (cod surcharge +₹40)
-    const baseRate = Math.round(100 + weightKg * 60 + (req.paymentMethod === 'COD' ? 40 : 0));
+    const baseRate = Math.round(
+      100 + weightKg * 60 + (req.paymentMethod === 'COD' ? 40 : 0),
+    );
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     return [
@@ -602,23 +704,30 @@ export class GatiAdapter implements CarrierAdapter {
     ];
   }
 
-  private async makeRequestWithRetry(method: 'GET' | 'POST', endpoint: string, data?: any): Promise<any> {
+  private async makeRequestWithRetry(
+    method: 'GET' | 'POST',
+    endpoint: string,
+    data?: any,
+  ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
+      Accept: 'application/json',
+      Authorization: `Bearer ${this.apiKey}`,
     };
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[GatiAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[GatiAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -634,14 +743,21 @@ export class GatiAdapter implements CarrierAdapter {
         const response = await axios(config);
 
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[GatiAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -650,7 +766,7 @@ export class GatiAdapter implements CarrierAdapter {
         }
 
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        
+
         if (attempt < this.maxRetries) {
           console.warn(`[GatiAdapter] Request failed, retrying in ${delay}ms`, {
             attempt,
@@ -664,9 +780,11 @@ export class GatiAdapter implements CarrierAdapter {
     throw lastError || new Error('Request failed after retries');
   }
 
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `GATI-${req.shipmentId}-${Date.now()}`;
-    
+
     console.warn('[GatiAdapter] Using fallback label generation', {
       shipmentId: req.shipmentId,
       labelNumber,
@@ -684,6 +802,6 @@ export class GatiAdapter implements CarrierAdapter {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

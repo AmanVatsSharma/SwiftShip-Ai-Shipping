@@ -35,7 +35,20 @@ export const buildDataSourceOptions = (): DataSourceOptions => ({
   // Migrations are ordered by the timestamp prefix in their filenames
   // (1718160000000 before 1718160000001). Add new migrations here, in
   // append order; never re-order or re-number an existing one.
-  migrations: [AddTenantId1718160000000, AddWalletTables1718160000001, ValidateTenantIdFKs1718160000002, AddRateZoneMatrix1718160000003, AddOrderRateQuotes1718160000004, AddNdrCases1718160000005, AddRtoDisputes1718160000006, AddKycTables1718160000010, AddGstInvoiceTables1718160000011, AddCodRemittanceTables1718160000013, AddAuditLogTable1718160000014, AddChannelSyncTables1718160000015],
+  migrations: [
+    AddTenantId1718160000000,
+    AddWalletTables1718160000001,
+    ValidateTenantIdFKs1718160000002,
+    AddRateZoneMatrix1718160000003,
+    AddOrderRateQuotes1718160000004,
+    AddNdrCases1718160000005,
+    AddRtoDisputes1718160000006,
+    AddKycTables1718160000010,
+    AddGstInvoiceTables1718160000011,
+    AddCodRemittanceTables1718160000013,
+    AddAuditLogTable1718160000014,
+    AddChannelSyncTables1718160000015,
+  ],
   // In production this is `false` and we use migrations. For development we
   // auto-sync to keep parity with the previous Prisma workflow; CI / staging
   // / prod override with `DB_SYNCHRONIZE=false`.

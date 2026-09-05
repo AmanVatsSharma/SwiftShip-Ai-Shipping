@@ -1,4 +1,8 @@
-import { PanValidatorService, PAN_REGEX, PAN_HOLDER_TYPE_CHARS } from '../pan-validator';
+import {
+  PanValidatorService,
+  PAN_REGEX,
+  PAN_HOLDER_TYPE_CHARS,
+} from '../pan-validator';
 
 describe('PanValidatorService', () => {
   let service: PanValidatorService;
@@ -67,7 +71,9 @@ describe('PanValidatorService', () => {
     it('rejects empty / null / undefined', () => {
       expect(service.validate('').valid).toBe(false);
       expect(service.validate(null as unknown as string).valid).toBe(false);
-      expect(service.validate(undefined as unknown as string).valid).toBe(false);
+      expect(service.validate(undefined as unknown as string).valid).toBe(
+        false,
+      );
     });
 
     it('regex matches exactly the right shape', () => {

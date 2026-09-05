@@ -1,7 +1,19 @@
-export { OnboardingModule, OnboardingModule as OnboardingLibModule } from './lib/onboarding.module';
-export { OnboardingService, OnboardingService as OnboardingLibService } from './lib/onboarding.service';
-export { OnboardingResolver, OnboardingResolver as OnboardingLibResolver } from './lib/onboarding.resolver';
-export { OnboardingGuard, OnboardingGuard as OnboardingLibGuard } from './lib/onboarding.guard';
+export {
+  OnboardingModule,
+  OnboardingModule as OnboardingLibModule,
+} from './lib/onboarding.module';
+export {
+  OnboardingService,
+  OnboardingService as OnboardingLibService,
+} from './lib/onboarding.service';
+export {
+  OnboardingResolver,
+  OnboardingResolver as OnboardingLibResolver,
+} from './lib/onboarding.resolver';
+export {
+  OnboardingGuard,
+  OnboardingGuard as OnboardingLibGuard,
+} from './lib/onboarding.guard';
 export { OnboardingStateModel } from './lib/onboarding.model';
 
 // SS-031: KYC (PAN + GSTIN + bank) is shipped under the onboarding

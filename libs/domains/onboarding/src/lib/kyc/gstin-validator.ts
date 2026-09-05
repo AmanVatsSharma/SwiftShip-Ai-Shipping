@@ -61,7 +61,8 @@ export const GSTIN_STATE_CODES: Record<string, string> = {
   '99': 'Non-State Code',
 };
 
-export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[A-Z]{1}$/;
+export const GSTIN_REGEX =
+  /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[A-Z]{1}$/;
 
 export interface GstinValidationResult {
   valid: boolean;
@@ -113,7 +114,7 @@ export function computeGstinChecksum(gstin14: string): string {
   for (let i = 0; i < 14; i++) {
     const ch = gstin14.charAt(i);
     const value = gstinCharToValue(ch);
-    const factor = (i % 2 === 0) ? 1 : 2;
+    const factor = i % 2 === 0 ? 1 : 2;
     const product = value * factor;
     // Sum the digits of the product, then add to running total.
     const q = Math.floor(product / 10);

@@ -89,7 +89,9 @@ describe('BankVerifierService', () => {
       const adapter: BankVerifierAdapter = {
         name: 'test-adapter',
         isReady: () => true,
-        verify: jest.fn().mockResolvedValue({ status: 'VERIFIED', providerRef: 'x' }),
+        verify: jest
+          .fn()
+          .mockResolvedValue({ status: 'VERIFIED', providerRef: 'x' }),
       };
       const svc = new BankVerifierService(adapter);
       const result = await svc.verify({

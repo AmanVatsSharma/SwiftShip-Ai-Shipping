@@ -1,4 +1,9 @@
-import { GstinValidatorService, computeGstinChecksum, GSTIN_REGEX, GSTIN_STATE_CODES } from '../gstin-validator';
+import {
+  GstinValidatorService,
+  computeGstinChecksum,
+  GSTIN_REGEX,
+  GSTIN_STATE_CODES,
+} from '../gstin-validator';
 import { PanValidatorService } from '../pan-validator';
 
 describe('GstinValidatorService', () => {
@@ -22,7 +27,9 @@ describe('GstinValidatorService', () => {
 
   describe('normalize', () => {
     it('trims and upper-cases', () => {
-      expect(service.normalize(`  ${RELIANCE_GSTIN.toLowerCase()}  `)).toBe(RELIANCE_GSTIN);
+      expect(service.normalize(`  ${RELIANCE_GSTIN.toLowerCase()}  `)).toBe(
+        RELIANCE_GSTIN,
+      );
     });
   });
 
@@ -72,7 +79,9 @@ describe('GstinValidatorService', () => {
     it('rejects empty / null / undefined', () => {
       expect(service.validate('').valid).toBe(false);
       expect(service.validate(null as unknown as string).valid).toBe(false);
-      expect(service.validate(undefined as unknown as string).valid).toBe(false);
+      expect(service.validate(undefined as unknown as string).valid).toBe(
+        false,
+      );
     });
   });
 
@@ -89,7 +98,9 @@ describe('GstinValidatorService', () => {
 
     it('produces a stable checksum (golden value)', () => {
       // Snapshot value: any change to the algorithm must be deliberate.
-      expect(computeGstinChecksum(RELIANCE_PREFIX)).toBe(RELIANCE_GSTIN.charAt(14));
+      expect(computeGstinChecksum(RELIANCE_PREFIX)).toBe(
+        RELIANCE_GSTIN.charAt(14),
+      );
     });
   });
 });

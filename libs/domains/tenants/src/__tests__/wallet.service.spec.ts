@@ -37,7 +37,9 @@ describe('WalletService', () => {
         ) => {
           if (target === (WalletEntity as unknown)) {
             if (opts.where.tenantId !== undefined) {
-              return wallets.find((w) => w.tenantId === opts.where.tenantId) ?? null;
+              return (
+                wallets.find((w) => w.tenantId === opts.where.tenantId) ?? null
+              );
             }
             if (opts.where.id !== undefined) {
               return wallets.find((w) => w.id === opts.where.id) ?? null;
@@ -125,47 +127,43 @@ describe('WalletService', () => {
           return { affected: 1 };
         },
       ),
-      createQueryBuilder: jest.fn(
-        (_alias?: string): unknown => {
-          const qb: {
-            _setClauses: string[];
-            update: () => typeof qb;
-            set: (
-              clause:
-                | Record<string, unknown>
-                | ((qb: unknown) => void),
-            ) => typeof qb;
-            where: (clause: string, params: Record<string, unknown>) => typeof qb;
-            setLock: (mode: string) => typeof qb;
-            getOne: () => Promise<null>;
-            execute: () => Promise<{ affected: number }>;
-          } = {
-            _setClauses: [],
-            update() {
-              return qb;
-            },
-            set(clause) {
-              if (typeof clause === 'function') {
-                qb._setClauses.push('fn');
-              } else {
-                for (const [k, v] of Object.entries(clause)) {
-                  qb._setClauses.push(`${k}=${String(v)}`);
-                }
+      createQueryBuilder: jest.fn((_alias?: string): unknown => {
+        const qb: {
+          _setClauses: string[];
+          update: () => typeof qb;
+          set: (
+            clause: Record<string, unknown> | ((qb: unknown) => void),
+          ) => typeof qb;
+          where: (clause: string, params: Record<string, unknown>) => typeof qb;
+          setLock: (mode: string) => typeof qb;
+          getOne: () => Promise<null>;
+          execute: () => Promise<{ affected: number }>;
+        } = {
+          _setClauses: [],
+          update() {
+            return qb;
+          },
+          set(clause) {
+            if (typeof clause === 'function') {
+              qb._setClauses.push('fn');
+            } else {
+              for (const [k, v] of Object.entries(clause)) {
+                qb._setClauses.push(`${k}=${String(v)}`);
               }
-              return qb;
-            },
-            where() {
-              return qb;
-            },
-            setLock() {
-              return qb;
-            },
-            getOne: async () => null,
-            execute: async () => ({ affected: 1 }),
-          };
-          return qb;
-        },
-      ),
+            }
+            return qb;
+          },
+          where() {
+            return qb;
+          },
+          setLock() {
+            return qb;
+          },
+          getOne: async () => null,
+          execute: async () => ({ affected: 1 }),
+        };
+        return qb;
+      }),
     };
 
     const walletRepo = {
@@ -329,7 +327,9 @@ describe('WalletService', () => {
     expect(w2.reservedBalance).toBe;
 
     // A LOCK entry must have been recorded
-    const lockEntry = env.ledger.find((l) => l.idempotencyKey === 'lock_ship_1');
+    const lockEntry = env.ledger.find(
+      (l) => l.idempotencyKey === 'lock_ship_1',
+    );
     expect(lockEntry).toBeTruthy();
     expect(lockEntry?.entryType).toBe('LOCK');
     expect(lockEntry?.amount).toBe;

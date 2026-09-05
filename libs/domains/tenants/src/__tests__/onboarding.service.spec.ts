@@ -15,7 +15,10 @@ describe('OnboardingService', () => {
     const items: TenantEntity[] = [];
     let nextId = 1;
     return {
-      create: jest.fn((data: Partial<TenantEntity>) => ({ id: nextId, ...data } as TenantEntity)),
+      create: jest.fn(
+        (data: Partial<TenantEntity>) =>
+          ({ id: nextId, ...data }) as TenantEntity,
+      ),
       save: jest.fn(async (entity: TenantEntity) => {
         if (!entity.id) entity.id = nextId++;
         const idx = items.findIndex((i) => i.id === entity.id);
@@ -40,7 +43,9 @@ describe('OnboardingService', () => {
     const items: UserEntity[] = [];
     let nextId = 1;
     return {
-      create: jest.fn((data: Partial<UserEntity>) => ({ id: nextId, ...data } as UserEntity)),
+      create: jest.fn(
+        (data: Partial<UserEntity>) => ({ id: nextId, ...data }) as UserEntity,
+      ),
       save: jest.fn(async (entity: UserEntity) => {
         if (!entity.id) entity.id = nextId++;
         const idx = items.findIndex((i) => i.id === entity.id);
@@ -56,7 +61,10 @@ describe('OnboardingService', () => {
     const items: TenantApiKeyEntity[] = [];
     let nextId = 1;
     return {
-      create: jest.fn((data: Partial<TenantApiKeyEntity>) => ({ id: nextId, ...data } as TenantApiKeyEntity)),
+      create: jest.fn(
+        (data: Partial<TenantApiKeyEntity>) =>
+          ({ id: nextId, ...data }) as TenantApiKeyEntity,
+      ),
       save: jest.fn(async (entity: TenantApiKeyEntity) => {
         if (!entity.id) entity.id = nextId++;
         const idx = items.findIndex((i) => i.id === entity.id);
@@ -74,7 +82,10 @@ describe('OnboardingService', () => {
     const memberItems: TenantMemberEntity[] = [];
     let memberNextId = 1;
     return {
-      create: jest.fn((data: Partial<InviteEntity>) => ({ id: nextId, ...data } as InviteEntity)),
+      create: jest.fn(
+        (data: Partial<InviteEntity>) =>
+          ({ id: nextId, ...data }) as InviteEntity,
+      ),
       save: jest.fn(async (entity: InviteEntity | TenantMemberEntity) => {
         const isInvite = (entity as InviteEntity).token !== undefined;
         if (isInvite) {
@@ -121,7 +132,9 @@ describe('OnboardingService', () => {
     let nextId = 1;
     return {
       create: jest.fn(async (tenantId: number) => {
-        const prefix = `ss_live_${tenantId}${nextId}`.padEnd(8 + 'ss_live_'.length, 'x').slice(0, 'ss_live_'.length + 8);
+        const prefix = `ss_live_${tenantId}${nextId}`
+          .padEnd(8 + 'ss_live_'.length, 'x')
+          .slice(0, 'ss_live_'.length + 8);
         const entity: TenantApiKeyEntity = {
           id: nextId++,
           tenantId,
@@ -156,7 +169,11 @@ describe('OnboardingService', () => {
   });
 
   const makeWalletService = () => ({
-    topUp: jest.fn(async () => ({ id: 1, tenantId: 1, availableBalance: 50000 })),
+    topUp: jest.fn(async () => ({
+      id: 1,
+      tenantId: 1,
+      availableBalance: 50000,
+    })),
   });
 
   const buildService = () => {
@@ -193,8 +210,14 @@ describe('OnboardingService', () => {
 
   describe('onboardTenant', () => {
     it('creates tenant + user + api key with free credit, returns plainText once', async () => {
-      const { service, tenants, users, apiKeyService, featureFlagService, walletService } =
-        buildService();
+      const {
+        service,
+        tenants,
+        users,
+        apiKeyService,
+        featureFlagService,
+        walletService,
+      } = buildService();
 
       const result = await service.onboardTenant({
         name: 'Acme Co',
@@ -268,7 +291,9 @@ describe('OnboardingService', () => {
     it('generates token, sets expiresAt, logs the would-be email', async () => {
       const { service, invites } = buildService();
 
-      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+      const logSpy = jest
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined);
       try {
         const invite = await service.inviteTeamMember({
           tenantId: 1,
@@ -297,7 +322,9 @@ describe('OnboardingService', () => {
     it('creates a tenant member and marks the invite accepted', async () => {
       const { service, invites } = buildService();
 
-      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+      const logSpy = jest
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined);
       try {
         const invite = await service.inviteTeamMember({
           tenantId: 7,
@@ -318,7 +345,9 @@ describe('OnboardingService', () => {
 
     it('rejects expired / already-accepted invite', async () => {
       const { service, invites } = buildService();
-      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+      const logSpy = jest
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined);
       try {
         const invite = await service.inviteTeamMember({
           tenantId: 7,

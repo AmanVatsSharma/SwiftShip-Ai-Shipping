@@ -41,7 +41,9 @@ describe('AramexAdapter', () => {
 
       const codes = actions.map((a) => a.code).sort();
       // Default menu mirrors 11 (REATTEMPT), 12 (CHANGE_ADDRESS), 14 (CANCEL)
-      expect(codes).toEqual(expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS', 'CANCEL']));
+      expect(codes).toEqual(
+        expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS', 'CANCEL']),
+      );
     });
   });
 });

@@ -68,7 +68,9 @@ export interface CarrierAdapter {
   cancelShipment?(trackingNumber: string, reason?: string): Promise<boolean>;
   voidLabel?(labelNumber: string): Promise<boolean>;
   getRates(req: RateQuoteRequest): Promise<RateQuote[]>;
-  getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult>;
+  getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult>;
   schedulePickup(input: SchedulePickupRequest): Promise<ScheduledPickup>;
   cancelPickup?(input: CancelPickupRequest): Promise<void>;
   markCodCollected(input: MarkCodRequest): Promise<void>;

@@ -15,7 +15,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OnboardingStateEntity, OnboardingStatus } from '@swiftship/platform-typeorm';
+import {
+  OnboardingStateEntity,
+  OnboardingStatus,
+} from '@swiftship/platform-typeorm';
 import { UpdateOnboardingInput } from './dto/update-onboarding.input';
 
 @Injectable()
@@ -52,7 +55,9 @@ export class OnboardingService {
   async getByUser(userId: number): Promise<OnboardingStateEntity> {
     const state = await this.states.findOne({ where: { userId } });
     if (!state) {
-      throw new NotFoundException(`OnboardingState for user ${userId} not found`);
+      throw new NotFoundException(
+        `OnboardingState for user ${userId} not found`,
+      );
     }
     return state;
   }
@@ -71,16 +76,26 @@ export class OnboardingService {
     paymentsConfigured?: boolean;
     testLabelGenerated?: boolean;
     firstPickupScheduled?: boolean;
-  }): { status: OnboardingStatus; nextAction?: string; blockedReason?: string } {
+  }): {
+    status: OnboardingStatus;
+    nextAction?: string;
+    blockedReason?: string;
+  } {
     if (flags.kycSubmitted && !flags.kycApproved) {
-      return { status: OnboardingStatus.BLOCKED, blockedReason: 'KYC pending approval' };
+      return {
+        status: OnboardingStatus.BLOCKED,
+        blockedReason: 'KYC pending approval',
+      };
     }
     const steps = [
       { done: !!flags.kycApproved, action: 'Complete KYC' },
       { done: !!flags.pickupAddressAdded, action: 'Add pickup address' },
       { done: !!flags.pickupVerified, action: 'Verify pickup address' },
       { done: !!flags.carrierConnected, action: 'Connect a carrier' },
-      { done: !!flags.ecommerceConnected, action: 'Connect an e-commerce platform' },
+      {
+        done: !!flags.ecommerceConnected,
+        action: 'Connect an e-commerce platform',
+      },
       { done: !!flags.paymentsConfigured, action: 'Configure payments' },
       { done: !!flags.testLabelGenerated, action: 'Generate a test label' },
       { done: !!flags.firstPickupScheduled, action: 'Schedule first pickup' },
@@ -92,7 +107,9 @@ export class OnboardingService {
     }
     const anyStarted = steps.some((s) => s.done);
     return {
-      status: anyStarted ? OnboardingStatus.IN_PROGRESS : OnboardingStatus.NOT_STARTED,
+      status: anyStarted
+        ? OnboardingStatus.IN_PROGRESS
+        : OnboardingStatus.NOT_STARTED,
       nextAction: firstIncomplete.action,
     };
   }
@@ -127,13 +144,18 @@ export class OnboardingService {
     const flags = {
       kycSubmitted: input.kycSubmitted ?? current.kycSubmitted,
       kycApproved: input.kycApproved ?? current.kycApproved,
-      pickupAddressAdded: input.pickupAddressAdded ?? current.pickupAddressAdded,
+      pickupAddressAdded:
+        input.pickupAddressAdded ?? current.pickupAddressAdded,
       pickupVerified: input.pickupVerified ?? current.pickupVerified,
       carrierConnected: input.carrierConnected ?? current.carrierConnected,
-      ecommerceConnected: input.ecommerceConnected ?? current.ecommerceConnected,
-      paymentsConfigured: input.paymentsConfigured ?? current.paymentsConfigured,
-      testLabelGenerated: input.testLabelGenerated ?? current.testLabelGenerated,
-      firstPickupScheduled: input.firstPickupScheduled ?? current.firstPickupScheduled,
+      ecommerceConnected:
+        input.ecommerceConnected ?? current.ecommerceConnected,
+      paymentsConfigured:
+        input.paymentsConfigured ?? current.paymentsConfigured,
+      testLabelGenerated:
+        input.testLabelGenerated ?? current.testLabelGenerated,
+      firstPickupScheduled:
+        input.firstPickupScheduled ?? current.firstPickupScheduled,
     };
 
     const computed = this.computeStatus(flags);
@@ -149,6 +171,6 @@ export class OnboardingService {
       },
     );
 
-    return (await this.getByUser(userId)) as OnboardingStateEntity;
+    return await this.getByUser(userId);
   }
 }

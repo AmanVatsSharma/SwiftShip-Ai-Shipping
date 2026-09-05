@@ -44,7 +44,9 @@ describe('AuditLogService (SS-028)', () => {
   });
 
   it('record() swallows errors and warns instead of crashing the call', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
     const repo = {
       create: jest.fn((x: any) => x),
       save: jest.fn(async () => {
@@ -77,7 +79,10 @@ describe('AuditLogService (SS-028)', () => {
     } as any);
     expect(repo.createQueryBuilder).toHaveBeenCalledWith('a');
     expect(calls.andWhere.length).toBeGreaterThanOrEqual(2);
-    expect(calls.andWhere[0]).toEqual(['a.tenantId = :tenantId', { tenantId: 9 }]);
+    expect(calls.andWhere[0]).toEqual([
+      'a.tenantId = :tenantId',
+      { tenantId: 9 },
+    ]);
     expect(qb.orderBy).toHaveBeenCalledWith('a.createdAt', 'DESC');
     expect(qb.take).toHaveBeenCalledWith(10);
     expect(qb.skip).toHaveBeenCalledWith(0);
@@ -91,9 +96,18 @@ describe('AuditLogService (SS-028)', () => {
     const svc = new AuditLogService(repo as any);
     await svc.getForResource('1', 'order', 'o-1');
     expect(repo.createQueryBuilder).toHaveBeenCalledWith('a');
-    expect(calls.andWhere[0]).toEqual(['a.tenantId = :tenantId', { tenantId: 1 }]);
-    expect(calls.andWhere).toContainEqual(['a.resourceType = :resourceType', { resourceType: 'order' }]);
-    expect(calls.andWhere).toContainEqual(['a.resourceId = :resourceId', { resourceId: 'o-1' }]);
+    expect(calls.andWhere[0]).toEqual([
+      'a.tenantId = :tenantId',
+      { tenantId: 1 },
+    ]);
+    expect(calls.andWhere).toContainEqual([
+      'a.resourceType = :resourceType',
+      { resourceType: 'order' },
+    ]);
+    expect(calls.andWhere).toContainEqual([
+      'a.resourceId = :resourceId',
+      { resourceId: 'o-1' },
+    ]);
     expect(qb.take).toHaveBeenCalledWith(200);
     expect(qb.getMany).toHaveBeenCalled();
   });

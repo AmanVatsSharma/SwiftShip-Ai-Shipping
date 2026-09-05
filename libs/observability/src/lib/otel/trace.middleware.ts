@@ -1,10 +1,10 @@
-import {
-  Injectable,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 import { isOtelEnabled } from './otel.bootstrap';
-import { runWithCorrelation, getCorrelationContext } from '../correlation/context';
+import {
+  runWithCorrelation,
+  getCorrelationContext,
+} from '../correlation/context';
 
 type Correlation = {
   correlationId?: string;
@@ -35,7 +35,8 @@ export class TraceMiddleware implements NestMiddleware {
       // Lazy require so we don't have a hard dep on @opentelemetry/api.
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const traceApi: any = require('@opentelemetry/api');
-      const { trace, context, propagation, SpanKind, SpanStatusCode } = traceApi;
+      const { trace, context, propagation, SpanKind, SpanStatusCode } =
+        traceApi;
       const tracer = trace.getTracer('swiftship-http');
 
       const existing = (getCorrelationContext() ?? {}) as Correlation;
@@ -96,7 +97,9 @@ export class TraceMiddleware implements NestMiddleware {
     }
   }
 
-  private headerString(value: string | string[] | undefined): string | undefined {
+  private headerString(
+    value: string | string[] | undefined,
+  ): string | undefined {
     if (Array.isArray(value)) return value[0];
     return value;
   }

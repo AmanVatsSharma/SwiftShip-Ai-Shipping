@@ -156,8 +156,12 @@ export class AddGstInvoiceTables1718160000011 implements MigrationInterface {
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE gst_invoices DROP CONSTRAINT IF EXISTS fk_gst_invoices_invoice;`);
-    await q.query(`ALTER TABLE gst_eway_bills DROP CONSTRAINT IF EXISTS fk_gst_eway_bills_shipment;`);
+    await q.query(
+      `ALTER TABLE gst_invoices DROP CONSTRAINT IF EXISTS fk_gst_invoices_invoice;`,
+    );
+    await q.query(
+      `ALTER TABLE gst_eway_bills DROP CONSTRAINT IF EXISTS fk_gst_eway_bills_shipment;`,
+    );
     await q.query(`DROP INDEX IF EXISTS idx_gst_eway_bills_tenantId;`);
     await q.query(`DROP INDEX IF EXISTS gst_eway_bills_status_idx;`);
     await q.query(`DROP INDEX IF EXISTS gst_eway_bills_shipmentId_idx;`);

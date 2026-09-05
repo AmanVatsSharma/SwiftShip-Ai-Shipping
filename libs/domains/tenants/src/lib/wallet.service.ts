@@ -55,7 +55,9 @@ export class WalletService {
     if (tid === null || tid === undefined) {
       throw new BadRequestException('Tenant context required for wallet read');
     }
-    const wallet = await this.wallets.findOne({ where: { tenantId: Number(tid) } });
+    const wallet = await this.wallets.findOne({
+      where: { tenantId: Number(tid) },
+    });
     if (!wallet) {
       throw new NotFoundException(`Wallet for tenant ${tid} not found`);
     }
@@ -116,9 +118,13 @@ export class WalletService {
       input.amount,
     );
 
-    const updated = await em.findOne(WalletEntity, { where: { id: wallet.id } });
+    const updated = await em.findOne(WalletEntity, {
+      where: { id: wallet.id },
+    });
     if (!updated) {
-      throw new NotFoundException(`Wallet ${wallet.id} disappeared mid-transaction`);
+      throw new NotFoundException(
+        `Wallet ${wallet.id} disappeared mid-transaction`,
+      );
     }
     this.logger.log(
       `topUp tenant=${input.tenantId} +${input.amount}p key=${input.idempotencyKey}`,
@@ -246,9 +252,13 @@ export class WalletService {
         .where('id = :id', { id: wallet.id })
         .execute();
 
-      const updated = await em.findOne(WalletEntity, { where: { id: wallet.id } });
+      const updated = await em.findOne(WalletEntity, {
+        where: { id: wallet.id },
+      });
       if (!updated) {
-        throw new NotFoundException(`Wallet ${wallet.id} disappeared mid-transaction`);
+        throw new NotFoundException(
+          `Wallet ${wallet.id} disappeared mid-transaction`,
+        );
       }
       return updated;
     });
@@ -275,7 +285,10 @@ export class WalletService {
       // Reject release without a matching LOCK — the key must have been
       // a LOCK key previously.
       const lockEntry = await em.findOne(WalletLedgerEntity, {
-        where: { tenantId: input.tenantId, idempotencyKey: input.idempotencyKey },
+        where: {
+          tenantId: input.tenantId,
+          idempotencyKey: input.idempotencyKey,
+        },
       });
       if (!lockEntry) {
         throw new BadRequestException(
@@ -316,9 +329,13 @@ export class WalletService {
         .where('id = :id', { id: wallet.id })
         .execute();
 
-      const updated = await em.findOne(WalletEntity, { where: { id: wallet.id } });
+      const updated = await em.findOne(WalletEntity, {
+        where: { id: wallet.id },
+      });
       if (!updated) {
-        throw new NotFoundException(`Wallet ${wallet.id} disappeared mid-transaction`);
+        throw new NotFoundException(
+          `Wallet ${wallet.id} disappeared mid-transaction`,
+        );
       }
       return updated;
     });

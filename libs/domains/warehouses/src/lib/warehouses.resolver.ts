@@ -16,7 +16,8 @@ export class WarehousesResolver {
   @Roles('ADMIN', 'STAFF')
   list(
     @Args('search', { type: () => String, nullable: true }) search?: string,
-    @Args('isActive', { type: () => Boolean, nullable: true }) isActive?: boolean,
+    @Args('isActive', { type: () => Boolean, nullable: true })
+    isActive?: boolean,
   ) {
     return this.service.list({ search, isActive });
   }

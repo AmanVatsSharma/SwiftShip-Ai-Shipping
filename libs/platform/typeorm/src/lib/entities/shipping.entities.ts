@@ -108,7 +108,7 @@ export class ShipmentEntity {
   @Column({ type: 'int', nullable: true })
   warehouseId?: number | null;
   @ManyToOne(() => WarehouseEntity, (w) => w.shipments)
-  @JoinColumn({ name: "warehouseId" })
+  @JoinColumn({ name: 'warehouseId' })
   warehouse?: WarehouseEntity | null;
 
   @Column({ type: 'timestamp', nullable: true })
@@ -267,7 +267,11 @@ export class PincodeZoneEntity {
 }
 
 @Entity('rate_zone_matrix')
-@Index('rate_zone_matrix_carrier_pair_key', ['carrierCode', 'originZone', 'destZone'], { unique: true })
+@Index(
+  'rate_zone_matrix_carrier_pair_key',
+  ['carrierCode', 'originZone', 'destZone'],
+  { unique: true },
+)
 export class RateZoneMatrixEntity {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -386,7 +390,9 @@ export class ManifestEntity {
 }
 
 @Entity('manifest_items')
-@Index('manifest_items_manifest_shipment_key', ['manifestId', 'shipmentId'], { unique: true })
+@Index('manifest_items_manifest_shipment_key', ['manifestId', 'shipmentId'], {
+  unique: true,
+})
 export class ManifestItemEntity {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -546,7 +552,9 @@ export class EwayBillEntity {
   // billing.entities imports THIS file, so the target class is resolved
   // lazily to avoid a circular import.
   @OneToOne(
-    () => (require('./billing.entities') as typeof import('./billing.entities')).InvoiceEntity,
+    () =>
+      (require('./billing.entities') as typeof import('./billing.entities'))
+        .InvoiceEntity,
     (i: import('./billing.entities').InvoiceEntity) => i.ewayBill,
   )
   @JoinColumn({ name: 'invoiceId' })
@@ -668,7 +676,12 @@ export class RtoDisputeEntity {
   tenantId!: number;
 
   @Column({ type: 'varchar', length: 32, default: 'OPEN' })
-  status!: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED_CARRIER_FAULT' | 'RESOLVED_MERCHANT_FAULT' | 'REJECTED';
+  status!:
+    | 'OPEN'
+    | 'UNDER_REVIEW'
+    | 'RESOLVED_CARRIER_FAULT'
+    | 'RESOLVED_MERCHANT_FAULT'
+    | 'REJECTED';
 
   @Column({ type: 'varchar', length: 64, nullable: true })
   reasonCode?: string | null;
@@ -682,7 +695,11 @@ export class RtoDisputeEntity {
   @Column({ type: 'int', nullable: true })
   resolvedByUserId?: number | null;
 
-  @Column({ type: 'int', nullable: true, comment: 'Refund amount in paise if carrier-fault resolution' })
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: 'Refund amount in paise if carrier-fault resolution',
+  })
   refundedPaise?: number | null;
 
   @Column({ type: 'timestamp', nullable: true })

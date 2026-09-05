@@ -45,18 +45,18 @@ const defaultRateCard: StaticRateCard = {
 
 /**
  * Delhivery Carrier Adapter
- * 
+ *
  * Implements integration with Delhivery shipping API for label generation,
  * tracking, and shipment management.
- * 
+ *
  * API Documentation: https://delhivery.com/api-docs
- * 
+ *
  * Flow:
  * 1. Label Generation: Creates shipment and generates AWB label
  * 2. Tracking: Fetches real-time tracking updates
  * 3. Cancellation: Cancels shipments before pickup
  * 4. Label Voiding: Voids labels that haven't been used
- * 
+ *
  * Error Handling:
  * - Retries failed requests with exponential backoff
  * - Validates API responses
@@ -80,14 +80,17 @@ export class DelhiveryAdapter implements CarrierAdapter {
     }
     this.token = token;
     this.baseUrl = baseUrl;
-    console.log('[DelhiveryAdapter] Initialized', { baseUrl, hasToken: !!token });
+    console.log('[DelhiveryAdapter] Initialized', {
+      baseUrl,
+      hasToken: !!token,
+    });
   }
 
   /**
    * Generate a shipping label via Delhivery API
-   * 
+   *
    * API Endpoint: POST /api/p/label
-   * 
+   *
    * @param req - Label generation request with shipment details
    * @returns Label response with AWB number and label URL
    */
@@ -103,22 +106,26 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
     // Validate required fields
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for Delhivery label generation');
+      throw new Error(
+        'Delivery address is required for Delhivery label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for Delhivery label generation');
+      throw new Error(
+        'Package weight is required for Delhivery label generation',
+      );
     }
 
     try {
       // Build Delhivery API payload
       const payload = this.buildLabelPayload(req);
-      
+
       // Make API call with retry logic
       const response = await this.makeRequestWithRetry(
         'POST',
         '/api/p/label',
-        payload
+        payload,
       );
 
       // Parse response
@@ -133,15 +140,19 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
       return labelData;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[DelhiveryAdapter] generateLabel failed', {
         shipmentId: req.shipmentId,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+              }
+            : undefined,
       });
 
       // Fallback: Generate deterministic label number for graceful degradation
@@ -152,9 +163,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
   /**
    * Track a shipment via Delhivery API
-   * 
+   *
    * API Endpoint: GET /api/p/packages/json/?waybill={trackingNumber}
-   * 
+   *
    * @param trackingNumber - AWB/tracking number to track
    * @returns Tracking response with current status and events
    */
@@ -169,11 +180,14 @@ export class DelhiveryAdapter implements CarrierAdapter {
       // Make API call with retry logic
       const response = await this.makeRequestWithRetry(
         'GET',
-        `/api/p/packages/json/?waybill=${encodeURIComponent(trackingNumber)}`
+        `/api/p/packages/json/?waybill=${encodeURIComponent(trackingNumber)}`,
       );
 
       // Parse tracking response
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[DelhiveryAdapter] trackShipment success', {
         trackingNumber,
@@ -183,14 +197,18 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
       return trackingData;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[DelhiveryAdapter] trackShipment failed', {
         trackingNumber,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+              }
+            : undefined,
       });
 
       // Return minimal tracking response on error
@@ -206,15 +224,21 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
   /**
    * Cancel a shipment via Delhivery API
-   * 
+   *
    * API Endpoint: POST /api/p/edit
-   * 
+   *
    * @param trackingNumber - AWB/tracking number to cancel
    * @param reason - Optional cancellation reason
    * @returns True if cancellation successful
    */
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[DelhiveryAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[DelhiveryAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     try {
       const payload = {
@@ -225,10 +249,13 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
       await this.makeRequestWithRetry('POST', '/api/p/edit', payload);
 
-      console.log('[DelhiveryAdapter] cancelShipment success', { trackingNumber });
+      console.log('[DelhiveryAdapter] cancelShipment success', {
+        trackingNumber,
+      });
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[DelhiveryAdapter] cancelShipment failed', {
         trackingNumber,
         error: errorMessage,
@@ -239,9 +266,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
   /**
    * Void a label via Delhivery API
-   * 
+   *
    * API Endpoint: POST /api/p/edit
-   * 
+   *
    * @param labelNumber - Label/AWB number to void
    * @returns True if voiding successful
    */
@@ -259,7 +286,8 @@ export class DelhiveryAdapter implements CarrierAdapter {
       console.log('[DelhiveryAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[DelhiveryAdapter] voidLabel failed', {
         labelNumber,
         error: errorMessage,
@@ -278,13 +306,19 @@ export class DelhiveryAdapter implements CarrierAdapter {
    * Falls back to the static rate card on any HTTP / parse failure.
    */
   async getRates(req: RateQuoteRequest): Promise<RateQuote[]> {
-    console.log('[DelhiveryAdapter] getRates request', { ...req, carrierCode: 'delhivery' });
+    console.log('[DelhiveryAdapter] getRates request', {
+      ...req,
+      carrierCode: 'delhivery',
+    });
 
     // POST https://track.delhivery.com/api/kinko/v1/invoice/calculator/.estimate
     const liveQuotes = await this.fetchDelhiveryRateQuotes(req).catch((err) => {
-      console.warn('[DelhiveryAdapter] getRates live call failed, falling back', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      console.warn(
+        '[DelhiveryAdapter] getRates live call failed, falling back',
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
       return null;
     });
 
@@ -316,7 +350,10 @@ export class DelhiveryAdapter implements CarrierAdapter {
       ];
     } catch (fallbackErr) {
       console.error('[DelhiveryAdapter] getRates static fallback failed', {
-        error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+        error:
+          fallbackErr instanceof Error
+            ? fallbackErr.message
+            : String(fallbackErr),
       });
       // Last-ditch: return an empty array rather than throwing to the caller.
       return [];
@@ -326,7 +363,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
   /**
    * Internal: attempt the live rate-calculator call. Returns null on failure.
    */
-  private async fetchDelhiveryRateQuotes(req: RateQuoteRequest): Promise<RateQuote[] | null> {
+  private async fetchDelhiveryRateQuotes(
+    req: RateQuoteRequest,
+  ): Promise<RateQuote[] | null> {
     const url = `${this.baseUrl}/api/kinko/v1/invoice/calculator/.estimate`;
     const body = {
       origin: req.originPincode,
@@ -335,9 +374,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
       payment_mode: req.paymentMethod === 'COD' ? 'COD' : 'Prepaid',
     };
     const headers = {
-      'Authorization': `Token ${this.token}`,
+      Authorization: `Token ${this.token}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     const res = await fetch(url, {
@@ -350,8 +389,12 @@ export class DelhiveryAdapter implements CarrierAdapter {
     }
     const data: any = await res.json();
 
-    const surfaceRate = Number(data?.data?.[0]?.total_amount ?? data?.total_amount);
-    const expressRate = Number(data?.data?.[1]?.total_amount ?? data?.express_total);
+    const surfaceRate = Number(
+      data?.data?.[0]?.total_amount ?? data?.total_amount,
+    );
+    const expressRate = Number(
+      data?.data?.[1]?.total_amount ?? data?.express_total,
+    );
     if (!Number.isFinite(surfaceRate)) {
       return null;
     }
@@ -394,7 +437,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
    *   - GET https://track.delhivery.com/api/cmu/get_state_code?pincode={pin}
    *   - GET https://track.delhivery.com/api/pincode/{pin}?token={token}
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[DelhiveryAdapter] getServiceability request', input);
 
     let originOk = false;
@@ -413,9 +458,12 @@ export class DelhiveryAdapter implements CarrierAdapter {
       originCod = !!originData?.cod;
       destinationCod = !!destData?.cod;
     } catch (err) {
-      console.warn('[DelhiveryAdapter] getServiceability live call failed, falling back to static', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      console.warn(
+        '[DelhiveryAdapter] getServiceability live call failed, falling back to static',
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
     }
 
     // If both look serviceable and we got live data, use it; otherwise fall back
@@ -423,7 +471,8 @@ export class DelhiveryAdapter implements CarrierAdapter {
     if (originOk && destinationOk) {
       return {
         serviceable: true,
-        codAvailable: originCod && destinationCod && input.paymentMethod === 'COD',
+        codAvailable:
+          originCod && destinationCod && input.paymentMethod === 'COD',
         prepaidAvailable: true,
         estimatedDays: { min: 2, max: 4 },
         reason: undefined,
@@ -452,7 +501,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
   /**
    * Internal: GET https://track.delhivery.com/api/pincode/{pin}?token=...
    */
-  private async fetchDelhiveryPincodeInfo(pincode: string): Promise<{ serviceable: boolean; cod: boolean } | null> {
+  private async fetchDelhiveryPincodeInfo(
+    pincode: string,
+  ): Promise<{ serviceable: boolean; cod: boolean } | null> {
     const url = `${this.baseUrl}/api/pincode/${encodeURIComponent(pincode)}?token=${encodeURIComponent(this.token)}`;
     const res = await fetch(url, { method: 'GET' });
     if (!res.ok) {
@@ -462,8 +513,8 @@ export class DelhiveryAdapter implements CarrierAdapter {
     const deliveryCodes: any[] = Array.isArray(data?.delivery_codes)
       ? data.delivery_codes
       : Array.isArray(data?.data)
-      ? data.data
-      : [];
+        ? data.data
+        : [];
     if (deliveryCodes.length === 0) {
       return { serviceable: false, cod: false };
     }
@@ -497,9 +548,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${this.token}`,
+          Authorization: `Token ${this.token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify(body),
       });
@@ -516,9 +567,12 @@ export class DelhiveryAdapter implements CarrierAdapter {
         }
       }
     } catch (err) {
-      console.warn('[DelhiveryAdapter] schedulePickup live call failed, falling back', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      console.warn(
+        '[DelhiveryAdapter] schedulePickup live call failed, falling back',
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
     }
 
     // Fallback: generate a deterministic pickup id.
@@ -548,19 +602,25 @@ export class DelhiveryAdapter implements CarrierAdapter {
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${this.token}`,
+          Authorization: `Token ${this.token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
-        body: JSON.stringify({ pickup_id: input.pickupId, reason: input.reason }),
+        body: JSON.stringify({
+          pickup_id: input.pickupId,
+          reason: input.reason,
+        }),
       });
       if (res.ok) {
         return;
       }
     } catch (err) {
-      console.warn('[DelhiveryAdapter] cancelPickup live call failed (no-op in sandbox)', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      console.warn(
+        '[DelhiveryAdapter] cancelPickup live call failed (no-op in sandbox)',
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
     }
     // No-op fallback — Delhivery's sandbox does not implement pickup cancellation.
   }
@@ -600,8 +660,8 @@ export class DelhiveryAdapter implements CarrierAdapter {
       const res = await fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Token ${this.token}`,
-          'Accept': 'application/json',
+          Authorization: `Token ${this.token}`,
+          Accept: 'application/json',
         },
       });
       if (res.ok) {
@@ -609,24 +669,37 @@ export class DelhiveryAdapter implements CarrierAdapter {
         const scans: any[] = Array.isArray(data?.ShipmentData?.[0]?.Scans)
           ? data.ShipmentData[0].Scans
           : Array.isArray(data?.scans)
-          ? data.scans
-          : [];
+            ? data.scans
+            : [];
         const ndrScans = scans.filter(
-          (s) => s?.NDRCode || s?.ndr_code || s?.reason || s?.remarks?.toLowerCase().includes('ndr'),
+          (s) =>
+            s?.NDRCode ||
+            s?.ndr_code ||
+            s?.reason ||
+            s?.remarks?.toLowerCase().includes('ndr'),
         );
-        reasons = ndrScans.map((s) => String(s?.reason || s?.remarks || s?.ScanDetail || ''));
+        reasons = ndrScans.map((s) =>
+          String(s?.reason || s?.remarks || s?.ScanDetail || ''),
+        );
         if (reasons.length === 0) {
           // Fall back to the latest scan if no explicit NDR scan was tagged.
           const latest = scans[scans.length - 1];
           if (latest) {
-            reasons = [String(latest?.reason || latest?.remarks || latest?.ScanDetail || '')];
+            reasons = [
+              String(
+                latest?.reason || latest?.remarks || latest?.ScanDetail || '',
+              ),
+            ];
           }
         }
       }
     } catch (err) {
-      console.warn('[DelhiveryAdapter] getNdrActions live call failed, using static reason set', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      console.warn(
+        '[DelhiveryAdapter] getNdrActions live call failed, using static reason set',
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
     }
 
     return this.mapNdrReasonsToActions(reasons);
@@ -648,13 +721,20 @@ export class DelhiveryAdapter implements CarrierAdapter {
           label: 'Reattempt delivery',
           requiresCustomerInput: false,
         };
-      } else if (reason.includes('wrong address') || reason.includes('address')) {
+      } else if (
+        reason.includes('wrong address') ||
+        reason.includes('address')
+      ) {
         mapped = {
           code: 'CHANGE_ADDRESS',
           label: 'Update address',
           requiresCustomerInput: true,
         };
-      } else if (reason.includes('refused') || reason.includes('cancel') || reason.includes('rto')) {
+      } else if (
+        reason.includes('refused') ||
+        reason.includes('cancel') ||
+        reason.includes('rto')
+      ) {
         mapped = {
           code: 'CANCEL',
           label: 'Cancel and RTO',
@@ -740,7 +820,10 @@ export class DelhiveryAdapter implements CarrierAdapter {
   /**
    * Parse Delhivery label generation response
    */
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     // Delhivery API response structure
     const waybill = data?.waybill || data?.AWB || data?.awb;
     const labelUrl = data?.label_url || data?.labelUrl || data?.label;
@@ -755,8 +838,10 @@ export class DelhiveryAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: packageStatus?.service_type || 'Delhivery Surface',
       awbNumber: waybill || labelNumber,
-      trackingUrl: waybill ? `https://www.delhivery.com/track/${waybill}` : undefined,
-      estimatedDelivery: packageStatus?.estimated_delivery_date 
+      trackingUrl: waybill
+        ? `https://www.delhivery.com/track/${waybill}`
+        : undefined,
+      estimatedDelivery: packageStatus?.estimated_delivery_date
         ? new Date(packageStatus.estimated_delivery_date)
         : undefined,
     };
@@ -765,7 +850,10 @@ export class DelhiveryAdapter implements CarrierAdapter {
   /**
    * Parse Delhivery tracking response
    */
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     // Delhivery tracking response structure
     const packages = data?.packages || (Array.isArray(data) ? data : [data]);
     const pkg = packages[0] || {};
@@ -774,7 +862,9 @@ export class DelhiveryAdapter implements CarrierAdapter {
     const latestScan = scanHistory[scanHistory.length - 1] || {};
 
     // Map Delhivery status to our status
-    const status = this.mapDelhiveryStatus(latestScan?.status || pkg?.status || 'Unknown');
+    const status = this.mapDelhiveryStatus(
+      latestScan?.status || pkg?.status || 'Unknown',
+    );
 
     // Build events from scan history
     const events = scanHistory.map((scan: any) => ({
@@ -790,9 +880,10 @@ export class DelhiveryAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestScan?.sub_status || latestScan?.scan_type,
-      description: latestScan?.remarks || latestScan?.scan_detail || latestScan?.status,
+      description:
+        latestScan?.remarks || latestScan?.scan_detail || latestScan?.status,
       location: latestScan?.location || latestScan?.city || pkg?.destination,
-      occurredAt: latestScan?.scan_datetime 
+      occurredAt: latestScan?.scan_datetime
         ? new Date(latestScan.scan_datetime)
         : new Date(),
       events,
@@ -804,23 +895,35 @@ export class DelhiveryAdapter implements CarrierAdapter {
    */
   private mapDelhiveryStatus(delhiveryStatus: string): string {
     const status = (delhiveryStatus || '').toLowerCase();
-    
+
     if (status.includes('delivered') || status.includes('dl')) {
       return 'DELIVERED';
     }
-    if (status.includes('transit') || status.includes('in_transit') || status.includes('it')) {
+    if (
+      status.includes('transit') ||
+      status.includes('in_transit') ||
+      status.includes('it')
+    ) {
       return 'IN_TRANSIT';
     }
-    if (status.includes('shipped') || status.includes('pickup') || status.includes('pu')) {
+    if (
+      status.includes('shipped') ||
+      status.includes('pickup') ||
+      status.includes('pu')
+    ) {
       return 'SHIPPED';
     }
-    if (status.includes('pending') || status.includes('created') || status.includes('cr')) {
+    if (
+      status.includes('pending') ||
+      status.includes('created') ||
+      status.includes('cr')
+    ) {
       return 'PENDING';
     }
     if (status.includes('cancel') || status.includes('void')) {
       return 'CANCELLED';
     }
-    
+
     return 'UNKNOWN';
   }
 
@@ -830,24 +933,27 @@ export class DelhiveryAdapter implements CarrierAdapter {
   private async makeRequestWithRetry(
     method: 'GET' | 'POST',
     endpoint: string,
-    data?: any
+    data?: any,
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
-      'Authorization': `Token ${this.token}`,
+      Authorization: `Token ${this.token}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[DelhiveryAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[DelhiveryAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -864,15 +970,22 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
         // Check for API-level errors in response
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
+
         // Don't retry on 4xx errors (client errors)
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[DelhiveryAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -882,12 +995,15 @@ export class DelhiveryAdapter implements CarrierAdapter {
 
         // Calculate delay with exponential backoff
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        
+
         if (attempt < this.maxRetries) {
-          console.warn(`[DelhiveryAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[DelhiveryAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         } else {
           console.error('[DelhiveryAdapter] Request failed after all retries', {
@@ -904,9 +1020,11 @@ export class DelhiveryAdapter implements CarrierAdapter {
   /**
    * Generate fallback label when API fails
    */
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `DLV-${req.shipmentId}-${Date.now()}`;
-    
+
     console.warn('[DelhiveryAdapter] Using fallback label generation', {
       shipmentId: req.shipmentId,
       labelNumber,
@@ -927,6 +1045,6 @@ export class DelhiveryAdapter implements CarrierAdapter {
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

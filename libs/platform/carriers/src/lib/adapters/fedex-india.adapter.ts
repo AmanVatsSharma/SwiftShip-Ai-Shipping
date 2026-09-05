@@ -17,10 +17,10 @@ import axios, { AxiosError } from 'axios';
 
 /**
  * FedEx India Carrier Adapter
- * 
+ *
  * Implements integration with FedEx India API.
  * FedEx is a global logistics provider with strong presence in India.
- * 
+ *
  * API Documentation: https://developer.fedex.com/api/en-in
  */
 export class FedExIndiaAdapter implements CarrierAdapter {
@@ -35,21 +35,23 @@ export class FedExIndiaAdapter implements CarrierAdapter {
   private tokenExpiry: Date | null = null;
 
   constructor(
-    clientId: string, 
-    clientSecret: string, 
+    clientId: string,
+    clientSecret: string,
     accountNumber: string,
-    baseUrl: string = 'https://apis.fedex.com'
+    baseUrl: string = 'https://apis.fedex.com',
   ) {
     if (!clientId || !clientSecret || !accountNumber) {
-      throw new Error('FedEx India client ID, client secret, and account number are required');
+      throw new Error(
+        'FedEx India client ID, client secret, and account number are required',
+      );
     }
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.accountNumber = accountNumber;
     this.baseUrl = baseUrl;
-    console.log('[FedExIndiaAdapter] Initialized', { 
-      baseUrl, 
-      hasClientId: !!clientId, 
+    console.log('[FedExIndiaAdapter] Initialized', {
+      baseUrl,
+      hasClientId: !!clientId,
       hasClientSecret: !!clientSecret,
       hasAccountNumber: !!accountNumber,
     });
@@ -65,17 +67,25 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     });
 
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for FedEx India label generation');
+      throw new Error(
+        'Delivery address is required for FedEx India label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for FedEx India label generation');
+      throw new Error(
+        'Package weight is required for FedEx India label generation',
+      );
     }
 
     try {
       await this.ensureAuthenticated();
       const payload = this.buildLabelPayload(req);
-      const response = await this.makeRequestWithRetry('POST', '/ship/v1/shipments', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/ship/v1/shipments',
+        payload,
+      );
       const labelData = this.parseLabelResponse(response.data, req);
 
       console.log('[FedExIndiaAdapter] generateLabel success', {
@@ -95,7 +105,9 @@ export class FedExIndiaAdapter implements CarrierAdapter {
   }
 
   async trackShipment(trackingNumber: string): Promise<TrackingResponse> {
-    console.log('[FedExIndiaAdapter] trackShipment request', { trackingNumber });
+    console.log('[FedExIndiaAdapter] trackShipment request', {
+      trackingNumber,
+    });
 
     if (!trackingNumber) {
       throw new Error('Tracking number is required');
@@ -104,15 +116,24 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     try {
       await this.ensureAuthenticated();
       const payload = {
-        trackingInfo: [{
-          trackingNumberInfo: {
-            trackingNumber,
+        trackingInfo: [
+          {
+            trackingNumberInfo: {
+              trackingNumber,
+            },
           },
-        }],
+        ],
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/track/v1/trackingnumbers', payload);
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/track/v1/trackingnumbers',
+        payload,
+      );
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[FedExIndiaAdapter] trackShipment success', {
         trackingNumber,
@@ -137,8 +158,14 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     }
   }
 
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[FedExIndiaAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[FedExIndiaAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     try {
       await this.ensureAuthenticated();
@@ -147,8 +174,14 @@ export class FedExIndiaAdapter implements CarrierAdapter {
         cancellationReason: reason || 'Cancelled by customer',
       };
 
-      await this.makeRequestWithRetry('POST', '/ship/v1/shipments/cancel', payload);
-      console.log('[FedExIndiaAdapter] cancelShipment success', { trackingNumber });
+      await this.makeRequestWithRetry(
+        'POST',
+        '/ship/v1/shipments/cancel',
+        payload,
+      );
+      console.log('[FedExIndiaAdapter] cancelShipment success', {
+        trackingNumber,
+      });
       return true;
     } catch (error) {
       console.error('[FedExIndiaAdapter] cancelShipment failed', {
@@ -164,7 +197,10 @@ export class FedExIndiaAdapter implements CarrierAdapter {
 
     try {
       await this.ensureAuthenticated();
-      await this.makeRequestWithRetry('POST', `/ship/v1/shipments/${encodeURIComponent(labelNumber)}/void`);
+      await this.makeRequestWithRetry(
+        'POST',
+        `/ship/v1/shipments/${encodeURIComponent(labelNumber)}/void`,
+      );
       console.log('[FedExIndiaAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
@@ -191,15 +227,24 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     try {
       await this.ensureAuthenticated();
       const payload = this.buildRatePayload(req);
-      const response = await this.makeRequestWithRetry('POST', '/rate/v1/rates/quotes', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/rate/v1/rates/quotes',
+        payload,
+      );
       const quotes = this.parseRateResponse(response.data, req);
 
-      console.log('[FedExIndiaAdapter] getRates success', { quoteCount: quotes.length });
+      console.log('[FedExIndiaAdapter] getRates success', {
+        quoteCount: quotes.length,
+      });
       return quotes;
     } catch (error) {
-      console.error('[FedExIndiaAdapter] getRates failed, using static fallback', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[FedExIndiaAdapter] getRates failed, using static fallback',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getStaticRateQuotes(req);
     }
   }
@@ -207,14 +252,19 @@ export class FedExIndiaAdapter implements CarrierAdapter {
   /**
    * Check serviceability via FedEx /availability/v1/addressserviceables.
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[FedExIndiaAdapter] getServiceability request', input);
 
     try {
       await this.ensureAuthenticated();
       const payload = {
         originAddress: { postalCode: input.originPincode, countryCode: 'IN' },
-        destinationAddress: { postalCode: input.destinationPincode, countryCode: 'IN' },
+        destinationAddress: {
+          postalCode: input.destinationPincode,
+          countryCode: 'IN',
+        },
         services: [
           'PRIORITY_OVERNIGHT',
           'FEDEX_2_DAY',
@@ -226,15 +276,22 @@ export class FedExIndiaAdapter implements CarrierAdapter {
         },
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/availability/v1/addressserviceables', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/availability/v1/addressserviceables',
+        payload,
+      );
       const result = this.parseServiceabilityResponse(response.data, input);
 
       console.log('[FedExIndiaAdapter] getServiceability success', result);
       return result;
     } catch (error) {
-      console.error('[FedExIndiaAdapter] getServiceability failed, using fallback', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[FedExIndiaAdapter] getServiceability failed, using fallback',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getStaticServiceability(input);
     }
   }
@@ -247,7 +304,10 @@ export class FedExIndiaAdapter implements CarrierAdapter {
 
     try {
       await this.ensureAuthenticated();
-      const readyTimestamp = this.buildReadyTimestamp(input.pickupDate, input.pickupTimeSlot);
+      const readyTimestamp = this.buildReadyTimestamp(
+        input.pickupDate,
+        input.pickupTimeSlot,
+      );
       const payload = {
         associatedAccountNumber: { value: this.accountNumber },
         carrierCode: 'FDXE',
@@ -265,14 +325,21 @@ export class FedExIndiaAdapter implements CarrierAdapter {
           personName: input.contactName,
           phoneNumber: input.contactPhone,
         },
-        shipmentIds: input.shipmentIds.map(id => ({ value: id })),
+        shipmentIds: input.shipmentIds.map((id) => ({ value: id })),
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/pickup/v1/pickups', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/pickup/v1/pickups',
+        payload,
+      );
       const data = response.data?.output || response.data;
-      const confirmationCode = data?.pickupConfirmationCode || data?.confirmationNumber;
+      const confirmationCode =
+        data?.pickupConfirmationCode || data?.confirmationNumber;
 
-      console.log('[FedExIndiaAdapter] schedulePickup success', { confirmationCode });
+      console.log('[FedExIndiaAdapter] schedulePickup success', {
+        confirmationCode,
+      });
 
       return {
         pickupId: confirmationCode || `FEDEX-PIK-${Date.now()}`,
@@ -283,9 +350,12 @@ export class FedExIndiaAdapter implements CarrierAdapter {
           : undefined,
       };
     } catch (error) {
-      console.error('[FedExIndiaAdapter] schedulePickup failed, using fallback', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[FedExIndiaAdapter] schedulePickup failed, using fallback',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       const pickupId = `FEDEX-PIK-${Date.now()}`;
       return {
         pickupId,
@@ -310,7 +380,9 @@ export class FedExIndiaAdapter implements CarrierAdapter {
         carrierCode: 'FDXE',
         countryCode: 'IN',
       });
-      console.log('[FedExIndiaAdapter] cancelPickup success', { pickupId: input.pickupId });
+      console.log('[FedExIndiaAdapter] cancelPickup success', {
+        pickupId: input.pickupId,
+      });
     } catch (error) {
       console.error('[FedExIndiaAdapter] cancelPickup failed', {
         pickupId: input.pickupId,
@@ -327,7 +399,9 @@ export class FedExIndiaAdapter implements CarrierAdapter {
    * so callers route to the recon queue rather than sending a no-op confirmation.
    */
   async markCodCollected(_input: MarkCodRequest): Promise<void> {
-    console.log('[FedExIndiaAdapter] markCodCollected request — FedEx COD is auto-reconciled');
+    console.log(
+      '[FedExIndiaAdapter] markCodCollected request — FedEx COD is auto-reconciled',
+    );
     const err = new Error(
       'FedEx India COD is auto-reconciled; markCodCollected is not implemented. The queue-based reconciliation worker handles it.',
     );
@@ -349,12 +423,18 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     try {
       await this.ensureAuthenticated();
       const payload = {
-        trackingInfo: [{
-          trackingNumberInfo: { trackingNumber: shipmentId },
-        }],
+        trackingInfo: [
+          {
+            trackingNumberInfo: { trackingNumber: shipmentId },
+          },
+        ],
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/track/v1/trackingnumbers', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/track/v1/trackingnumbers',
+        payload,
+      );
       const codes = this.collectFedExExceptionCodes(response.data);
 
       console.log('[FedExIndiaAdapter] getNdrActions resolved', {
@@ -388,23 +468,31 @@ export class FedExIndiaAdapter implements CarrierAdapter {
         variableOptions: 'FREIGHT_GUARANTEE',
       },
       requestedShipment: {
-        shipper: { address: { postalCode: req.originPincode, countryCode: 'IN' } },
-        recipient: { address: { postalCode: req.destinationPincode, countryCode: 'IN' } },
+        shipper: {
+          address: { postalCode: req.originPincode, countryCode: 'IN' },
+        },
+        recipient: {
+          address: { postalCode: req.destinationPincode, countryCode: 'IN' },
+        },
         pickupType: 'USE_SCHEDULED_PICKUP',
-        requestedPackageLineItems: [{
-          weight: {
-            value: (req.weightGrams / 1000).toFixed(2),
-            units: 'KG',
-          },
-          ...(req.length && req.width && req.height ? {
-            dimensions: {
-              length: req.length.toString(),
-              width: req.width.toString(),
-              height: req.height.toString(),
-              units: 'CM',
+        requestedPackageLineItems: [
+          {
+            weight: {
+              value: (req.weightGrams / 1000).toFixed(2),
+              units: 'KG',
             },
-          } : {}),
-        }],
+            ...(req.length && req.width && req.height
+              ? {
+                  dimensions: {
+                    length: req.length.toString(),
+                    width: req.width.toString(),
+                    height: req.height.toString(),
+                    units: 'CM',
+                  },
+                }
+              : {}),
+          },
+        ],
         serviceType: serviceTypes[0],
         ...(req.paymentMethod === 'COD' && {
           specialServicesRequested: {
@@ -434,11 +522,19 @@ export class FedExIndiaAdapter implements CarrierAdapter {
       .filter((r: any) => r && (r.ratedShipmentDetails || r.shipmentRateDetail))
       .map((r: any) => {
         const rated = r.ratedShipmentDetails?.[0] || r.shipmentRateDetail || {};
-        const totalAmount = parseFloat(rated.totalNetCharge || rated.shipmentRateDetail?.totalNetCharge || '0');
+        const totalAmount = parseFloat(
+          rated.totalNetCharge ||
+            rated.shipmentRateDetail?.totalNetCharge ||
+            '0',
+        );
         const transitDays = rated.transitDays || rated.deliveryTimestamp;
         const serviceType = r.serviceType || rated.serviceType;
-        const minDays = typeof transitDays === 'string' ? 1 : (transitDays?.minDays || 1);
-        const maxDays = typeof transitDays === 'string' ? Math.max(2, Number(transitDays) || 2) : (transitDays?.maxDays || 3);
+        const minDays =
+          typeof transitDays === 'string' ? 1 : transitDays?.minDays || 1;
+        const maxDays =
+          typeof transitDays === 'string'
+            ? Math.max(2, Number(transitDays) || 2)
+            : transitDays?.maxDays || 3;
 
         return {
           carrier: 'FedEx India',
@@ -479,17 +575,30 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     ];
   }
 
-  private mapFedExServiceType(serviceType: string | undefined): 'STANDARD' | 'EXPRESS' | 'SAME_DAY' | 'OVERNIGHT' {
+  private mapFedExServiceType(
+    serviceType: string | undefined,
+  ): 'STANDARD' | 'EXPRESS' | 'SAME_DAY' | 'OVERNIGHT' {
     const s = (serviceType || '').toUpperCase();
     if (s.includes('SAME_DAY')) return 'SAME_DAY';
     if (s.includes('OVERNIGHT') || s.includes('PRIORITY')) return 'OVERNIGHT';
-    if (s.includes('EXPRESS') || s.includes('2_DAY') || s.includes('INTERNATIONAL')) return 'EXPRESS';
+    if (
+      s.includes('EXPRESS') ||
+      s.includes('2_DAY') ||
+      s.includes('INTERNATIONAL')
+    )
+      return 'EXPRESS';
     return 'STANDARD';
   }
 
-  private parseServiceabilityResponse(data: any, input: ServiceabilityRequest): ServiceabilityResult {
+  private parseServiceabilityResponse(
+    data: any,
+    input: ServiceabilityRequest,
+  ): ServiceabilityResult {
     const output = data?.output || data;
-    const responses = output?.addressServiceabilityResponses || output?.serviceabilityResponses || [];
+    const responses =
+      output?.addressServiceabilityResponses ||
+      output?.serviceabilityResponses ||
+      [];
     const anyServiceable = responses.some((r: any) => r?.serviceable === true);
 
     if (responses.length === 0) {
@@ -505,8 +614,12 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     };
   }
 
-  private getStaticServiceability(input: ServiceabilityRequest): ServiceabilityResult {
-    const valid = /^\d{6}$/.test(input.originPincode) && /^\d{6}$/.test(input.destinationPincode);
+  private getStaticServiceability(
+    input: ServiceabilityRequest,
+  ): ServiceabilityResult {
+    const valid =
+      /^\d{6}$/.test(input.originPincode) &&
+      /^\d{6}$/.test(input.destinationPincode);
     return {
       serviceable: valid,
       codAvailable: valid,
@@ -516,7 +629,10 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     };
   }
 
-  private buildReadyTimestamp(pickupDate: string, timeSlot: 'MORNING' | 'AFTERNOON' | 'EVENING'): string {
+  private buildReadyTimestamp(
+    pickupDate: string,
+    timeSlot: 'MORNING' | 'AFTERNOON' | 'EVENING',
+  ): string {
     const date = new Date(pickupDate);
     let hour = 9;
     if (timeSlot === 'MORNING') hour = 9;
@@ -536,14 +652,21 @@ export class FedExIndiaAdapter implements CarrierAdapter {
       for (const tr of trackResults) {
         const scanEvents = tr?.scanEvents || tr?.trackingEvents || [];
         for (const ev of scanEvents) {
-          const code = ev?.exceptionCode || ev?.statusExceptionCode || ev?.statusDetail?.code;
+          const code =
+            ev?.exceptionCode ||
+            ev?.statusExceptionCode ||
+            ev?.statusDetail?.code;
           if (code && !codes.includes(code)) {
             codes.push(code);
           }
         }
         // Also surface latestStatusDetail code if it's exception-like
         const detailCode = tr?.latestStatusDetail?.code;
-        if (detailCode && /^[A-Z]{3}$/.test(detailCode) && !codes.includes(detailCode)) {
+        if (
+          detailCode &&
+          /^[A-Z]{3}$/.test(detailCode) &&
+          !codes.includes(detailCode)
+        ) {
           codes.push(detailCode);
         }
       }
@@ -552,7 +675,9 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     return codes;
   }
 
-  private mapFedExExceptionCodesToNdrActions(codes: string[]): NdrActionOption[] {
+  private mapFedExExceptionCodesToNdrActions(
+    codes: string[],
+  ): NdrActionOption[] {
     const actions: NdrActionOption[] = [];
     const seen = new Set<NdrActionOption['code']>();
 
@@ -571,7 +696,8 @@ export class FedExIndiaAdapter implements CarrierAdapter {
             code: 'CHANGE_ADDRESS',
             label: 'Update delivery address',
             requiresCustomerInput: true,
-            description: 'FedEx reported an address hold (AHS). Collect a corrected address from the customer.',
+            description:
+              'FedEx reported an address hold (AHS). Collect a corrected address from the customer.',
           });
           break;
         case 'CDX': // Customer Delivery Exception
@@ -579,7 +705,8 @@ export class FedExIndiaAdapter implements CarrierAdapter {
             code: 'REATTEMPT',
             label: 'Reattempt delivery',
             requiresCustomerInput: false,
-            description: 'Customer delivery exception (CDX) — schedule a reattempt on the next business day.',
+            description:
+              'Customer delivery exception (CDX) — schedule a reattempt on the next business day.',
           });
           break;
         case 'RCX': // Recipient Refused
@@ -587,7 +714,8 @@ export class FedExIndiaAdapter implements CarrierAdapter {
             code: 'CANCEL',
             label: 'Cancel and RTO',
             requiresCustomerInput: false,
-            description: 'Recipient refused the shipment (RCX) — initiate return to origin.',
+            description:
+              'Recipient refused the shipment (RCX) — initiate return to origin.',
           });
           break;
         default:
@@ -611,7 +739,8 @@ export class FedExIndiaAdapter implements CarrierAdapter {
       code: 'OPEN_DISPUTE',
       label: 'Open a dispute',
       requiresCustomerInput: true,
-      description: 'Escalate to FedEx India support if none of the above resolves the issue.',
+      description:
+        'Escalate to FedEx India support if none of the above resolves the issue.',
     });
 
     return actions;
@@ -665,7 +794,7 @@ export class FedExIndiaAdapter implements CarrierAdapter {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        }
+        },
       );
 
       this.accessToken = response.data.access_token;
@@ -691,32 +820,41 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     return {
       labelResponseOptions: req.format || 'PDF',
       requestedShipment: {
-        shipper: pickup ? {
-          contact: {
-            personName: pickup.name,
-            phoneNumber: pickup.phone,
+        shipper: pickup
+          ? {
+              contact: {
+                personName: pickup.name,
+                phoneNumber: pickup.phone,
+              },
+              address: {
+                streetLines: [pickup.addressLine1, pickup.addressLine2].filter(
+                  Boolean,
+                ),
+                city: pickup.city,
+                stateOrProvinceCode: pickup.state,
+                postalCode: pickup.pincode,
+                countryCode: pickup.country || 'IN',
+              },
+            }
+          : undefined,
+        recipients: [
+          {
+            contact: {
+              personName: delivery.name,
+              phoneNumber: delivery.phone,
+            },
+            address: {
+              streetLines: [
+                delivery.addressLine1,
+                delivery.addressLine2,
+              ].filter(Boolean),
+              city: delivery.city,
+              stateOrProvinceCode: delivery.state,
+              postalCode: delivery.pincode,
+              countryCode: delivery.country || 'IN',
+            },
           },
-          address: {
-            streetLines: [pickup.addressLine1, pickup.addressLine2].filter(Boolean),
-            city: pickup.city,
-            stateOrProvinceCode: pickup.state,
-            postalCode: pickup.pincode,
-            countryCode: pickup.country || 'IN',
-          },
-        } : undefined,
-        recipients: [{
-          contact: {
-            personName: delivery.name,
-            phoneNumber: delivery.phone,
-          },
-          address: {
-            streetLines: [delivery.addressLine1, delivery.addressLine2].filter(Boolean),
-            city: delivery.city,
-            stateOrProvinceCode: delivery.state,
-            postalCode: delivery.pincode,
-            countryCode: delivery.country || 'IN',
-          },
-        }],
+        ],
         shipDatestamp: new Date().toISOString().split('T')[0],
         serviceType: 'STANDARD_OVERNIGHT',
         packagingType: 'YOUR_PACKAGING',
@@ -729,34 +867,41 @@ export class FedExIndiaAdapter implements CarrierAdapter {
           imageType: req.format === 'ZPL' ? 'ZPL' : 'PDF',
           labelStockType: 'PAPER_4X6',
         },
-        requestedPackageLineItems: [{
-          weight: {
-            value: (pkg.weight / 1000).toFixed(2),
-            units: 'KG',
-          },
-          dimensions: (pkg.length && pkg.width && pkg.height) ? {
-            length: pkg.length.toString(),
-            width: pkg.width.toString(),
-            height: pkg.height.toString(),
-            units: 'CM',
-          } : undefined,
-          ...(pkg.codAmount && {
-            specialServicesRequested: {
-              specialServiceTypes: ['COD'],
-              codDetail: {
-                codCollectionAmount: {
-                  amount: pkg.codAmount.toString(),
-                  currency: 'INR',
+        requestedPackageLineItems: [
+          {
+            weight: {
+              value: (pkg.weight / 1000).toFixed(2),
+              units: 'KG',
+            },
+            dimensions:
+              pkg.length && pkg.width && pkg.height
+                ? {
+                    length: pkg.length.toString(),
+                    width: pkg.width.toString(),
+                    height: pkg.height.toString(),
+                    units: 'CM',
+                  }
+                : undefined,
+            ...(pkg.codAmount && {
+              specialServicesRequested: {
+                specialServiceTypes: ['COD'],
+                codDetail: {
+                  codCollectionAmount: {
+                    amount: pkg.codAmount.toString(),
+                    currency: 'INR',
+                  },
                 },
               },
-            },
-          }),
-        }],
+            }),
+          },
+        ],
         ...(req.orderNumber && {
-          customerReferences: [{
-            customerReferenceType: 'CUSTOMER_REFERENCE',
-            value: req.orderNumber,
-          }],
+          customerReferences: [
+            {
+              customerReferenceType: 'CUSTOMER_REFERENCE',
+              value: req.orderNumber,
+            },
+          ],
         }),
       },
       accountNumber: {
@@ -765,14 +910,19 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     };
   }
 
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const output = data?.output || data;
     const transactionShipments = output?.transactionShipments || [];
     const shipment = transactionShipments[0] || {};
-    const masterTrackingNumber = shipment?.masterTrackingNumber || shipment?.trackingNumber;
+    const masterTrackingNumber =
+      shipment?.masterTrackingNumber || shipment?.trackingNumber;
     const labelUrl = shipment?.label?.url || shipment?.labelUrl;
 
-    const labelNumber = masterTrackingNumber || `FEDEX-${req.shipmentId}-${Date.now()}`;
+    const labelNumber =
+      masterTrackingNumber || `FEDEX-${req.shipmentId}-${Date.now()}`;
 
     return {
       labelNumber,
@@ -781,14 +931,19 @@ export class FedExIndiaAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: shipment?.serviceType || 'FedEx Standard Overnight',
       awbNumber: masterTrackingNumber || labelNumber,
-      trackingUrl: masterTrackingNumber ? `https://www.fedex.com/apps/fedextrack/?tracknumbers=${masterTrackingNumber}` : undefined,
-      estimatedDelivery: shipment?.estimatedDeliveryDate 
+      trackingUrl: masterTrackingNumber
+        ? `https://www.fedex.com/apps/fedextrack/?tracknumbers=${masterTrackingNumber}`
+        : undefined,
+      estimatedDelivery: shipment?.estimatedDeliveryDate
         ? new Date(shipment.estimatedDeliveryDate)
         : undefined,
     };
   }
 
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const output = data?.output || data;
     const completeTrackResults = output?.completeTrackResults || [];
     const result = completeTrackResults[0] || {};
@@ -797,13 +952,18 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     const scanEvents = trackResult?.scanEvents || [];
 
     const latestEvent = scanEvents[scanEvents.length - 1] || {};
-    const status = this.mapFedExStatus(trackResult?.latestStatusDetail?.code || latestEvent?.eventType || 'Unknown');
+    const status = this.mapFedExStatus(
+      trackResult?.latestStatusDetail?.code ||
+        latestEvent?.eventType ||
+        'Unknown',
+    );
 
     const events = scanEvents.map((event: any) => ({
       status: this.mapFedExStatus(event.eventType || event.status),
       subStatus: event.eventDescription || event.scanLocation?.city,
       description: event.eventDescription || event.status,
-      location: event.scanLocation?.city || event.scanLocation?.stateOrProvinceCode,
+      location:
+        event.scanLocation?.city || event.scanLocation?.stateOrProvinceCode,
       occurredAt: new Date(event.date || event.timestamp || Date.now()),
       eventCode: event.eventType,
     }));
@@ -812,8 +972,12 @@ export class FedExIndiaAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestEvent?.eventDescription,
-      description: latestEvent?.eventDescription || trackResult?.latestStatusDetail?.description,
-      location: latestEvent?.scanLocation?.city || trackResult?.latestStatusDetail?.scanLocation?.city,
+      description:
+        latestEvent?.eventDescription ||
+        trackResult?.latestStatusDetail?.description,
+      location:
+        latestEvent?.scanLocation?.city ||
+        trackResult?.latestStatusDetail?.scanLocation?.city,
       occurredAt: latestEvent?.date ? new Date(latestEvent.date) : new Date(),
       events,
     };
@@ -822,18 +986,23 @@ export class FedExIndiaAdapter implements CarrierAdapter {
   private mapFedExStatus(status: string): string {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
-    if (s.includes('transit') || s.includes('it') || s.includes('on_vehicle')) return 'IN_TRANSIT';
+    if (s.includes('transit') || s.includes('it') || s.includes('on_vehicle'))
+      return 'IN_TRANSIT';
     if (s.includes('picked_up') || s.includes('pu')) return 'SHIPPED';
     if (s.includes('pending') || s.includes('created')) return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
 
-  private async makeRequestWithRetry(method: 'GET' | 'POST', endpoint: string, data?: any): Promise<any> {
+  private async makeRequestWithRetry(
+    method: 'GET' | 'POST',
+    endpoint: string,
+    data?: any,
+  ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     if (this.accessToken) {
@@ -844,11 +1013,14 @@ export class FedExIndiaAdapter implements CarrierAdapter {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[FedExIndiaAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[FedExIndiaAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -870,7 +1042,7 @@ export class FedExIndiaAdapter implements CarrierAdapter {
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
+
         if (error instanceof AxiosError && error.response?.status === 401) {
           this.accessToken = null;
           this.tokenExpiry = null;
@@ -879,8 +1051,13 @@ export class FedExIndiaAdapter implements CarrierAdapter {
             continue;
           }
         }
-        
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[FedExIndiaAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -889,12 +1066,15 @@ export class FedExIndiaAdapter implements CarrierAdapter {
         }
 
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        
+
         if (attempt < this.maxRetries) {
-          console.warn(`[FedExIndiaAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[FedExIndiaAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         }
       }
@@ -903,9 +1083,11 @@ export class FedExIndiaAdapter implements CarrierAdapter {
     throw lastError || new Error('Request failed after retries');
   }
 
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `FEDEX-${req.shipmentId}-${Date.now()}`;
-    
+
     console.warn('[FedExIndiaAdapter] Using fallback label generation', {
       shipmentId: req.shipmentId,
       labelNumber,
@@ -923,6 +1105,6 @@ export class FedExIndiaAdapter implements CarrierAdapter {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

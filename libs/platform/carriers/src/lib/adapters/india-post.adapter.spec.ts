@@ -46,7 +46,9 @@ describe('IndiaPostAdapter', () => {
         contactPhone: '9999999999',
       };
 
-      await expect(adapter.schedulePickup(input)).rejects.toThrow(/Not implemented/i);
+      await expect(adapter.schedulePickup(input)).rejects.toThrow(
+        /Not implemented/i,
+      );
     });
   });
 });

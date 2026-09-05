@@ -25,14 +25,9 @@ export class TenantGuard implements CanActivate {
     // context factory is `({ req }) => ({ req })`. Reading index 0 (root)
     // silently yielded undefined and 403'd every guarded mutation (found
     // by the e2e money-path suites).
-    const gqlContext = context.getArgByIndex?.(2) as
-      | { req?: RequestWithTenant }
-      | undefined;
+    const gqlContext = context.getArgByIndex?.(2);
     const req: RequestWithTenant | undefined =
-      gqlContext?.req ??
-      (context.switchToHttp?.().getRequest?.() as
-        | RequestWithTenant
-        | undefined);
+      gqlContext?.req ?? context.switchToHttp?.().getRequest?.();
 
     if (!req) {
       throw new ForbiddenException('No request context');

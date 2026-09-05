@@ -48,7 +48,6 @@ export function initOtel(opts: OtelInitOptions = {}): boolean {
   const endpoint =
     opts.endpoint ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? '';
   if (!endpoint) {
-    // eslint-disable-next-line no-console
     console.log(
       '[otel] OTEL_EXPORTER_OTLP_ENDPOINT unset; OpenTelemetry is a no-op',
     );
@@ -71,7 +70,6 @@ export function initOtel(opts: OtelInitOptions = {}): boolean {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     processor = require('@opentelemetry/sdk-trace-base');
   } catch {
-    // eslint-disable-next-line no-console
     console.warn(
       '[otel] OpenTelemetry SDK packages not installed; OTel is a no-op',
     );
@@ -89,14 +87,18 @@ export function initOtel(opts: OtelInitOptions = {}): boolean {
   const OTLPTraceExporter = exporter.OTLPTraceExporter;
   const BatchSpanProcessor = processor.BatchSpanProcessor;
 
-  const traceExporter = new OTLPTraceExporter({ url: `${endpoint.replace(/\/$/, '')}/v1/traces` });
+  const traceExporter = new OTLPTraceExporter({
+    url: `${endpoint.replace(/\/$/, '')}/v1/traces`,
+  });
 
   const resource = new resources.Resource({
     'service.name':
       opts.serviceName ?? process.env.OTEL_SERVICE_NAME ?? 'swiftship-api',
     'service.namespace': 'swiftship',
-    'service.version': opts.serviceVersion ?? process.env.npm_package_version ?? 'dev',
-    'deployment.environment': opts.environment ?? process.env.NODE_ENV ?? 'development',
+    'service.version':
+      opts.serviceVersion ?? process.env.npm_package_version ?? 'dev',
+    'deployment.environment':
+      opts.environment ?? process.env.NODE_ENV ?? 'development',
     'process.pid': process.pid,
     'host.name': process.env.HOSTNAME ?? require('os').hostname(),
   });
@@ -118,7 +120,7 @@ export function initOtel(opts: OtelInitOptions = {}): boolean {
   try {
     otel.start();
     _enabled = true;
-    // eslint-disable-next-line no-console
+
     console.log(
       `[otel] initialized: service=swiftship-api endpoint=${endpoint}`,
     );
@@ -134,7 +136,6 @@ export function initOtel(opts: OtelInitOptions = {}): boolean {
     process.once('SIGTERM', shutdown);
     process.once('SIGINT', shutdown);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn('[otel] failed to start:', (err as Error).message);
     return false;
   }

@@ -12,7 +12,10 @@ describe('XpressbeesAdapter (rate-shopping / pickup / NDR)', () => {
   // We intentionally construct the adapter with no token so that the static
   // rate card / fallback paths are exercised. This is how the rate-shop
   // acceptance test ("≥1 RateQuote per carrier") will hit Xpressbees.
-  const adapter = new XpressbeesAdapter(undefined, 'https://api.xpressbees.com');
+  const adapter = new XpressbeesAdapter(
+    undefined,
+    'https://api.xpressbees.com',
+  );
 
   describe('getRates', () => {
     it('returns at least one RateQuote on the static rate card fallback', async () => {
@@ -133,7 +136,8 @@ describe('XpressbeesAdapter (rate-shopping / pickup / NDR)', () => {
     it('returns the canonical action codes for Xpressbees native codes', async () => {
       const shipmentId = 'XBE1234567';
 
-      const actions: NdrActionOption[] = await adapter.getNdrActions(shipmentId);
+      const actions: NdrActionOption[] =
+        await adapter.getNdrActions(shipmentId);
 
       expect(Array.isArray(actions)).toBe(true);
       expect(actions.length).toBeGreaterThanOrEqual(3);

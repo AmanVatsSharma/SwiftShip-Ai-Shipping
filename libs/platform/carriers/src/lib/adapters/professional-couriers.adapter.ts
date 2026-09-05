@@ -46,7 +46,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
     const username = this.config.get<string>('PCA_USERNAME');
 
     if (!apiKey || !username) {
-      throw new Error('Professional Couriers API key and username are required');
+      throw new Error(
+        'Professional Couriers API key and username are required',
+      );
     }
 
     console.log('[ProfessionalCouriersAdapter] Initialized', {
@@ -83,18 +85,26 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
     });
 
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for Professional Couriers label generation');
+      throw new Error(
+        'Delivery address is required for Professional Couriers label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for Professional Couriers label generation');
+      throw new Error(
+        'Package weight is required for Professional Couriers label generation',
+      );
     }
 
     try {
       // In production mode, we would make real API calls
       if (process.env.NODE_ENV === 'production') {
         const payload = this.buildLabelPayload(req);
-        const response = await this.makeRequestWithRetry('POST', '/api/shipments', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/api/shipments',
+          payload,
+        );
         const labelData = this.parseLabelResponse(response.data, req);
 
         console.log('[ProfessionalCouriersAdapter] generateLabel success', {
@@ -109,19 +119,25 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         return this.generateSandboxLabel(req);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[ProfessionalCouriersAdapter] generateLabel failed', {
         shipmentId: req.shipmentId,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+              }
+            : undefined,
       });
 
       // Return deterministic label number for graceful degradation
-      console.warn('[ProfessionalCouriersAdapter] Falling back to deterministic label generation');
+      console.warn(
+        '[ProfessionalCouriersAdapter] Falling back to deterministic label generation',
+      );
       return this.generateFallbackLabel(req);
     }
   }
@@ -133,7 +149,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
    * @returns Tracking response with current status and events
    */
   async trackShipment(trackingNumber: string): Promise<TrackingResponse> {
-    console.log('[ProfessionalCouriersAdapter] trackShipment request', { trackingNumber });
+    console.log('[ProfessionalCouriersAdapter] trackShipment request', {
+      trackingNumber,
+    });
 
     if (!trackingNumber) {
       throw new Error('Tracking number is required');
@@ -144,9 +162,12 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
       if (process.env.NODE_ENV === 'production') {
         const response = await this.makeRequestWithRetry(
           'GET',
-          `/api/tracking/${encodeURIComponent(trackingNumber)}`
+          `/api/tracking/${encodeURIComponent(trackingNumber)}`,
         );
-        const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+        const trackingData = this.parseTrackingResponse(
+          response.data,
+          trackingNumber,
+        );
 
         console.log('[ProfessionalCouriersAdapter] trackShipment success', {
           trackingNumber,
@@ -160,14 +181,18 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         return this.generateMockTracking(trackingNumber);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[ProfessionalCouriersAdapter] trackShipment failed', {
         trackingNumber,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+              }
+            : undefined,
       });
 
       // Return mock tracking response on error
@@ -205,14 +230,21 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
       };
 
       if (process.env.NODE_ENV === 'production') {
-        const response = await this.makeRequestWithRetry('POST', '/rate/calculate', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/rate/calculate',
+          payload,
+        );
         return this.parseRateResponse(response.data, req);
       }
       return this.getFallbackRates(req);
     } catch (error) {
-      console.error('[ProfessionalCouriersAdapter] getRates failed, falling back to static rate card', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[ProfessionalCouriersAdapter] getRates failed, falling back to static rate card',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getFallbackRates(req);
     }
   }
@@ -225,7 +257,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
    * @param input - Serviceability request
    * @returns Serviceability result
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[ProfessionalCouriersAdapter] getServiceability request', {
       originPincode: input.originPincode,
       destinationPincode: input.destinationPincode,
@@ -241,10 +275,23 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
           payment_mode: input.paymentMethod,
           weight: (input.weightGrams / 1000).toFixed(2),
         };
-        const response = await this.makeRequestWithRetry('POST', '/pincode/check', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/pincode/check',
+          payload,
+        );
         const data = response.data || {};
-        const serviceable = !!(data.serviceable ?? data.is_serviceable ?? data.status === 'OK' ?? true);
-        const codAvailable = !!(data.cod_available ?? data.cod ?? (input.paymentMethod === 'COD' && serviceable));
+        const serviceable = !!(
+          data.serviceable ??
+          data.is_serviceable ??
+          data.status === 'OK' ??
+          true
+        );
+        const codAvailable = !!(
+          data.cod_available ??
+          data.cod ??
+          (input.paymentMethod === 'COD' && serviceable)
+        );
         return {
           serviceable,
           codAvailable,
@@ -299,14 +346,20 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
           contact_name: input.contactName,
           contact_phone: input.contactPhone,
         };
-        const response = await this.makeRequestWithRetry('POST', '/pickup/create', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/pickup/create',
+          payload,
+        );
         const data = response.data || {};
         const pickupId = data.pickup_id || data.id || `PCA-PU-${Date.now()}`;
         return {
           pickupId,
           pickupDate: data.pickup_date || input.pickupDate,
           pickupTimeSlot: data.pickup_time_slot || input.pickupTimeSlot,
-          trackingUrl: data.tracking_url || `https://www.professionalcouriers.com/track?awb=${pickupId}`,
+          trackingUrl:
+            data.tracking_url ||
+            `https://www.professionalcouriers.com/track?awb=${pickupId}`,
         };
       }
       const fallbackId = `PCA-PU-FB-${Date.now()}`;
@@ -338,7 +391,10 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
    * @param input - Cancel pickup request
    */
   async cancelPickup(input: CancelPickupRequest): Promise<void> {
-    console.log('[ProfessionalCouriersAdapter] cancelPickup request', { pickupId: input.pickupId, reason: input.reason });
+    console.log('[ProfessionalCouriersAdapter] cancelPickup request', {
+      pickupId: input.pickupId,
+      reason: input.reason,
+    });
 
     try {
       // Live: POST /pickup/cancel
@@ -409,7 +465,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
    * @returns Available NDR actions
    */
   async getNdrActions(shipmentId: string): Promise<NdrActionOption[]> {
-    console.log('[ProfessionalCouriersAdapter] getNdrActions request', { shipmentId });
+    console.log('[ProfessionalCouriersAdapter] getNdrActions request', {
+      shipmentId,
+    });
 
     try {
       // Live: GET /track/ndr?awb=...
@@ -419,16 +477,21 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
           `/track/ndr?awb=${encodeURIComponent(shipmentId)}`,
         );
         const data = response.data || {};
-        const code = String(data.reason_code || data.code || data.reason || '').toUpperCase();
+        const code = String(
+          data.reason_code || data.code || data.reason || '',
+        ).toUpperCase();
         const mapped = this.mapPcaNdrCode(code);
         return mapped ? [mapped] : this.getDefaultNdrActions();
       }
       return this.getDefaultNdrActions();
     } catch (error) {
-      console.error('[ProfessionalCouriersAdapter] getNdrActions failed, returning default actions', {
-        shipmentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[ProfessionalCouriersAdapter] getNdrActions failed, returning default actions',
+        {
+          shipmentId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getDefaultNdrActions();
     }
   }
@@ -441,28 +504,32 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
           code: 'REATTEMPT',
           label: 'Reattempt delivery',
           requiresCustomerInput: false,
-          description: 'PCA: Customer was not available at the time of the delivery attempt.',
+          description:
+            'PCA: Customer was not available at the time of the delivery attempt.',
         };
       case 'WR':
         return {
           code: 'CHANGE_ADDRESS',
           label: 'Change delivery address',
           requiresCustomerInput: true,
-          description: 'PCA: Wrong address. Please provide a corrected address.',
+          description:
+            'PCA: Wrong address. Please provide a corrected address.',
         };
       case 'IN':
         return {
           code: 'CHANGE_ADDRESS',
           label: 'Change delivery address',
           requiresCustomerInput: true,
-          description: 'PCA: Address is incomplete. Please provide a full address.',
+          description:
+            'PCA: Address is incomplete. Please provide a full address.',
         };
       case 'RF':
         return {
           code: 'CANCEL',
           label: 'Cancel shipment',
           requiresCustomerInput: false,
-          description: 'PCA: Customer refused the shipment. Initiate cancellation / RTO.',
+          description:
+            'PCA: Customer refused the shipment. Initiate cancellation / RTO.',
         };
       default:
         return {
@@ -476,14 +543,30 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
 
   private getDefaultNdrActions(): NdrActionOption[] {
     return [
-      { code: 'REATTEMPT', label: 'Reattempt delivery', requiresCustomerInput: false, description: 'Schedule another delivery attempt.' },
-      { code: 'CHANGE_ADDRESS', label: 'Change delivery address', requiresCustomerInput: true, description: 'Provide a corrected address for reattempt.' },
-      { code: 'CANCEL', label: 'Cancel shipment', requiresCustomerInput: false, description: 'Cancel the shipment and initiate RTO.' },
+      {
+        code: 'REATTEMPT',
+        label: 'Reattempt delivery',
+        requiresCustomerInput: false,
+        description: 'Schedule another delivery attempt.',
+      },
+      {
+        code: 'CHANGE_ADDRESS',
+        label: 'Change delivery address',
+        requiresCustomerInput: true,
+        description: 'Provide a corrected address for reattempt.',
+      },
+      {
+        code: 'CANCEL',
+        label: 'Cancel shipment',
+        requiresCustomerInput: false,
+        description: 'Cancel the shipment and initiate RTO.',
+      },
     ];
   }
 
   private parseRateResponse(data: any, req: RateQuoteRequest): RateQuote[] {
-    const rawQuotes: any[] = data?.quotes || data?.rates || (Array.isArray(data) ? data : []);
+    const rawQuotes: any[] =
+      data?.quotes || data?.rates || (Array.isArray(data) ? data : []);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     if (rawQuotes.length === 0) {
@@ -491,9 +574,16 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
     }
 
     return rawQuotes.map((q) => {
-      const serviceRaw = String(q.service_type || q.service || 'STANDARD').toUpperCase();
-      const allowed: ReadonlyArray<RateQuote['serviceType']> = ['STANDARD', 'EXPRESS', 'SAME_DAY', 'OVERNIGHT'];
-      const serviceType = (allowed.find((s) => s === serviceRaw) || 'STANDARD') as RateQuote['serviceType'];
+      const serviceRaw = String(
+        q.service_type || q.service || 'STANDARD',
+      ).toUpperCase();
+      const allowed: ReadonlyArray<RateQuote['serviceType']> = [
+        'STANDARD',
+        'EXPRESS',
+        'SAME_DAY',
+        'OVERNIGHT',
+      ];
+      const serviceType = allowed.find((s) => s === serviceRaw) || 'STANDARD';
 
       const eta = q.estimated_days || q.transit_days || { min: 2, max: 5 };
 
@@ -504,7 +594,11 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         rate: Number(q.rate ?? q.total_charge ?? q.charge ?? 0),
         currency: 'INR',
         estimatedDays: { min: Number(eta.min ?? 2), max: Number(eta.max ?? 5) },
-        codAvailable: !!(q.cod_available ?? q.cod ?? req.paymentMethod === 'COD'),
+        codAvailable: !!(
+          q.cod_available ??
+          q.cod ??
+          req.paymentMethod === 'COD'
+        ),
         pickupAvailable: !!(q.pickup_available ?? true),
         expiresAt: q.expires_at ? new Date(q.expires_at) : expiresAt,
         rawResponse: q,
@@ -515,7 +609,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
   private getFallbackRates(req: RateQuoteRequest): RateQuote[] {
     const weightKg = req.weightGrams / 1000;
     // Deterministic pricing: base ₹90 + ₹55/kg (COD surcharge +₹35)
-    const baseRate = Math.round(90 + weightKg * 55 + (req.paymentMethod === 'COD' ? 35 : 0));
+    const baseRate = Math.round(
+      90 + weightKg * 55 + (req.paymentMethod === 'COD' ? 35 : 0),
+    );
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     return [
@@ -529,7 +625,11 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         codAvailable: req.paymentMethod === 'COD',
         pickupAvailable: true,
         expiresAt,
-        rawResponse: { fallback: true, weightKg, paymentMethod: req.paymentMethod },
+        rawResponse: {
+          fallback: true,
+          weightKg,
+          paymentMethod: req.paymentMethod,
+        },
       },
     ];
   }
@@ -551,7 +651,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
       consignee: {
         name: delivery.name,
         mobile: delivery.phone,
-        address: [delivery.addressLine1, delivery.addressLine2].filter(Boolean).join(', '),
+        address: [delivery.addressLine1, delivery.addressLine2]
+          .filter(Boolean)
+          .join(', '),
         city: delivery.city,
         state: delivery.state,
         pincode: delivery.pincode,
@@ -562,7 +664,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         consignor: {
           name: pickup.name,
           mobile: pickup.phone,
-          address: [pickup.addressLine1, pickup.addressLine2].filter(Boolean).join(', '),
+          address: [pickup.addressLine1, pickup.addressLine2]
+            .filter(Boolean)
+            .join(', '),
           city: pickup.city,
           state: pickup.state,
           pincode: pickup.pincode,
@@ -576,7 +680,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         ...(pkg.width && { width: pkg.width.toString() }),
         ...(pkg.height && { height: pkg.height.toString() }),
         ...(pkg.codAmount && { codAmount: pkg.codAmount.toString() }),
-        ...(pkg.declaredValue && { declaredValue: pkg.declaredValue.toString() }),
+        ...(pkg.declaredValue && {
+          declaredValue: pkg.declaredValue.toString(),
+        }),
       },
       service: 'STANDARD',
       labelFormat: req.format || 'PDF',
@@ -587,8 +693,12 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
   /**
    * Parse Professional Couriers label generation response
    */
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
-    const waybill = data?.awbNo || data?.awb || data?.trackingNo || data?.trackingNumber;
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
+    const waybill =
+      data?.awbNo || data?.awb || data?.trackingNo || data?.trackingNumber;
     const labelUrl = data?.labelUrl || data?.labelPdf;
 
     const labelNumber = waybill || `PCA-${req.shipmentId}-${Date.now()}`;
@@ -600,23 +710,34 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: data?.serviceType || 'Professional Couriers Standard',
       awbNumber: waybill || labelNumber,
-      trackingUrl: waybill ? `https://www.professionalcouriers.com/track?awb=${waybill}` : undefined,
-      estimatedDelivery: data?.estimatedDelivery ? new Date(data.estimatedDelivery) : undefined,
+      trackingUrl: waybill
+        ? `https://www.professionalcouriers.com/track?awb=${waybill}`
+        : undefined,
+      estimatedDelivery: data?.estimatedDelivery
+        ? new Date(data.estimatedDelivery)
+        : undefined,
     };
   }
 
   /**
    * Parse Professional Couriers tracking response
    */
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const tracking = data?.tracking || data?.shipment || {};
     const events = tracking?.events || tracking?.history || [];
 
     const latestEvent = events[events.length - 1] || {};
-    const status = this.mapProfessionalCouriersStatus(latestEvent?.status || tracking?.status || 'Unknown');
+    const status = this.mapProfessionalCouriersStatus(
+      latestEvent?.status || tracking?.status || 'Unknown',
+    );
 
     const trackingEvents = events.map((event: any) => ({
-      status: this.mapProfessionalCouriersStatus(event.status || event.eventType),
+      status: this.mapProfessionalCouriersStatus(
+        event.status || event.eventType,
+      ),
       subStatus: event.subStatus || event.eventType,
       description: event.description || event.status,
       location: event.location || event.city || event.destination,
@@ -630,7 +751,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
       subStatus: latestEvent?.subStatus,
       description: latestEvent?.description || latestEvent?.status,
       location: latestEvent?.location || latestEvent?.city,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events: trackingEvents,
     };
   }
@@ -641,9 +764,12 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
   private mapProfessionalCouriersStatus(status: string): string {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
-    if (s.includes('transit') || s.includes('in_transit') || s.includes('it')) return 'IN_TRANSIT';
-    if (s.includes('picked_up') || s.includes('pu') || s.includes('pickup')) return 'SHIPPED';
-    if (s.includes('pending') || s.includes('created') || s.includes('cr')) return 'PENDING';
+    if (s.includes('transit') || s.includes('in_transit') || s.includes('it'))
+      return 'IN_TRANSIT';
+    if (s.includes('picked_up') || s.includes('pu') || s.includes('pickup'))
+      return 'SHIPPED';
+    if (s.includes('pending') || s.includes('created') || s.includes('cr'))
+      return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
@@ -654,14 +780,14 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
   private async makeRequestWithRetry(
     method: 'GET' | 'POST',
     endpoint: string,
-    data?: any
+    data?: any,
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const apiKey = this.config.get<string>('PCA_API_KEY');
 
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       'X-API-Key': apiKey,
     };
 
@@ -669,11 +795,14 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[ProfessionalCouriersAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[ProfessionalCouriersAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -690,7 +819,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
 
         // Check for API-level errors in response
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
@@ -698,11 +829,19 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         lastError = error instanceof Error ? error : new Error('Unknown error');
 
         // Don't retry on 4xx errors (client errors)
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
-          console.error('[ProfessionalCouriersAdapter] Client error, not retrying', {
-            status: error.response.status,
-            data: error.response.data,
-          });
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
+          console.error(
+            '[ProfessionalCouriersAdapter] Client error, not retrying',
+            {
+              status: error.response.status,
+              data: error.response.data,
+            },
+          );
           throw error;
         }
 
@@ -710,16 +849,22 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
 
         if (attempt < this.maxRetries) {
-          console.warn(`[ProfessionalCouriersAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[ProfessionalCouriersAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         } else {
-          console.error('[ProfessionalCouriersAdapter] Request failed after all retries', {
-            attempts: this.maxRetries,
-            error: lastError.message,
-          });
+          console.error(
+            '[ProfessionalCouriersAdapter] Request failed after all retries',
+            {
+              attempts: this.maxRetries,
+              error: lastError.message,
+            },
+          );
         }
       }
     }
@@ -742,7 +887,10 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
       awbNumber: awb,
       trackingUrl: `https://www.professionalcouriers.com/track?awb=${awb}`,
       estimatedDelivery: req.packageDetails?.weight
-        ? new Date(Date.now() + (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000)
+        ? new Date(
+            Date.now() +
+              (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000,
+          )
         : undefined,
     };
   }
@@ -751,7 +899,9 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
    * Generate mock tracking response for non-production environments
    */
   private generateMockTracking(trackingNumber: string): TrackingResponse {
-    console.log('[ProfessionalCouriersAdapter] generateMockTracking', { trackingNumber });
+    console.log('[ProfessionalCouriersAdapter] generateMockTracking', {
+      trackingNumber,
+    });
 
     return {
       trackingNumber,
@@ -781,13 +931,18 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
   /**
    * Generate fallback label when API fails
    */
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `PCA-${req.shipmentId}-${Date.now()}`;
 
-    console.warn('[ProfessionalCouriersAdapter] Using fallback label generation', {
-      shipmentId: req.shipmentId,
-      labelNumber,
-    });
+    console.warn(
+      '[ProfessionalCouriersAdapter] Using fallback label generation',
+      {
+        shipmentId: req.shipmentId,
+        labelNumber,
+      },
+    );
 
     return {
       labelNumber,
@@ -804,6 +959,6 @@ export class ProfessionalCouriersAdapter implements CarrierAdapter {
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

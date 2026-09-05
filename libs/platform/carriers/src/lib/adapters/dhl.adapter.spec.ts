@@ -43,7 +43,9 @@ describe('DhlAdapter', () => {
       const actions = await adapter.getNdrActions('DHL123456');
 
       const codes = actions.map((a) => a.code).sort();
-      expect(codes).toEqual(expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS', 'CANCEL']));
+      expect(codes).toEqual(
+        expect.arrayContaining(['REATTEMPT', 'CHANGE_ADDRESS', 'CANCEL']),
+      );
     });
   });
 });

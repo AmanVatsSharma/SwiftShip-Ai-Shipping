@@ -107,14 +107,18 @@ export class AddNdrCases1718160000005 implements MigrationInterface {
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE ndr_cases DROP CONSTRAINT IF EXISTS fk_ndr_cases_shipment;`);
+    await q.query(
+      `ALTER TABLE ndr_cases DROP CONSTRAINT IF EXISTS fk_ndr_cases_shipment;`,
+    );
     await q.query(`DROP INDEX IF EXISTS ndr_cases_tenantId_status_idx;`);
     await q.query(`DROP INDEX IF EXISTS ndr_cases_status_idx;`);
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS resolvedAt;`);
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS metadata;`);
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS attemptCount;`);
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS lastAttemptAt;`);
-    await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS firstAttemptAt;`);
+    await q.query(
+      `ALTER TABLE ndr_cases DROP COLUMN IF EXISTS firstAttemptAt;`,
+    );
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS ndrReason;`);
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS customerName;`);
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS customerEmail;`);
@@ -122,10 +126,16 @@ export class AddNdrCases1718160000005 implements MigrationInterface {
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS courierName;`);
     await q.query(`ALTER TABLE ndr_cases DROP COLUMN IF EXISTS awbNumber;`);
     await q.query(`ALTER TABLE ndr_cases ALTER COLUMN status DROP DEFAULT;`);
-    await q.query(`ALTER TABLE ndr_cases ALTER COLUMN status TYPE VARCHAR(32);`);
-    await q.query(`ALTER TABLE ndr_cases ALTER COLUMN status SET DEFAULT 'OPEN';`);
+    await q.query(
+      `ALTER TABLE ndr_cases ALTER COLUMN status TYPE VARCHAR(32);`,
+    );
+    await q.query(
+      `ALTER TABLE ndr_cases ALTER COLUMN status SET DEFAULT 'OPEN';`,
+    );
     await q.query(`DROP TYPE IF EXISTS ndr_case_status;`);
-    await q.query(`ALTER TABLE ndr_cases ADD COLUMN IF NOT EXISTS reason TEXT;`);
+    await q.query(
+      `ALTER TABLE ndr_cases ADD COLUMN IF NOT EXISTS reason TEXT;`,
+    );
     await q.query(`UPDATE ndr_cases SET reason = '' WHERE reason IS NULL;`);
     await q.query(`ALTER TABLE ndr_cases ALTER COLUMN reason SET NOT NULL;`);
   }

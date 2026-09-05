@@ -114,7 +114,9 @@ export class AddKycTables1718160000010 implements MigrationInterface {
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE kyc_documents DROP CONSTRAINT IF EXISTS fk_kyc_documents_kyc_record;`);
+    await q.query(
+      `ALTER TABLE kyc_documents DROP CONSTRAINT IF EXISTS fk_kyc_documents_kyc_record;`,
+    );
     await q.query(`DROP INDEX IF EXISTS kyc_documents_record_idx;`);
     await q.query(`DROP TABLE IF EXISTS kyc_documents;`);
     await q.query(`DROP INDEX IF EXISTS kyc_records_tenant_status_idx;`);

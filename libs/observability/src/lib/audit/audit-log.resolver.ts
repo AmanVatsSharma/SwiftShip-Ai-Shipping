@@ -44,7 +44,11 @@ export class AuditLogResolver {
     @Args('resourceType') resourceType: string,
     @Args('resourceId') resourceId: string,
   ): Promise<AuditEventGql[]> {
-    const rows = await this.audit.getForResource(tenantId, resourceType, resourceId);
+    const rows = await this.audit.getForResource(
+      tenantId,
+      resourceType,
+      resourceId,
+    );
     return rows.map(this.toGql);
   }
 

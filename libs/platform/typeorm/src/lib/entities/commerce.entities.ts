@@ -10,7 +10,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { OrderStatus, PaymentStatus, ReturnStatus, ShipmentStatus } from '../enums';
+import {
+  OrderStatus,
+  PaymentStatus,
+  ReturnStatus,
+  ShipmentStatus,
+} from '../enums';
 import { UserEntity } from './identity.entities';
 import { CarrierEntity } from './shipping.entities';
 import { WarehouseEntity } from './warehouse.entities';
@@ -57,13 +62,13 @@ export class OrderEntity {
   @Column({ type: 'int', nullable: true })
   carrierId?: number | null;
   @ManyToOne(() => CarrierEntity)
-  @JoinColumn({ name: "carrierId" })
+  @JoinColumn({ name: 'carrierId' })
   carrier?: CarrierEntity | null;
 
   @Column({ type: 'int', nullable: true })
   warehouseId?: number | null;
   @ManyToOne(() => WarehouseEntity, (w) => w.orders)
-  @JoinColumn({ name: "warehouseId" })
+  @JoinColumn({ name: 'warehouseId' })
   warehouse?: WarehouseEntity | null;
 
   @OneToMany('ShipmentEntity', (s: any) => s.order)

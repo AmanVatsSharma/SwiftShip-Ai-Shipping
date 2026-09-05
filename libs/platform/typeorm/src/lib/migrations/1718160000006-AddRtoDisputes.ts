@@ -49,7 +49,9 @@ export class AddRtoDisputes1718160000006 implements MigrationInterface {
     await q.query(
       `CREATE INDEX rto_disputes_tenantId_idx ON rto_disputes ("tenantId");`,
     );
-    await q.query(`CREATE INDEX rto_disputes_status_idx ON rto_disputes (status);`);
+    await q.query(
+      `CREATE INDEX rto_disputes_status_idx ON rto_disputes (status);`,
+    );
 
     // FK constraints to shipments / orders. We add NOT VALID + VALIDATE so
     // the constraint check doesn't block on existing rows; the table is

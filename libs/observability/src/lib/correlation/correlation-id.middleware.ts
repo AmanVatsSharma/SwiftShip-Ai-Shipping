@@ -1,13 +1,7 @@
-import {
-  Injectable,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'node:crypto';
-import {
-  correlationStorage,
-  runWithCorrelation,
-} from './context';
+import { correlationStorage, runWithCorrelation } from './context';
 
 /**
  * SS-028 — CorrelationIdMiddleware.

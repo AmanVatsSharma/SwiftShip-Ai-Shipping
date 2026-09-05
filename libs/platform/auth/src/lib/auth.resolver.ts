@@ -23,7 +23,9 @@ export class AuthResolver {
     return this.authService.me(id) as Promise<UserAuth>;
   }
 
-  @Mutation(() => AuthPayload, { description: 'Register a new user and sign them in' })
+  @Mutation(() => AuthPayload, {
+    description: 'Register a new user and sign them in',
+  })
   async register(
     @Args('email') email: string,
     @Args('password') password: string,
@@ -46,7 +48,9 @@ export class AuthResolver {
     return this.authService.login(email, password) as Promise<AuthPayload>;
   }
 
-  @Mutation(() => MessageResponse, { description: 'Request password reset email' })
+  @Mutation(() => MessageResponse, {
+    description: 'Request password reset email',
+  })
   async requestPasswordReset(
     @Args('email') email: string,
   ): Promise<MessageResponse> {
@@ -59,7 +63,9 @@ export class AuthResolver {
     };
   }
 
-  @Mutation(() => MessageResponse, { description: 'Reset password using reset token' })
+  @Mutation(() => MessageResponse, {
+    description: 'Reset password using reset token',
+  })
   async resetPassword(
     @Args('token') token: string,
     @Args('newPassword') newPassword: string,
@@ -68,7 +74,9 @@ export class AuthResolver {
     return { message: 'Password has been reset. Please sign in again.' };
   }
 
-  @Mutation(() => AuthPayload, { description: 'Refresh access and refresh tokens' })
+  @Mutation(() => AuthPayload, {
+    description: 'Refresh access and refresh tokens',
+  })
   async refreshToken(
     @Args('refreshToken') refreshToken: string,
   ): Promise<AuthPayload> {

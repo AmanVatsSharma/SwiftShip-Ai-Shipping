@@ -54,7 +54,9 @@ export class DhlAdapter implements CarrierAdapter {
     const accountNumber = this.config.get<string>('DHL_ACCOUNT_NUMBER');
 
     if (!clientId || !clientSecret || !accountNumber) {
-      throw new Error('DHL client ID, client secret, and account number are required');
+      throw new Error(
+        'DHL client ID, client secret, and account number are required',
+      );
     }
 
     console.log('[DhlAdapter] Initialized', {
@@ -105,7 +107,11 @@ export class DhlAdapter implements CarrierAdapter {
       if (process.env.NODE_ENV === 'production') {
         await this.ensureAuthenticated();
         const payload = this.buildLabelPayload(req);
-        const response = await this.makeRequestWithRetry('POST', '/api/labels', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/api/labels',
+          payload,
+        );
         const labelData = this.parseLabelResponse(response.data, req);
 
         console.log('[DhlAdapter] generateLabel success', {
@@ -120,19 +126,25 @@ export class DhlAdapter implements CarrierAdapter {
         return this.generateSandboxLabel(req);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[DhlAdapter] generateLabel failed', {
         shipmentId: req.shipmentId,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+              }
+            : undefined,
       });
 
       // Return deterministic label number for graceful degradation
-      console.warn('[DhlAdapter] Falling back to deterministic label generation');
+      console.warn(
+        '[DhlAdapter] Falling back to deterministic label generation',
+      );
       return this.generateFallbackLabel(req);
     }
   }
@@ -156,9 +168,12 @@ export class DhlAdapter implements CarrierAdapter {
         await this.ensureAuthenticated();
         const response = await this.makeRequestWithRetry(
           'GET',
-          `/api/tracking/${encodeURIComponent(trackingNumber)}`
+          `/api/tracking/${encodeURIComponent(trackingNumber)}`,
         );
-        const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+        const trackingData = this.parseTrackingResponse(
+          response.data,
+          trackingNumber,
+        );
 
         console.log('[DhlAdapter] trackShipment success', {
           trackingNumber,
@@ -172,14 +187,18 @@ export class DhlAdapter implements CarrierAdapter {
         return this.generateMockTracking(trackingNumber);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[DhlAdapter] trackShipment failed', {
         trackingNumber,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+              }
+            : undefined,
       });
 
       // Return mock tracking response on error
@@ -209,25 +228,43 @@ export class DhlAdapter implements CarrierAdapter {
       const payload = {
         customerDetails: {
           shipperDetails: { postalCode: req.originPincode, countryCode: 'IN' },
-          receiverDetails: { postalCode: req.destinationPincode, countryCode: 'IN' },
+          receiverDetails: {
+            postalCode: req.destinationPincode,
+            countryCode: 'IN',
+          },
         },
-        accounts: [{ typeCode: 'shipper', number: this.config.get<string>('DHL_ACCOUNT_NUMBER') }],
+        accounts: [
+          {
+            typeCode: 'shipper',
+            number: this.config.get<string>('DHL_ACCOUNT_NUMBER'),
+          },
+        ],
         productCode: req.paymentMethod === 'COD' ? 'P' : 'D',
         localProductCode: 'EXPRESS',
-        serviceArea: { origin: req.originPincode, destination: req.destinationPincode },
+        serviceArea: {
+          origin: req.originPincode,
+          destination: req.destinationPincode,
+        },
         weight: { value: (req.weightGrams / 1000).toFixed(2), unit: 'KG' },
       };
 
       if (process.env.NODE_ENV === 'production') {
         await this.ensureAuthenticated();
-        const response = await this.makeRequestWithRetry('POST', '/mydhlapi/rates', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/mydhlapi/rates',
+          payload,
+        );
         return this.parseRateResponse(response.data, req);
       }
       return this.getFallbackRates(req);
     } catch (error) {
-      console.error('[DhlAdapter] getRates failed, falling back to static rate card', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[DhlAdapter] getRates failed, falling back to static rate card',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getFallbackRates(req);
     }
   }
@@ -241,7 +278,9 @@ export class DhlAdapter implements CarrierAdapter {
    * @param input - Serviceability request
    * @returns Serviceability result
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[DhlAdapter] getServiceability request', {
       originPincode: input.originPincode,
       destinationPincode: input.destinationPincode,
@@ -260,7 +299,11 @@ export class DhlAdapter implements CarrierAdapter {
             addressLocality: input.destinationPincode,
           },
         };
-        const response = await this.makeRequestWithRetry('POST', '/mydhlapi/address-validate', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/mydhlapi/address-validate',
+          payload,
+        );
         const data = response.data?.address || response.data || {};
         const valid = !!(data.valid ?? data.isValid ?? true);
         return {
@@ -323,11 +366,23 @@ export class DhlAdapter implements CarrierAdapter {
             fullName: input.contactName,
             phone: input.contactPhone,
           },
-          shipmentDetails: input.shipmentIds.map((id) => ({ productCode: 'D', localProductCode: 'EXPRESS', shipmentTrackingId: id })),
+          shipmentDetails: input.shipmentIds.map((id) => ({
+            productCode: 'D',
+            localProductCode: 'EXPRESS',
+            shipmentTrackingId: id,
+          })),
         };
-        const response = await this.makeRequestWithRetry('POST', '/mydhlapi/pickups', payload);
-        const data = response.data?.dispatchConfirmationNumbers?.[0] || response.data || {};
-        const dispatchId = data.dispatchConfirmationNumber || `DHL-PU-${Date.now()}`;
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/mydhlapi/pickups',
+          payload,
+        );
+        const data =
+          response.data?.dispatchConfirmationNumbers?.[0] ||
+          response.data ||
+          {};
+        const dispatchId =
+          data.dispatchConfirmationNumber || `DHL-PU-${Date.now()}`;
         return {
           pickupId: dispatchId,
           pickupDate: input.pickupDate,
@@ -365,13 +420,19 @@ export class DhlAdapter implements CarrierAdapter {
    * @param input - Cancel pickup request
    */
   async cancelPickup(input: CancelPickupRequest): Promise<void> {
-    console.log('[DhlAdapter] cancelPickup request', { pickupId: input.pickupId, reason: input.reason });
+    console.log('[DhlAdapter] cancelPickup request', {
+      pickupId: input.pickupId,
+      reason: input.reason,
+    });
 
     try {
       // Live: DELETE /mydhlapi/pickups/{dispatchConfirmationNumber}
       if (process.env.NODE_ENV === 'production') {
         await this.ensureAuthenticated();
-        await this.makeRequestWithRetry('DELETE', `/mydhlapi/pickups/${encodeURIComponent(input.pickupId)}`);
+        await this.makeRequestWithRetry(
+          'DELETE',
+          `/mydhlapi/pickups/${encodeURIComponent(input.pickupId)}`,
+        );
       }
       // Non-production: no-op
     } catch (error) {
@@ -407,7 +468,11 @@ export class DhlAdapter implements CarrierAdapter {
           collectedAt: input.collectedAt,
           reference: input.reference,
         };
-        await this.makeRequestWithRetry('POST', '/mydhlapi/cod/collect', payload);
+        await this.makeRequestWithRetry(
+          'POST',
+          '/mydhlapi/cod/collect',
+          payload,
+        );
       }
       // Non-production: no-op
     } catch (error) {
@@ -446,16 +511,21 @@ export class DhlAdapter implements CarrierAdapter {
         const data = response.data?.shipments?.[0] || response.data || {};
         const events: any[] = data.events || [];
         const latest = events[events.length - 1] || {};
-        const code = String(latest.exceptionCode || latest.statusCode || latest.code || '').toUpperCase();
+        const code = String(
+          latest.exceptionCode || latest.statusCode || latest.code || '',
+        ).toUpperCase();
         const mapped = this.mapDhlNdrCode(code);
         return mapped ? [mapped] : this.getDefaultNdrActions();
       }
       return this.getDefaultNdrActions();
     } catch (error) {
-      console.error('[DhlAdapter] getNdrActions failed, returning default actions', {
-        shipmentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[DhlAdapter] getNdrActions failed, returning default actions',
+        {
+          shipmentId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getDefaultNdrActions();
     }
   }
@@ -468,21 +538,24 @@ export class DhlAdapter implements CarrierAdapter {
           code: 'CHANGE_ADDRESS',
           label: 'Change delivery address',
           requiresCustomerInput: true,
-          description: 'DHL: Address is incorrect or incomplete. Please provide a corrected address.',
+          description:
+            'DHL: Address is incorrect or incomplete. Please provide a corrected address.',
         };
       case 'CDX':
         return {
           code: 'REATTEMPT',
           label: 'Reattempt delivery',
           requiresCustomerInput: false,
-          description: 'DHL: Customer was not available at the time of the delivery attempt.',
+          description:
+            'DHL: Customer was not available at the time of the delivery attempt.',
         };
       case 'RCX':
         return {
           code: 'CANCEL',
           label: 'Cancel shipment',
           requiresCustomerInput: false,
-          description: 'DHL: Customer refused the shipment. Initiate cancellation / RTO.',
+          description:
+            'DHL: Customer refused the shipment. Initiate cancellation / RTO.',
         };
       default:
         return {
@@ -496,14 +569,30 @@ export class DhlAdapter implements CarrierAdapter {
 
   private getDefaultNdrActions(): NdrActionOption[] {
     return [
-      { code: 'REATTEMPT', label: 'Reattempt delivery', requiresCustomerInput: false, description: 'Schedule another delivery attempt.' },
-      { code: 'CHANGE_ADDRESS', label: 'Change delivery address', requiresCustomerInput: true, description: 'Provide a corrected address for reattempt.' },
-      { code: 'CANCEL', label: 'Cancel shipment', requiresCustomerInput: false, description: 'Cancel the shipment and initiate RTO.' },
+      {
+        code: 'REATTEMPT',
+        label: 'Reattempt delivery',
+        requiresCustomerInput: false,
+        description: 'Schedule another delivery attempt.',
+      },
+      {
+        code: 'CHANGE_ADDRESS',
+        label: 'Change delivery address',
+        requiresCustomerInput: true,
+        description: 'Provide a corrected address for reattempt.',
+      },
+      {
+        code: 'CANCEL',
+        label: 'Cancel shipment',
+        requiresCustomerInput: false,
+        description: 'Cancel the shipment and initiate RTO.',
+      },
     ];
   }
 
   private parseRateResponse(data: any, req: RateQuoteRequest): RateQuote[] {
-    const rawQuotes: any[] = data?.products || data?.quotes || (Array.isArray(data) ? data : []);
+    const rawQuotes: any[] =
+      data?.products || data?.quotes || (Array.isArray(data) ? data : []);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     if (rawQuotes.length === 0) {
@@ -511,9 +600,16 @@ export class DhlAdapter implements CarrierAdapter {
     }
 
     return rawQuotes.map((q) => {
-      const serviceRaw = String(q.productCode || q.service || 'EXPRESS').toUpperCase();
-      const allowed: ReadonlyArray<RateQuote['serviceType']> = ['STANDARD', 'EXPRESS', 'SAME_DAY', 'OVERNIGHT'];
-      const serviceType = (allowed.find((s) => s === serviceRaw) || 'EXPRESS') as RateQuote['serviceType'];
+      const serviceRaw = String(
+        q.productCode || q.service || 'EXPRESS',
+      ).toUpperCase();
+      const allowed: ReadonlyArray<RateQuote['serviceType']> = [
+        'STANDARD',
+        'EXPRESS',
+        'SAME_DAY',
+        'OVERNIGHT',
+      ];
+      const serviceType = allowed.find((s) => s === serviceRaw) || 'EXPRESS';
 
       const eta = q.deliveryCapabilities?.estimatedDeliveryDateAndTime
         ? { min: 1, max: 3 }
@@ -539,7 +635,9 @@ export class DhlAdapter implements CarrierAdapter {
   private getFallbackRates(req: RateQuoteRequest): RateQuote[] {
     const weightKg = req.weightGrams / 1000;
     // Deterministic pricing: base ₹150 + ₹80/kg (COD surcharge +₹60)
-    const baseRate = Math.round(150 + weightKg * 80 + (req.paymentMethod === 'COD' ? 60 : 0));
+    const baseRate = Math.round(
+      150 + weightKg * 80 + (req.paymentMethod === 'COD' ? 60 : 0),
+    );
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     return [
@@ -553,7 +651,11 @@ export class DhlAdapter implements CarrierAdapter {
         codAvailable: req.paymentMethod === 'COD',
         pickupAvailable: true,
         expiresAt,
-        rawResponse: { fallback: true, weightKg, paymentMethod: req.paymentMethod },
+        rawResponse: {
+          fallback: true,
+          weightKg,
+          paymentMethod: req.paymentMethod,
+        },
       },
     ];
   }
@@ -586,7 +688,7 @@ export class DhlAdapter implements CarrierAdapter {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        }
+        },
       );
 
       this.accessToken = response.data.access_token;
@@ -618,7 +720,9 @@ export class DhlAdapter implements CarrierAdapter {
       // Delivery address
       recipient: {
         address: {
-          streetAddress: [delivery.addressLine1, delivery.addressLine2].filter(Boolean),
+          streetAddress: [delivery.addressLine1, delivery.addressLine2].filter(
+            Boolean,
+          ),
           city: delivery.city,
           stateOrProvinceCode: delivery.state,
           postalCode: delivery.pincode,
@@ -631,7 +735,9 @@ export class DhlAdapter implements CarrierAdapter {
       ...(pickup && {
         shipper: {
           address: {
-            streetAddress: [pickup.addressLine1, pickup.addressLine2].filter(Boolean),
+            streetAddress: [pickup.addressLine1, pickup.addressLine2].filter(
+              Boolean,
+            ),
             city: pickup.city,
             stateOrProvinceCode: pickup.state,
             postalCode: pickup.pincode,
@@ -647,14 +753,16 @@ export class DhlAdapter implements CarrierAdapter {
           value: (pkg.weight / 1000).toFixed(2), // Convert grams to kg
           unit: 'KG',
         },
-        ...(pkg.length && pkg.width && pkg.height && {
-          dimensions: {
-            length: pkg.length.toString(),
-            width: pkg.width.toString(),
-            height: pkg.height.toString(),
-            unit: 'CM',
-          },
-        }),
+        ...(pkg.length &&
+          pkg.width &&
+          pkg.height && {
+            dimensions: {
+              length: pkg.length.toString(),
+              width: pkg.width.toString(),
+              height: pkg.height.toString(),
+              unit: 'CM',
+            },
+          }),
         ...(pkg.codAmount && {
           cod: {
             amount: pkg.codAmount.toString(),
@@ -666,10 +774,12 @@ export class DhlAdapter implements CarrierAdapter {
       service: 'EXPRESS',
       labelFormat: req.format || 'PDF',
       ...(req.orderNumber && {
-        customerReferences: [{
-          type: 'CUSTOMER_REFERENCE',
-          value: req.orderNumber,
-        }],
+        customerReferences: [
+          {
+            type: 'CUSTOMER_REFERENCE',
+            value: req.orderNumber,
+          },
+        ],
       }),
     };
   }
@@ -677,7 +787,10 @@ export class DhlAdapter implements CarrierAdapter {
   /**
    * Parse DHL label generation response
    */
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const waybill = data?.trackingNumber || data?.waybill || data?.awb;
     const labelUrl = data?.labelUrl || data?.labelPdf || data?.pdfUrl;
 
@@ -690,20 +803,29 @@ export class DhlAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: data?.serviceType || 'DHL Express',
       awbNumber: waybill || labelNumber,
-      trackingUrl: waybill ? `https://www.dhl.com/track-and-track/track.html?trackingNumber=${waybill}` : undefined,
-      estimatedDelivery: data?.estimatedDelivery ? new Date(data.estimatedDelivery) : undefined,
+      trackingUrl: waybill
+        ? `https://www.dhl.com/track-and-track/track.html?trackingNumber=${waybill}`
+        : undefined,
+      estimatedDelivery: data?.estimatedDelivery
+        ? new Date(data.estimatedDelivery)
+        : undefined,
     };
   }
 
   /**
    * Parse DHL tracking response
    */
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const shipment = data?.shipment || data;
     const events = shipment?.events || shipment?.trackingHistory || [];
 
     const latestEvent = events[events.length - 1] || {};
-    const status = this.mapDhlStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapDhlStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     const trackingEvents = events.map((event: any) => ({
       status: this.mapDhlStatus(event.status || event.eventType),
@@ -720,7 +842,9 @@ export class DhlAdapter implements CarrierAdapter {
       subStatus: latestEvent?.subStatus,
       description: latestEvent?.description || latestEvent?.status,
       location: latestEvent?.location || latestEvent?.city,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events: trackingEvents,
     };
   }
@@ -731,9 +855,11 @@ export class DhlAdapter implements CarrierAdapter {
   private mapDhlStatus(status: string): string {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
-    if (s.includes('transit') || s.includes('in_transit') || s.includes('it')) return 'IN_TRANSIT';
+    if (s.includes('transit') || s.includes('in_transit') || s.includes('it'))
+      return 'IN_TRANSIT';
     if (s.includes('picked_up') || s.includes('pu')) return 'SHIPPED';
-    if (s.includes('pending') || s.includes('created') || s.includes('cr')) return 'PENDING';
+    if (s.includes('pending') || s.includes('created') || s.includes('cr'))
+      return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
@@ -744,12 +870,12 @@ export class DhlAdapter implements CarrierAdapter {
   private async makeRequestWithRetry(
     method: 'GET' | 'POST' | 'DELETE',
     endpoint: string,
-    data?: any
+    data?: any,
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     if (this.accessToken) {
@@ -760,11 +886,14 @@ export class DhlAdapter implements CarrierAdapter {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[DhlAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[DhlAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -781,7 +910,9 @@ export class DhlAdapter implements CarrierAdapter {
 
         // Check for API-level errors in response
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
@@ -789,7 +920,12 @@ export class DhlAdapter implements CarrierAdapter {
         lastError = error instanceof Error ? error : new Error('Unknown error');
 
         // Don't retry on 4xx errors (client errors)
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[DhlAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -844,7 +980,10 @@ export class DhlAdapter implements CarrierAdapter {
       awbNumber: awb,
       trackingUrl: `https://www.dhl.com/track-and-trail/tracking.shtml?trackNumber=${awb}`,
       estimatedDelivery: req.packageDetails?.weight
-        ? new Date(Date.now() + (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000)
+        ? new Date(
+            Date.now() +
+              (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000,
+          )
         : undefined,
     };
   }
@@ -883,7 +1022,9 @@ export class DhlAdapter implements CarrierAdapter {
   /**
    * Generate fallback label when API fails
    */
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `DHL-${req.shipmentId}-${Date.now()}`;
 
     console.warn('[DhlAdapter] Using fallback label generation', {
@@ -906,6 +1047,6 @@ export class DhlAdapter implements CarrierAdapter {
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

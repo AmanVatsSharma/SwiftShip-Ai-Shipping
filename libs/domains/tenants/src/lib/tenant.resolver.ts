@@ -54,16 +54,12 @@ export class TenantResolver {
   }
 
   @Mutation(() => Tenant, { name: 'createTenant' })
-  async createTenant(
-    @Args('input') input: CreateTenantInput,
-  ): Promise<Tenant> {
+  async createTenant(@Args('input') input: CreateTenantInput): Promise<Tenant> {
     return this.tenants.create(input);
   }
 
   @Mutation(() => Tenant, { name: 'updateTenant' })
-  async updateTenant(
-    @Args('input') input: UpdateTenantInput,
-  ): Promise<Tenant> {
+  async updateTenant(@Args('input') input: UpdateTenantInput): Promise<Tenant> {
     return this.tenants.update(input.id, input);
   }
 
@@ -75,9 +71,7 @@ export class TenantResolver {
   }
 
   @Mutation(() => Boolean, { name: 'assignRole' })
-  async assignRole(
-    @Args('input') _input: AssignRoleInput,
-  ): Promise<boolean> {
+  async assignRole(@Args('input') _input: AssignRoleInput): Promise<boolean> {
     // Role assignment persistence is wired by SS-005. Stub for W1.
     return true;
   }

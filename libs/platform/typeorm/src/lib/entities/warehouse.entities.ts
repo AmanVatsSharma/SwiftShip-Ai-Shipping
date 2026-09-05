@@ -117,7 +117,9 @@ export class WarehouseStockEntity {
 }
 
 @Entity('warehouse_coverage')
-@Index('warehouse_coverage_warehouse_pincode_key', ['warehouseId', 'pincode'], { unique: true })
+@Index('warehouse_coverage_warehouse_pincode_key', ['warehouseId', 'pincode'], {
+  unique: true,
+})
 @Index('warehouse_coverage_warehouse_pincode_idx', ['warehouseId', 'pincode'])
 export class WarehouseCoverageEntity {
   @PrimaryGeneratedColumn()
@@ -157,16 +159,24 @@ export class WarehouseCoverageEntity {
 }
 
 @Entity('warehouse_seller_profiles')
-@Index('warehouse_seller_profiles_warehouse_user_idx', ['warehouseId', 'userId'])
+@Index('warehouse_seller_profiles_warehouse_user_idx', [
+  'warehouseId',
+  'userId',
+])
 @Index('warehouse_seller_profiles_warehouse_idx', ['warehouseId'])
-@Index('warehouse_seller_profiles_warehouse_active_idx', ['warehouseId', 'isActive'])
+@Index('warehouse_seller_profiles_warehouse_active_idx', [
+  'warehouseId',
+  'isActive',
+])
 export class WarehouseSellerProfileEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({ type: 'int' })
   warehouseId!: number;
-  @ManyToOne(() => WarehouseEntity, (w) => w.sellerProfiles, { onDelete: 'CASCADE' })
+  @ManyToOne(() => WarehouseEntity, (w) => w.sellerProfiles, {
+    onDelete: 'CASCADE',
+  })
   warehouse?: WarehouseEntity;
 
   @Column({ type: 'int' })
@@ -263,14 +273,20 @@ export class WarehouseSellerProfileEntity {
 }
 
 @Entity('invoice_sequences')
-@Index('invoice_sequences_warehouse_financialYear_key', ['warehouseId', 'financialYear'], { unique: true })
+@Index(
+  'invoice_sequences_warehouse_financialYear_key',
+  ['warehouseId', 'financialYear'],
+  { unique: true },
+)
 export class InvoiceSequenceEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({ type: 'int' })
   warehouseId!: number;
-  @ManyToOne(() => WarehouseEntity, (w) => w.invoiceSequences, { onDelete: 'CASCADE' })
+  @ManyToOne(() => WarehouseEntity, (w) => w.invoiceSequences, {
+    onDelete: 'CASCADE',
+  })
   warehouse?: WarehouseEntity;
 
   @Column({ type: 'varchar', length: 16 })

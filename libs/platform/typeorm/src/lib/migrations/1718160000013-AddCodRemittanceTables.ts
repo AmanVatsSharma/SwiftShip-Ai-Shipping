@@ -135,7 +135,9 @@ export class AddCodRemittanceTables1718160000013 implements MigrationInterface {
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE bank_cod_disputes DROP CONSTRAINT IF EXISTS fk_bank_cod_disputes_remittance;`);
+    await q.query(
+      `ALTER TABLE bank_cod_disputes DROP CONSTRAINT IF EXISTS fk_bank_cod_disputes_remittance;`,
+    );
     await q.query(`DROP INDEX IF EXISTS idx_bank_cod_disputes_tenantId;`);
     await q.query(`DROP INDEX IF EXISTS bank_cod_disputes_remittance_idx;`);
     await q.query(`DROP INDEX IF EXISTS bank_cod_disputes_status_created_idx;`);
@@ -143,7 +145,9 @@ export class AddCodRemittanceTables1718160000013 implements MigrationInterface {
     await q.query(`DROP INDEX IF EXISTS idx_bank_cod_remittances_tenantId;`);
     await q.query(`DROP INDEX IF EXISTS bank_cod_remittances_courier_ref_idx;`);
     await q.query(`DROP INDEX IF EXISTS bank_cod_remittances_status_idx;`);
-    await q.query(`DROP INDEX IF EXISTS bank_cod_remittances_tenant_deposit_idx;`);
+    await q.query(
+      `DROP INDEX IF EXISTS bank_cod_remittances_tenant_deposit_idx;`,
+    );
     await q.query(`DROP TABLE IF EXISTS bank_cod_remittances;`);
     await q.query(`DROP TYPE IF EXISTS bank_cod_dispute_status;`);
     await q.query(`DROP TYPE IF EXISTS bank_cod_remittance_status;`);

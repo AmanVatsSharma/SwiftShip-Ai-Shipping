@@ -1,17 +1,34 @@
-import { EcomExpressAdapter, NotImplementedError } from './ecom-express.adapter';
-import { RateQuoteRequest, ServiceabilityRequest, SchedulePickupRequest, CancelPickupRequest, MarkCodRequest } from '../adapter.interface';
+import {
+  EcomExpressAdapter,
+  NotImplementedError,
+} from './ecom-express.adapter';
+import {
+  RateQuoteRequest,
+  ServiceabilityRequest,
+  SchedulePickupRequest,
+  CancelPickupRequest,
+  MarkCodRequest,
+} from '../adapter.interface';
 
 describe('EcomExpressAdapter', () => {
   let adapter: EcomExpressAdapter;
 
   beforeEach(() => {
-    adapter = new EcomExpressAdapter('test-user', 'test-pass', 'https://clconnect.ecomexpress.in');
+    adapter = new EcomExpressAdapter(
+      'test-user',
+      'test-pass',
+      'https://clconnect.ecomexpress.in',
+    );
   });
 
   describe('constructor', () => {
     it('throws when username or password missing', () => {
-      expect(() => new EcomExpressAdapter('', 'p')).toThrow(/username and password are required/);
-      expect(() => new EcomExpressAdapter('u', '')).toThrow(/username and password are required/);
+      expect(() => new EcomExpressAdapter('', 'p')).toThrow(
+        /username and password are required/,
+      );
+      expect(() => new EcomExpressAdapter('u', '')).toThrow(
+        /username and password are required/,
+      );
     });
   });
 
@@ -37,17 +54,26 @@ describe('EcomExpressAdapter', () => {
     });
 
     it('marks the quote as COD-available for COD requests', async () => {
-      const quotes = await adapter.getRates({ ...baseReq, paymentMethod: 'COD' });
+      const quotes = await adapter.getRates({
+        ...baseReq,
+        paymentMethod: 'COD',
+      });
       expect(quotes[0].codAvailable).toBe(true);
     });
 
     it('marks the quote as not-COD for prepaid requests', async () => {
-      const quotes = await adapter.getRates({ ...baseReq, paymentMethod: 'PREPAID' });
+      const quotes = await adapter.getRates({
+        ...baseReq,
+        paymentMethod: 'PREPAID',
+      });
       expect(quotes[0].codAvailable).toBe(false);
     });
 
     it('returns [] when a different courierCode is requested', async () => {
-      const quotes = await adapter.getRates({ ...baseReq, courierCode: 'delhivery' });
+      const quotes = await adapter.getRates({
+        ...baseReq,
+        courierCode: 'delhivery',
+      });
       expect(quotes).toEqual([]);
     });
   });
@@ -113,7 +139,9 @@ describe('EcomExpressAdapter', () => {
         collectedAmount: 1500,
         collectedAt: '2026-06-14T10:00:00.000Z',
       };
-      await expect(adapter.markCodCollected(input)).rejects.toBeInstanceOf(NotImplementedError);
+      await expect(adapter.markCodCollected(input)).rejects.toBeInstanceOf(
+        NotImplementedError,
+      );
     });
   });
 
@@ -131,7 +159,7 @@ describe('EcomExpressAdapter', () => {
     // for at least 2 distinct NDR codes.
     it('returns the canonical action vocabulary as a fallback when the live call fails', async () => {
       const actions = await adapter.getNdrActions('EE-AWB-NDR');
-      const codes = actions.map(a => a.code);
+      const codes = actions.map((a) => a.code);
 
       // Surface at least 2 of Ecom Express's mapped action codes:
       //   REATTEMPT (UA + CN), CHANGE_ADDRESS (WA), CANCEL (CR)
@@ -143,7 +171,9 @@ describe('EcomExpressAdapter', () => {
     it('returns at least one option (NEVER an empty list) for any NDR scenario', async () => {
       const actions = await adapter.getNdrActions('EE-AWB-UNKNOWN');
       expect(actions.length).toBeGreaterThan(0);
-      expect(actions[0].code).toMatch(/REATTEMPT|CHANGE_ADDRESS|CANCEL|OPEN_DISPUTE/);
+      expect(actions[0].code).toMatch(
+        /REATTEMPT|CHANGE_ADDRESS|CANCEL|OPEN_DISPUTE/,
+      );
     });
   });
 

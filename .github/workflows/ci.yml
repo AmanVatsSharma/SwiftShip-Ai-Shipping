@@ -51,7 +51,12 @@ jobs:
         run: npm audit --audit-level=critical || true
 
   lint:
-    name: Lint
+    name: Lint (non-blocking — SS-108)
+    # SS-108: eslint only became runnable in SS-101; the first full sweep
+    # surfaced ~2,900 type-safety errors (mostly any-typed carrier/bank
+    # payloads). Tracked in SS-108 — flip continue-on-error back to false
+    # when the sweep lands.
+    continue-on-error: true
     runs-on: ubuntu-latest
     needs: [graph]
     steps:

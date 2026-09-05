@@ -17,10 +17,10 @@ import axios, { AxiosError } from 'axios';
 
 /**
  * Shadowfax Carrier Adapter
- * 
+ *
  * Implements integration with Shadowfax API.
  * Shadowfax is a leading hyperlocal and e-commerce logistics provider in India.
- * 
+ *
  * API Documentation: https://www.shadowfax.in/api-docs
  */
 export class ShadowfaxAdapter implements CarrierAdapter {
@@ -31,14 +31,22 @@ export class ShadowfaxAdapter implements CarrierAdapter {
   private readonly maxRetries: number = 3;
   private readonly retryDelay: number = 1000;
 
-  constructor(apiKey: string, secretKey: string, baseUrl: string = 'https://www.shadowfax.in') {
+  constructor(
+    apiKey: string,
+    secretKey: string,
+    baseUrl: string = 'https://www.shadowfax.in',
+  ) {
     if (!apiKey || !secretKey) {
       throw new Error('Shadowfax API key and secret key are required');
     }
     this.apiKey = apiKey;
     this.secretKey = secretKey;
     this.baseUrl = baseUrl;
-    console.log('[ShadowfaxAdapter] Initialized', { baseUrl, hasApiKey: !!apiKey, hasSecretKey: !!secretKey });
+    console.log('[ShadowfaxAdapter] Initialized', {
+      baseUrl,
+      hasApiKey: !!apiKey,
+      hasSecretKey: !!secretKey,
+    });
   }
 
   async generateLabel(req: CarrierLabelRequest): Promise<CarrierLabelResponse> {
@@ -51,16 +59,24 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     });
 
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for Shadowfax label generation');
+      throw new Error(
+        'Delivery address is required for Shadowfax label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for Shadowfax label generation');
+      throw new Error(
+        'Package weight is required for Shadowfax label generation',
+      );
     }
 
     try {
       const payload = this.buildLabelPayload(req);
-      const response = await this.makeRequestWithRetry('POST', '/api/v1/shipment/create', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/v1/shipment/create',
+        payload,
+      );
       const labelData = this.parseLabelResponse(response.data, req);
 
       console.log('[ShadowfaxAdapter] generateLabel success', {
@@ -89,9 +105,12 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     try {
       const response = await this.makeRequestWithRetry(
         'GET',
-        `/api/v1/tracking/${encodeURIComponent(trackingNumber)}`
+        `/api/v1/tracking/${encodeURIComponent(trackingNumber)}`,
       );
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[ShadowfaxAdapter] trackShipment success', {
         trackingNumber,
@@ -116,8 +135,14 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     }
   }
 
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[ShadowfaxAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[ShadowfaxAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     try {
       const payload = {
@@ -125,8 +150,14 @@ export class ShadowfaxAdapter implements CarrierAdapter {
         cancellation_reason: reason || 'Cancelled by customer',
       };
 
-      await this.makeRequestWithRetry('POST', '/api/v1/shipment/cancel', payload);
-      console.log('[ShadowfaxAdapter] cancelShipment success', { trackingNumber });
+      await this.makeRequestWithRetry(
+        'POST',
+        '/api/v1/shipment/cancel',
+        payload,
+      );
+      console.log('[ShadowfaxAdapter] cancelShipment success', {
+        trackingNumber,
+      });
       return true;
     } catch (error) {
       console.error('[ShadowfaxAdapter] cancelShipment failed', {
@@ -141,7 +172,10 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     console.log('[ShadowfaxAdapter] voidLabel request', { labelNumber });
 
     try {
-      await this.makeRequestWithRetry('POST', `/api/v1/label/${encodeURIComponent(labelNumber)}/void`);
+      await this.makeRequestWithRetry(
+        'POST',
+        `/api/v1/label/${encodeURIComponent(labelNumber)}/void`,
+      );
       console.log('[ShadowfaxAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
@@ -175,15 +209,23 @@ export class ShadowfaxAdapter implements CarrierAdapter {
         destination: req.destinationPincode,
         weight: (req.weightGrams / 1000).toFixed(2),
         payment_mode: req.paymentMethod, // 'PREPAID' | 'COD'
-        ...(req.declaredValue !== undefined && { declared_value: req.declaredValue }),
+        ...(req.declaredValue !== undefined && {
+          declared_value: req.declaredValue,
+        }),
         ...(req.length !== undefined && { length: req.length }),
         ...(req.width !== undefined && { width: req.width }),
         ...(req.height !== undefined && { height: req.height }),
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/v3/order/charges', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/v3/order/charges',
+        payload,
+      );
       const data = response.data || {};
-      const isHyperlocal = Boolean(data.is_hyperlocal ?? data.hyperlocal ?? false);
+      const isHyperlocal = Boolean(
+        data.is_hyperlocal ?? data.hyperlocal ?? false,
+      );
 
       const baseRate = Number(data.charge ?? data.rate ?? data.amount ?? 0);
       const etaMin = Number(data.estimated_days?.min ?? data.eta_min ?? 1);
@@ -214,7 +256,10 @@ export class ShadowfaxAdapter implements CarrierAdapter {
       });
 
       // Fall back to a static rate card.
-      const isHyperlocal = this.guessHyperlocal(req.originPincode, req.destinationPincode);
+      const isHyperlocal = this.guessHyperlocal(
+        req.originPincode,
+        req.destinationPincode,
+      );
       return [
         {
           carrier: 'Shadowfax',
@@ -240,7 +285,9 @@ export class ShadowfaxAdapter implements CarrierAdapter {
    * same-day options. Falls back to a pincode-validity heuristic
    * on any API failure.
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[ShadowfaxAdapter] getServiceability request', input);
 
     try {
@@ -251,11 +298,21 @@ export class ShadowfaxAdapter implements CarrierAdapter {
         payment_mode: input.paymentMethod,
       };
 
-      const response = await this.makeRequestWithRetry('POST', '/v3/service_check', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/v3/service_check',
+        payload,
+      );
       const data = response.data || {};
-      const serviceable = Boolean(data.serviceable ?? data.is_serviceable ?? true);
-      const codAvailable = Boolean(data.cod_available ?? data.codAvailable ?? true);
-      const isHyperlocal = Boolean(data.is_hyperlocal ?? data.hyperlocal ?? false);
+      const serviceable = Boolean(
+        data.serviceable ?? data.is_serviceable ?? true,
+      );
+      const codAvailable = Boolean(
+        data.cod_available ?? data.codAvailable ?? true,
+      );
+      const isHyperlocal = Boolean(
+        data.is_hyperlocal ?? data.hyperlocal ?? false,
+      );
       const etaMin = Number(data.estimated_days?.min ?? (isHyperlocal ? 0 : 1));
       const etaMax = Number(data.estimated_days?.max ?? (isHyperlocal ? 1 : 2));
 
@@ -270,7 +327,9 @@ export class ShadowfaxAdapter implements CarrierAdapter {
       }
 
       // Carry hyperlocal flag alongside the canonical result.
-      (result as ServiceabilityResult & { isHyperlocal?: boolean }).isHyperlocal = isHyperlocal;
+      (
+        result as ServiceabilityResult & { isHyperlocal?: boolean }
+      ).isHyperlocal = isHyperlocal;
 
       console.log('[ShadowfaxAdapter] getServiceability success', {
         serviceable,
@@ -287,8 +346,12 @@ export class ShadowfaxAdapter implements CarrierAdapter {
       // Heuristic fallback: any 6-digit pincode pair is serviceable;
       // same metro-area prefix => hyperlocal.
       const validPincodes =
-        /^\d{6}$/.test(input.originPincode) && /^\d{6}$/.test(input.destinationPincode);
-      const isHyperlocal = this.guessHyperlocal(input.originPincode, input.destinationPincode);
+        /^\d{6}$/.test(input.originPincode) &&
+        /^\d{6}$/.test(input.destinationPincode);
+      const isHyperlocal = this.guessHyperlocal(
+        input.originPincode,
+        input.destinationPincode,
+      );
 
       const result: ServiceabilityResult = {
         serviceable: validPincodes,
@@ -296,7 +359,9 @@ export class ShadowfaxAdapter implements CarrierAdapter {
         prepaidAvailable: validPincodes,
         estimatedDays: isHyperlocal ? { min: 0, max: 1 } : { min: 1, max: 2 },
       };
-      (result as ServiceabilityResult & { isHyperlocal?: boolean }).isHyperlocal = isHyperlocal;
+      (
+        result as ServiceabilityResult & { isHyperlocal?: boolean }
+      ).isHyperlocal = isHyperlocal;
       if (!validPincodes) {
         result.reason = 'INVALID_PINCODE';
       }
@@ -321,9 +386,15 @@ export class ShadowfaxAdapter implements CarrierAdapter {
       contact_phone: input.contactPhone,
     };
 
-    const response = await this.makeRequestWithRetry('POST', '/v3/request_pickup', payload);
+    const response = await this.makeRequestWithRetry(
+      'POST',
+      '/v3/request_pickup',
+      payload,
+    );
     const data = response.data || {};
-    const pickupId = String(data.pickup_id ?? data.pickupId ?? `SF-PU-${Date.now()}`);
+    const pickupId = String(
+      data.pickup_id ?? data.pickupId ?? `SF-PU-${Date.now()}`,
+    );
     const awb = data.awb ?? data.tracking_number;
 
     console.log('[ShadowfaxAdapter] schedulePickup success', { pickupId });
@@ -353,7 +424,9 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     };
 
     await this.makeRequestWithRetry('POST', '/v3/cancel_pickup', payload);
-    console.log('[ShadowfaxAdapter] cancelPickup success', { pickupId: input.pickupId });
+    console.log('[ShadowfaxAdapter] cancelPickup success', {
+      pickupId: input.pickupId,
+    });
   }
 
   /**
@@ -372,7 +445,9 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     };
 
     await this.makeRequestWithRetry('POST', '/v3/mark_cod_collected', payload);
-    console.log('[ShadowfaxAdapter] markCodCollected success', { awbNumber: input.awbNumber });
+    console.log('[ShadowfaxAdapter] markCodCollected success', {
+      awbNumber: input.awbNumber,
+    });
   }
 
   /**
@@ -446,7 +521,8 @@ export class ShadowfaxAdapter implements CarrierAdapter {
           code: 'CHANGE_ADDRESS',
           label: 'Update address',
           requiresCustomerInput: true,
-          description: 'Address could not be located; customer must confirm new address',
+          description:
+            'Address could not be located; customer must confirm new address',
         };
       case 'CUSTOMER_REFUSED':
         return {
@@ -461,7 +537,8 @@ export class ShadowfaxAdapter implements CarrierAdapter {
           code: 'REATTEMPT',
           label: 'Reattempt delivery',
           requiresCustomerInput: false,
-          description: 'Phone not reachable; will retry and trigger WhatsApp follow-up',
+          description:
+            'Phone not reachable; will retry and trigger WhatsApp follow-up',
         };
       default:
         return null;
@@ -499,7 +576,10 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     return origin.substring(0, 3) === destination.substring(0, 3);
   }
 
-  private fallbackRate(req: { weightGrams: number; paymentMethod: 'PREPAID' | 'COD' }, isHyperlocal: boolean): number {
+  private fallbackRate(
+    req: { weightGrams: number; paymentMethod: 'PREPAID' | 'COD' },
+    isHyperlocal: boolean,
+  ): number {
     // Simple static rate card: base + per-100g, +COD fee, -hyperlocal discount.
     const base = isHyperlocal ? 35 : 55;
     const per100g = 10;
@@ -526,16 +606,18 @@ export class ShadowfaxAdapter implements CarrierAdapter {
         phone: delivery.phone,
         country: delivery.country || 'India',
       },
-      shipper: pickup ? {
-        name: pickup.name,
-        address: pickup.addressLine1,
-        address2: pickup.addressLine2 || '',
-        city: pickup.city,
-        state: pickup.state,
-        pincode: pickup.pincode,
-        phone: pickup.phone,
-        country: pickup.country || 'India',
-      } : undefined,
+      shipper: pickup
+        ? {
+            name: pickup.name,
+            address: pickup.addressLine1,
+            address2: pickup.addressLine2 || '',
+            city: pickup.city,
+            state: pickup.state,
+            pincode: pickup.pincode,
+            phone: pickup.phone,
+            country: pickup.country || 'India',
+          }
+        : undefined,
       shipment: {
         weight: (pkg.weight / 1000).toFixed(2),
         ...(pkg.length && { length: pkg.length.toString() }),
@@ -548,8 +630,12 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     };
   }
 
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
-    const awbNumber = data?.awb || data?.waybill_number || data?.tracking_number;
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
+    const awbNumber =
+      data?.awb || data?.waybill_number || data?.tracking_number;
     const labelUrl = data?.label_url || data?.label_pdf;
     const shipmentData = data?.shipment || data;
 
@@ -562,20 +648,27 @@ export class ShadowfaxAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: shipmentData?.service_type || 'Shadowfax Express',
       awbNumber: awbNumber || labelNumber,
-      trackingUrl: awbNumber ? `https://www.shadowfax.in/track/${awbNumber}` : undefined,
-      estimatedDelivery: shipmentData?.estimated_delivery_date 
+      trackingUrl: awbNumber
+        ? `https://www.shadowfax.in/track/${awbNumber}`
+        : undefined,
+      estimatedDelivery: shipmentData?.estimated_delivery_date
         ? new Date(shipmentData.estimated_delivery_date)
         : undefined,
     };
   }
 
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const shipment = data?.shipment || data;
     const trackingHistory = shipment?.tracking_history || shipment?.scans || [];
 
     const latestEvent = trackingHistory[trackingHistory.length - 1] || {};
 
-    const status = this.mapShadowfaxStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapShadowfaxStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     const events = trackingHistory.map((event: any) => ({
       status: this.mapShadowfaxStatus(event.status || event.scan_type),
@@ -590,9 +683,13 @@ export class ShadowfaxAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestEvent?.sub_status || latestEvent?.scan_type,
-      description: latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
-      location: latestEvent?.location || latestEvent?.city || shipment?.destination,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      description:
+        latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
+      location:
+        latestEvent?.location || latestEvent?.city || shipment?.destination,
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events,
     };
   }
@@ -601,29 +698,37 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
     if (s.includes('transit') || s.includes('it')) return 'IN_TRANSIT';
-    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu')) return 'SHIPPED';
+    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu'))
+      return 'SHIPPED';
     if (s.includes('pending') || s.includes('created')) return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
 
-  private async makeRequestWithRetry(method: 'GET' | 'POST', endpoint: string, data?: any): Promise<any> {
+  private async makeRequestWithRetry(
+    method: 'GET' | 'POST',
+    endpoint: string,
+    data?: any,
+  ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
+      Accept: 'application/json',
+      Authorization: `Bearer ${this.apiKey}`,
     };
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[ShadowfaxAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[ShadowfaxAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -639,14 +744,21 @@ export class ShadowfaxAdapter implements CarrierAdapter {
         const response = await axios(config);
 
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[ShadowfaxAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -655,12 +767,15 @@ export class ShadowfaxAdapter implements CarrierAdapter {
         }
 
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        
+
         if (attempt < this.maxRetries) {
-          console.warn(`[ShadowfaxAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[ShadowfaxAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         }
       }
@@ -669,9 +784,11 @@ export class ShadowfaxAdapter implements CarrierAdapter {
     throw lastError || new Error('Request failed after retries');
   }
 
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `SF-${req.shipmentId}-${Date.now()}`;
-    
+
     console.warn('[ShadowfaxAdapter] Using fallback label generation', {
       shipmentId: req.shipmentId,
       labelNumber,
@@ -689,6 +806,6 @@ export class ShadowfaxAdapter implements CarrierAdapter {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

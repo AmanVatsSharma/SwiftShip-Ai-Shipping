@@ -2,10 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TenantEntity } from './entities';
-import type {
-  CreateTenantInput,
-  UpdateTenantInput,
-} from './tenant.input';
+import type { CreateTenantInput, UpdateTenantInput } from './tenant.input';
 
 export interface TenantListFilter {
   status?: string;
@@ -61,7 +58,8 @@ export class TenantService {
 
   async list(filter: TenantListFilter = {}): Promise<TenantEntity[]> {
     const qb = this.tenants.createQueryBuilder('t');
-    if (filter.status) qb.andWhere('t.status = :status', { status: filter.status });
+    if (filter.status)
+      qb.andWhere('t.status = :status', { status: filter.status });
     if (filter.tier) qb.andWhere('t.tier = :tier', { tier: filter.tier });
     if (filter.search) {
       qb.andWhere('(t.name ILIKE :s OR t.slug ILIKE :s)', {

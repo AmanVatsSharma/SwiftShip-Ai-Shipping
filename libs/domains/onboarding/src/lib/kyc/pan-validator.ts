@@ -24,7 +24,18 @@ import { Injectable } from '@nestjs/common';
 export const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
 /** Known PAN holder-type characters. Anything else fails the format check. */
-export const PAN_HOLDER_TYPE_CHARS = ['P', 'C', 'H', 'A', 'B', 'G', 'J', 'L', 'F', 'T'] as const;
+export const PAN_HOLDER_TYPE_CHARS = [
+  'P',
+  'C',
+  'H',
+  'A',
+  'B',
+  'G',
+  'J',
+  'L',
+  'F',
+  'T',
+] as const;
 
 export type PanHolderType = (typeof PAN_HOLDER_TYPE_CHARS)[number];
 
@@ -59,7 +70,12 @@ export class PanValidatorService {
    */
   validate(input: string): PanValidationResult {
     if (input === null || input === undefined || input === '') {
-      return { valid: false, normalized: null, holderType: null, reason: 'PAN is empty' };
+      return {
+        valid: false,
+        normalized: null,
+        holderType: null,
+        reason: 'PAN is empty',
+      };
     }
     const normalized = this.normalize(input);
 

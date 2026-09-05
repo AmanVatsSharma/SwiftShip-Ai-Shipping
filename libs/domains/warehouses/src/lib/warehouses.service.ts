@@ -66,8 +66,13 @@ export class WarehousesService {
 
   // ---- create
   async create(input: CreateWarehouseInput) {
-    const existing = await this.warehouses.findOne({ where: { code: input.code } });
-    if (existing) throw new BadRequestException(`Warehouse code ${input.code} already exists`);
+    const existing = await this.warehouses.findOne({
+      where: { code: input.code },
+    });
+    if (existing)
+      throw new BadRequestException(
+        `Warehouse code ${input.code} already exists`,
+      );
     const wh = this.warehouses.create(input);
     return this.warehouses.save(wh);
   }

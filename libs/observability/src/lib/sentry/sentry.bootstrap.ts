@@ -32,7 +32,6 @@ export function initSentry(opts: SentryInitOptions): boolean {
   _initialized = true;
   const dsn = opts.dsn ?? process.env.SENTRY_DSN;
   if (!dsn) {
-    // eslint-disable-next-line no-console
     console.log('[sentry] SENTRY_DSN unset; Sentry is a no-op');
     return false;
   }
@@ -46,7 +45,6 @@ export function initSentry(opts: SentryInitOptions): boolean {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     Sentry = require('@sentry/node');
   } catch {
-    // eslint-disable-next-line no-console
     console.warn(
       '[sentry] @sentry/node not installed; Sentry is a no-op even though SENTRY_DSN is set',
     );
@@ -60,12 +58,13 @@ export function initSentry(opts: SentryInitOptions): boolean {
     tracesSampleRate: opts.tracesSampleRate ?? 0.1,
     initialScope: {
       tags: {
-        service: opts.serviceName ?? process.env.OTEL_SERVICE_NAME ?? 'swiftship-api',
+        service:
+          opts.serviceName ?? process.env.OTEL_SERVICE_NAME ?? 'swiftship-api',
       },
     },
   });
   _enabled = true;
-  // eslint-disable-next-line no-console
+
   console.log('[sentry] initialized for service swiftship-api');
   return true;
 }
@@ -74,7 +73,10 @@ export function isSentryEnabled(): boolean {
   return _enabled;
 }
 
-export function captureException(err: unknown, extra?: Record<string, any>): void {
+export function captureException(
+  err: unknown,
+  extra?: Record<string, any>,
+): void {
   if (!_enabled) return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -85,7 +87,10 @@ export function captureException(err: unknown, extra?: Record<string, any>): voi
   }
 }
 
-export function setSentryTag(key: string, value: string | number | boolean): void {
+export function setSentryTag(
+  key: string,
+  value: string | number | boolean,
+): void {
   if (!_enabled) return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -54,7 +54,12 @@ import { KycResolver } from './kyc.resolver';
       inject: ['BANK_VERIFIER_ADAPTER'],
     },
   ],
-  exports: [KycService, PanValidatorService, GstinValidatorService, BankVerifierService],
+  exports: [
+    KycService,
+    PanValidatorService,
+    GstinValidatorService,
+    BankVerifierService,
+  ],
 })
 export class KycModule implements OnModuleInit {
   constructor(
@@ -75,8 +80,10 @@ export class KycModule implements OnModuleInit {
     try {
       this.kyc.registerWorker();
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('[KycModule] failed to register worker:', (err as Error).message);
+      console.warn(
+        '[KycModule] failed to register worker:',
+        (err as Error).message,
+      );
     }
   }
 }

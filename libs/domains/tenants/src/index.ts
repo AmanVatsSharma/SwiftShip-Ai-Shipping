@@ -33,11 +33,7 @@ export {
   TenantRoleEntity,
 } from './lib/entities';
 export { InviteEntity } from './lib/invite.entity';
-export type {
-  TenantMemberRole,
-  TenantStatus,
-  TenantTier,
-} from './lib/enums';
+export type { TenantMemberRole, TenantStatus, TenantTier } from './lib/enums';
 
 // Wallet domain exports
 export { WalletEntity } from './lib/wallet.entity';

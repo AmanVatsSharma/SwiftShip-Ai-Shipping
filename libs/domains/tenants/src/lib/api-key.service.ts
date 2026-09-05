@@ -72,9 +72,11 @@ export class ApiKeyService {
    * Mark an old key revoked and create a replacement for the same tenant,
    * preserving the public prefix.
    */
-  async rotate(
-    oldKeyId: number,
-  ): Promise<{ entity: TenantApiKeyEntity; plainText: string; prefix: string }> {
+  async rotate(oldKeyId: number): Promise<{
+    entity: TenantApiKeyEntity;
+    plainText: string;
+    prefix: string;
+  }> {
     const old = await this.apiKeys.findOne({ where: { id: oldKeyId } });
     if (!old) throw new NotFoundException(`ApiKey ${oldKeyId} not found`);
 

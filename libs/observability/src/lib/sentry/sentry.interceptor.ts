@@ -71,8 +71,7 @@ export class SentryGraphqlInterceptor implements NestInterceptor {
         });
         // Pre-tag for filtering; the filter will decide whether to capture.
         try {
-          const status =
-            (err && (err.status || err.statusCode)) ?? undefined;
+          const status = (err && (err.status || err.statusCode)) ?? undefined;
           setSentryTag('http.status_code', String(status ?? 0));
         } catch {
           /* ignore */

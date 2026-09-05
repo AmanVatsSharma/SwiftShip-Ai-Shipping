@@ -1,11 +1,25 @@
-import { CarrierAdapter, CarrierLabelRequest, CarrierLabelResponse, TrackingResponse, RateQuoteRequest, RateQuote, ServiceabilityRequest, ServiceabilityResult, SchedulePickupRequest, ScheduledPickup, CancelPickupRequest, MarkCodRequest, NdrActionOption } from '../adapter.interface';
+import {
+  CarrierAdapter,
+  CarrierLabelRequest,
+  CarrierLabelResponse,
+  TrackingResponse,
+  RateQuoteRequest,
+  RateQuote,
+  ServiceabilityRequest,
+  ServiceabilityResult,
+  SchedulePickupRequest,
+  ScheduledPickup,
+  CancelPickupRequest,
+  MarkCodRequest,
+  NdrActionOption,
+} from '../adapter.interface';
 
 /**
  * Sandbox Carrier Adapter
- * 
+ *
  * A test adapter that simulates carrier operations without making real API calls.
  * Used for development, testing, and when carrier credentials are not available.
- * 
+ *
  * Flow:
  * 1. Label generation returns deterministic label numbers
  * 2. Tracking returns mock tracking events
@@ -16,14 +30,14 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
 
   /**
    * Generate a shipping label (sandbox mode)
-   * 
+   *
    * @param req - Label generation request
    * @returns Label response with deterministic label number
    */
   async generateLabel(req: CarrierLabelRequest): Promise<CarrierLabelResponse> {
     // Generate deterministic label number for testing
     const labelNumber = `SANDBOX-${req.shipmentId}-${Date.now()}`;
-    
+
     // Log label generation request for debugging
     console.log('[SandboxCarrierAdapter] generateLabel', {
       shipmentId: req.shipmentId,
@@ -42,15 +56,18 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
       serviceName: 'Sandbox Ground',
       awbNumber: labelNumber,
       trackingUrl: `https://sandbox.example.com/track/${labelNumber}`,
-      estimatedDelivery: req.packageDetails?.weight 
-        ? new Date(Date.now() + (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000)
+      estimatedDelivery: req.packageDetails?.weight
+        ? new Date(
+            Date.now() +
+              (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000,
+          )
         : undefined,
     };
   }
 
   /**
    * Track a shipment (sandbox mode)
-   * 
+   *
    * @param trackingNumber - Tracking number to query
    * @returns Mock tracking response with sample events
    */
@@ -58,9 +75,11 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
     console.log('[SandboxCarrierAdapter] trackShipment', { trackingNumber });
 
     // Generate mock tracking events based on tracking number hash
-    const hash = trackingNumber.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hash = trackingNumber
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const statusIndex = hash % 4;
-    
+
     const statuses = ['PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'];
     const currentStatus = statuses[statusIndex];
 
@@ -110,7 +129,7 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
       description: events[events.length - 1]?.description,
       location: events[events.length - 1]?.location,
       occurredAt: events[events.length - 1]?.occurredAt || new Date(),
-      events: events.map(e => ({
+      events: events.map((e) => ({
         status: e.status,
         description: e.description,
         location: e.location,
@@ -122,19 +141,25 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
 
   /**
    * Cancel a shipment (sandbox mode)
-   * 
+   *
    * @param trackingNumber - Tracking number to cancel
    * @param reason - Optional cancellation reason
    * @returns Always returns true in sandbox mode
    */
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[SandboxCarrierAdapter] cancelShipment', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[SandboxCarrierAdapter] cancelShipment', {
+      trackingNumber,
+      reason,
+    });
     return true;
   }
 
   /**
    * Void a label (sandbox mode)
-   * 
+   *
    * @param labelNumber - Label number to void
    * @returns Always returns true in sandbox mode
    */
@@ -154,18 +179,20 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
 
     // Return a single deterministic quote based on weight + pincode parity
     const baseRate = 50 + Math.ceil(req.weightGrams / 100) * 10; // paise
-    return [{
-      carrier: 'Sandbox Carrier',
-      carrierCode: this.code,
-      serviceType: 'STANDARD',
-      rate: baseRate,
-      currency: 'INR',
-      estimatedDays: { min: 2, max: 4 },
-      codAvailable: req.paymentMethod === 'COD',
-      pickupAvailable: true,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      metadata: { sandbox: true },
-    }];
+    return [
+      {
+        carrier: 'Sandbox Carrier',
+        carrierCode: this.code,
+        serviceType: 'STANDARD',
+        rate: baseRate,
+        currency: 'INR',
+        estimatedDays: { min: 2, max: 4 },
+        codAvailable: req.paymentMethod === 'COD',
+        pickupAvailable: true,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        metadata: { sandbox: true },
+      },
+    ];
   }
 
   /**
@@ -174,11 +201,15 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
    * @param input - Serviceability request
    * @returns Serviceability result based on pincode validation
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[SandboxCarrierAdapter] getServiceability', input);
 
     // Serviceable if both pincodes are 6-digit numbers
-    const valid = /^\d{6}$/.test(input.originPincode) && /^\d{6}$/.test(input.destinationPincode);
+    const valid =
+      /^\d{6}$/.test(input.originPincode) &&
+      /^\d{6}$/.test(input.destinationPincode);
     return {
       serviceable: valid,
       codAvailable: valid,
@@ -241,25 +272,25 @@ export class SandboxCarrierAdapter implements CarrierAdapter {
         code: 'REATTEMPT' as const,
         label: 'Reattempt delivery',
         requiresCustomerInput: false,
-        description: 'Try delivering again'
+        description: 'Try delivering again',
       },
       {
         code: 'CHANGE_ADDRESS' as const,
         label: 'Update address',
         requiresCustomerInput: true,
-        description: 'Customer needs to confirm new address'
+        description: 'Customer needs to confirm new address',
       },
       {
         code: 'CANCEL' as const,
         label: 'Cancel and RTO',
         requiresCustomerInput: false,
-        description: 'Return to origin'
+        description: 'Return to origin',
       },
       {
         code: 'OPEN_DISPUTE' as const,
         label: 'Open a dispute',
         requiresCustomerInput: true,
-        description: 'Escalate to carrier support'
+        description: 'Escalate to carrier support',
       },
     ];
   }

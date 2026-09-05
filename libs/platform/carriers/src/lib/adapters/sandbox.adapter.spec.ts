@@ -38,7 +38,7 @@ describe('SandboxCarrierAdapter', () => {
       expect(result.codAvailable).toBe(true);
     });
 
-    it('should return { serviceable: false, reason: \'INVALID_PINCODE\' } for invalid pincodes', async () => {
+    it("should return { serviceable: false, reason: 'INVALID_PINCODE' } for invalid pincodes", async () => {
       const input = {
         originPincode: '12345',
         destinationPincode: '560001',
@@ -58,7 +58,7 @@ describe('SandboxCarrierAdapter', () => {
       const actions = await adapter.getNdrActions('SANDBOX-123');
 
       expect(actions).toHaveLength(4);
-      expect(actions.map(a => a.code)).toEqual([
+      expect(actions.map((a) => a.code)).toEqual([
         'REATTEMPT',
         'CHANGE_ADDRESS',
         'CANCEL',

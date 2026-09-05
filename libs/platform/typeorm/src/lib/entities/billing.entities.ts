@@ -22,7 +22,10 @@ import {
 } from '../enums';
 import { UserEntity } from './identity.entities';
 import { OrderEntity } from './commerce.entities';
-import { WarehouseEntity, WarehouseSellerProfileEntity } from './warehouse.entities';
+import {
+  WarehouseEntity,
+  WarehouseSellerProfileEntity,
+} from './warehouse.entities';
 import { EwayBillEntity } from './shipping.entities';
 
 /**
@@ -47,13 +50,13 @@ export class PaymentEntity {
   @Column({ type: 'int', nullable: true })
   orderId?: number | null;
   @ManyToOne(() => OrderEntity, (o) => o.payments)
-  @JoinColumn({ name: "orderId" })
+  @JoinColumn({ name: 'orderId' })
   order?: OrderEntity | null;
 
   @Column({ type: 'uuid', nullable: true })
   invoiceId?: string | null;
   @ManyToOne(() => InvoiceEntity, (i) => i.payments)
-  @JoinColumn({ name: "invoiceId" })
+  @JoinColumn({ name: 'invoiceId' })
   invoice?: InvoiceEntity | null;
 
   @Column({ type: 'double precision' })
@@ -161,10 +164,18 @@ export class SubscriptionEntity {
   @OneToOne(() => UserEntity, (u) => u.subscription)
   user?: UserEntity;
 
-  @Column({ type: 'enum', enum: SubscriptionPlan, default: SubscriptionPlan.FREE })
+  @Column({
+    type: 'enum',
+    enum: SubscriptionPlan,
+    default: SubscriptionPlan.FREE,
+  })
   plan!: SubscriptionPlan;
 
-  @Column({ type: 'enum', enum: SubscriptionStatus, default: SubscriptionStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: SubscriptionStatus,
+    default: SubscriptionStatus.ACTIVE,
+  })
   status!: SubscriptionStatus;
 
   @Column({ type: 'enum', enum: PaymentGateway })
@@ -222,7 +233,7 @@ export class InvoiceEntity {
   @Column({ type: 'uuid', nullable: true })
   subscriptionId?: string | null;
   @ManyToOne(() => SubscriptionEntity, (s) => s.invoices)
-  @JoinColumn({ name: "subscriptionId" })
+  @JoinColumn({ name: 'subscriptionId' })
   subscription?: SubscriptionEntity | null;
 
   @Column({ type: 'int' })
@@ -233,13 +244,13 @@ export class InvoiceEntity {
   @Column({ type: 'int', nullable: true })
   warehouseId?: number | null;
   @ManyToOne(() => WarehouseEntity, (w) => w.invoices)
-  @JoinColumn({ name: "warehouseId" })
+  @JoinColumn({ name: 'warehouseId' })
   warehouse?: WarehouseEntity | null;
 
   @Column({ type: 'int', nullable: true })
   sellerProfileId?: number | null;
   @ManyToOne(() => WarehouseSellerProfileEntity, (p) => p.invoices)
-  @JoinColumn({ name: "sellerProfileId" })
+  @JoinColumn({ name: 'sellerProfileId' })
   sellerProfile?: WarehouseSellerProfileEntity | null;
 
   @Column({ type: 'int', default: 1 })
@@ -352,7 +363,9 @@ export class InvoiceItemEntity {
 
   @Column({ type: 'uuid' })
   invoiceId!: string;
-  @ManyToOne(() => InvoiceEntity, (i) => i.invoiceItems, { onDelete: 'CASCADE' })
+  @ManyToOne(() => InvoiceEntity, (i) => i.invoiceItems, {
+    onDelete: 'CASCADE',
+  })
   invoice?: InvoiceEntity;
 
   @Column({ type: 'varchar', length: 255 })
@@ -551,7 +564,4 @@ export type BankCodRemittanceStatus =
   | 'DISPUTED';
 
 /** String-literal lifecycle for `BankCodDisputeEntity.status`. */
-export type BankCodDisputeStatus =
-  | 'OPEN'
-  | 'UNDER_REVIEW'
-  | 'RESOLVED';
+export type BankCodDisputeStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED';

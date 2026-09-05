@@ -10,11 +10,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type {
-  TenantMemberRole,
-  TenantStatus,
-  TenantTier,
-} from './enums';
+import type { TenantMemberRole, TenantStatus, TenantTier } from './enums';
 import { WalletEntity } from './wallet.entity';
 
 @Entity('tenants')

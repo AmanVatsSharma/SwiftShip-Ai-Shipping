@@ -3,7 +3,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TenantContext } from '@swiftship/domains-tenants';
 import { QueuesService } from '@swiftship/platform-queues';
-import { KycService, KYC_QUEUE_NAME, KYC_VERIFY_JOB, KYC_VERIFY_MAX_ATTEMPTS } from '../kyc.service';
+import {
+  KycService,
+  KYC_QUEUE_NAME,
+  KYC_VERIFY_JOB,
+  KYC_VERIFY_MAX_ATTEMPTS,
+} from '../kyc.service';
 import { KycRecordEntity, KycDocumentEntity, KycStatus } from '../kyc.entity';
 import { PanValidatorService } from '../pan-validator';
 import { GstinValidatorService } from '../gstin-validator';
@@ -55,7 +60,11 @@ describe('KycService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     records = {
-      create: jest.fn((data) => ({ id: 1, status: KycStatus.PENDING, ...data })),
+      create: jest.fn((data) => ({
+        id: 1,
+        status: KycStatus.PENDING,
+        ...data,
+      })),
       save: jest.fn(async (data) => ({ id: 1, ...data })),
       findOne: jest.fn(),
     };
@@ -284,7 +293,10 @@ describe('KycService', () => {
 
   describe('isTenantKycVerified (COD gate)', () => {
     it('returns true when the tenant has a VERIFIED record', async () => {
-      records.findOne.mockResolvedValueOnce({ id: 1, status: KycStatus.VERIFIED });
+      records.findOne.mockResolvedValueOnce({
+        id: 1,
+        status: KycStatus.VERIFIED,
+      });
       expect(await service.isTenantKycVerified(1)).toBe(true);
     });
 

@@ -34,10 +34,16 @@ export class AuditEventGql {
   @Field({ nullable: true })
   resourceId?: string;
 
-  @Field(() => String, { nullable: true, description: 'JSON snapshot before the mutation.' })
+  @Field(() => String, {
+    nullable: true,
+    description: 'JSON snapshot before the mutation.',
+  })
   before?: any;
 
-  @Field(() => String, { nullable: true, description: 'JSON snapshot after the mutation.' })
+  @Field(() => String, {
+    nullable: true,
+    description: 'JSON snapshot after the mutation.',
+  })
   after?: any;
 
   @Field({ nullable: true })

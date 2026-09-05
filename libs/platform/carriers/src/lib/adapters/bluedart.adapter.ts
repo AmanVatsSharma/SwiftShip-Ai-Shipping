@@ -18,18 +18,18 @@ import { NotImplementedError } from './ecom-express.adapter';
 
 /**
  * BlueDart Carrier Adapter
- * 
+ *
  * Implements integration with BlueDart Express shipping API.
  * BlueDart is one of India's leading express logistics providers.
- * 
+ *
  * API Documentation: https://www.bluedart.com/api-docs
- * 
+ *
  * Flow:
  * 1. Label Generation: Creates shipment and generates AWB label
  * 2. Tracking: Fetches real-time tracking updates
  * 3. Cancellation: Cancels shipments before pickup
  * 4. Label Voiding: Voids labels that haven't been used
- * 
+ *
  * Error Handling:
  * - Retries failed requests with exponential backoff
  * - Validates API responses
@@ -44,14 +44,22 @@ export class BlueDartAdapter implements CarrierAdapter {
   private readonly maxRetries: number = 3;
   private readonly retryDelay: number = 1000;
 
-  constructor(apiKey: string, loginId: string, baseUrl: string = 'https://www.bluedart.com') {
+  constructor(
+    apiKey: string,
+    loginId: string,
+    baseUrl: string = 'https://www.bluedart.com',
+  ) {
     if (!apiKey || !loginId) {
       throw new Error('BlueDart API key and login ID are required');
     }
     this.apiKey = apiKey;
     this.loginId = loginId;
     this.baseUrl = baseUrl;
-    console.log('[BlueDartAdapter] Initialized', { baseUrl, hasApiKey: !!apiKey, hasLoginId: !!loginId });
+    console.log('[BlueDartAdapter] Initialized', {
+      baseUrl,
+      hasApiKey: !!apiKey,
+      hasLoginId: !!loginId,
+    });
   }
 
   async generateLabel(req: CarrierLabelRequest): Promise<CarrierLabelResponse> {
@@ -64,16 +72,24 @@ export class BlueDartAdapter implements CarrierAdapter {
     });
 
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for BlueDart label generation');
+      throw new Error(
+        'Delivery address is required for BlueDart label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
-      throw new Error('Package weight is required for BlueDart label generation');
+      throw new Error(
+        'Package weight is required for BlueDart label generation',
+      );
     }
 
     try {
       const payload = this.buildLabelPayload(req);
-      const response = await this.makeRequestWithRetry('POST', '/api/shipment/create', payload);
+      const response = await this.makeRequestWithRetry(
+        'POST',
+        '/api/shipment/create',
+        payload,
+      );
       const labelData = this.parseLabelResponse(response.data, req);
 
       console.log('[BlueDartAdapter] generateLabel success', {
@@ -102,9 +118,12 @@ export class BlueDartAdapter implements CarrierAdapter {
     try {
       const response = await this.makeRequestWithRetry(
         'GET',
-        `/api/tracking/${encodeURIComponent(trackingNumber)}`
+        `/api/tracking/${encodeURIComponent(trackingNumber)}`,
       );
-      const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+      const trackingData = this.parseTrackingResponse(
+        response.data,
+        trackingNumber,
+      );
 
       console.log('[BlueDartAdapter] trackShipment success', {
         trackingNumber,
@@ -129,8 +148,14 @@ export class BlueDartAdapter implements CarrierAdapter {
     }
   }
 
-  async cancelShipment(trackingNumber: string, reason?: string): Promise<boolean> {
-    console.log('[BlueDartAdapter] cancelShipment request', { trackingNumber, reason });
+  async cancelShipment(
+    trackingNumber: string,
+    reason?: string,
+  ): Promise<boolean> {
+    console.log('[BlueDartAdapter] cancelShipment request', {
+      trackingNumber,
+      reason,
+    });
 
     try {
       const payload = {
@@ -139,7 +164,9 @@ export class BlueDartAdapter implements CarrierAdapter {
       };
 
       await this.makeRequestWithRetry('POST', '/api/shipment/cancel', payload);
-      console.log('[BlueDartAdapter] cancelShipment success', { trackingNumber });
+      console.log('[BlueDartAdapter] cancelShipment success', {
+        trackingNumber,
+      });
       return true;
     } catch (error) {
       console.error('[BlueDartAdapter] cancelShipment failed', {
@@ -154,7 +181,10 @@ export class BlueDartAdapter implements CarrierAdapter {
     console.log('[BlueDartAdapter] voidLabel request', { labelNumber });
 
     try {
-      await this.makeRequestWithRetry('POST', `/api/label/${encodeURIComponent(labelNumber)}/void`);
+      await this.makeRequestWithRetry(
+        'POST',
+        `/api/label/${encodeURIComponent(labelNumber)}/void`,
+      );
       console.log('[BlueDartAdapter] voidLabel success', { labelNumber });
       return true;
     } catch (error) {
@@ -186,7 +216,10 @@ export class BlueDartAdapter implements CarrierAdapter {
 
     const weightKg = req.weightGrams / 1000;
     const quotes: RateQuote[] = [];
-    const productCodes: Array<{ code: 'A' | 'D'; serviceType: 'Air' | 'Surface' }> = [
+    const productCodes: Array<{
+      code: 'A' | 'D';
+      serviceType: 'Air' | 'Surface';
+    }> = [
       { code: 'A', serviceType: 'Air' },
       { code: 'D', serviceType: 'Surface' },
     ];
@@ -213,10 +246,13 @@ export class BlueDartAdapter implements CarrierAdapter {
           quotes.push(this.fallbackRate(req, serviceType, code));
         }
       } catch (error) {
-        console.warn('[BlueDartAdapter] getRates live call failed, using static rate card', {
-          serviceType,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        console.warn(
+          '[BlueDartAdapter] getRates live call failed, using static rate card',
+          {
+            serviceType,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
         quotes.push(this.fallbackRate(req, serviceType, code));
       }
     }
@@ -232,7 +268,9 @@ export class BlueDartAdapter implements CarrierAdapter {
    *
    * COD is assumed available for both Air and Surface in most metros.
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[BlueDartAdapter] getServiceability request', {
       origin: input.originPincode,
       dest: input.destinationPincode,
@@ -241,7 +279,12 @@ export class BlueDartAdapter implements CarrierAdapter {
     });
 
     const knownUnserviceable = new Set([
-      '000000', '999999', '110099', '400099', '560099', '600099',
+      '000000',
+      '999999',
+      '110099',
+      '400099',
+      '560099',
+      '600099',
     ]);
 
     if (
@@ -287,9 +330,12 @@ export class BlueDartAdapter implements CarrierAdapter {
         estimatedDays: { min: 1, max: 3 },
       };
     } catch (error) {
-      console.warn('[BlueDartAdapter] getServiceability live call failed, defaulting to unserviceable', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.warn(
+        '[BlueDartAdapter] getServiceability live call failed, defaulting to unserviceable',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return {
         serviceable: false,
         codAvailable: false,
@@ -424,16 +470,18 @@ export class BlueDartAdapter implements CarrierAdapter {
         phone: delivery.phone,
         country: delivery.country || 'India',
       },
-      shipper: pickup ? {
-        name: pickup.name,
-        address: pickup.addressLine1,
-        address2: pickup.addressLine2 || '',
-        city: pickup.city,
-        state: pickup.state,
-        pincode: pickup.pincode,
-        phone: pickup.phone,
-        country: pickup.country || 'India',
-      } : undefined,
+      shipper: pickup
+        ? {
+            name: pickup.name,
+            address: pickup.addressLine1,
+            address2: pickup.addressLine2 || '',
+            city: pickup.city,
+            state: pickup.state,
+            pincode: pickup.pincode,
+            phone: pickup.phone,
+            country: pickup.country || 'India',
+          }
+        : undefined,
       shipment: {
         weight: (pkg.weight / 1000).toFixed(2),
         ...(pkg.length && { length: pkg.length.toString() }),
@@ -446,8 +494,12 @@ export class BlueDartAdapter implements CarrierAdapter {
     };
   }
 
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
-    const awbNumber = data?.awb || data?.waybill_number || data?.tracking_number;
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
+    const awbNumber =
+      data?.awb || data?.waybill_number || data?.tracking_number;
     const labelUrl = data?.label_url || data?.label_pdf;
     const shipmentData = data?.shipment || data;
 
@@ -460,20 +512,27 @@ export class BlueDartAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: shipmentData?.service_type || 'BlueDart Express',
       awbNumber: awbNumber || labelNumber,
-      trackingUrl: awbNumber ? `https://www.bluedart.com/track/${awbNumber}` : undefined,
-      estimatedDelivery: shipmentData?.estimated_delivery_date 
+      trackingUrl: awbNumber
+        ? `https://www.bluedart.com/track/${awbNumber}`
+        : undefined,
+      estimatedDelivery: shipmentData?.estimated_delivery_date
         ? new Date(shipmentData.estimated_delivery_date)
         : undefined,
     };
   }
 
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const shipment = data?.shipment || data;
     const trackingHistory = shipment?.tracking_history || shipment?.scans || [];
 
     const latestEvent = trackingHistory[trackingHistory.length - 1] || {};
 
-    const status = this.mapBlueDartStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapBlueDartStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     const events = trackingHistory.map((event: any) => ({
       status: this.mapBlueDartStatus(event.status || event.scan_type),
@@ -488,9 +547,13 @@ export class BlueDartAdapter implements CarrierAdapter {
       trackingNumber,
       status,
       subStatus: latestEvent?.sub_status || latestEvent?.scan_type,
-      description: latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
-      location: latestEvent?.location || latestEvent?.city || shipment?.destination,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      description:
+        latestEvent?.remarks || latestEvent?.description || latestEvent?.status,
+      location:
+        latestEvent?.location || latestEvent?.city || shipment?.destination,
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events,
     };
   }
@@ -499,28 +562,36 @@ export class BlueDartAdapter implements CarrierAdapter {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
     if (s.includes('transit') || s.includes('it')) return 'IN_TRANSIT';
-    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu')) return 'SHIPPED';
+    if (s.includes('shipped') || s.includes('pickup') || s.includes('pu'))
+      return 'SHIPPED';
     if (s.includes('pending') || s.includes('created')) return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
 
-  private async makeRequestWithRetry(method: 'GET' | 'POST', endpoint: string, data?: any): Promise<any> {
+  private async makeRequestWithRetry(
+    method: 'GET' | 'POST',
+    endpoint: string,
+    data?: any,
+  ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[BlueDartAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[BlueDartAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -536,14 +607,21 @@ export class BlueDartAdapter implements CarrierAdapter {
         const response = await axios(config);
 
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[BlueDartAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -552,12 +630,15 @@ export class BlueDartAdapter implements CarrierAdapter {
         }
 
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        
+
         if (attempt < this.maxRetries) {
-          console.warn(`[BlueDartAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[BlueDartAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         }
       }
@@ -566,9 +647,11 @@ export class BlueDartAdapter implements CarrierAdapter {
     throw lastError || new Error('Request failed after retries');
   }
 
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `BD-${req.shipmentId}-${Date.now()}`;
-    
+
     console.warn('[BlueDartAdapter] Using fallback label generation', {
       shipmentId: req.shipmentId,
       labelNumber,
@@ -586,7 +669,7 @@ export class BlueDartAdapter implements CarrierAdapter {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -596,12 +679,19 @@ export class BlueDartAdapter implements CarrierAdapter {
    * Heavy parcels (>2kg Air, >5kg Surface) get a 40 / 20 paise per additional 500g
    * surcharge respectively.
    */
-  private static readonly FALLBACK_RATE_CARD: Record<'A' | 'D', { base: number; per500g: number; minEta: [number, number] }> = {
+  private static readonly FALLBACK_RATE_CARD: Record<
+    'A' | 'D',
+    { base: number; per500g: number; minEta: [number, number] }
+  > = {
     A: { base: 12000, per500g: 4000, minEta: [1, 2] },
     D: { base: 7000, per500g: 2000, minEta: [2, 4] },
   };
 
-  private fallbackRate(req: RateQuoteRequest, serviceType: 'Air' | 'Surface', code: 'A' | 'D'): RateQuote {
+  private fallbackRate(
+    req: RateQuoteRequest,
+    serviceType: 'Air' | 'Surface',
+    code: 'A' | 'D',
+  ): RateQuote {
     const card = BlueDartAdapter.FALLBACK_RATE_CARD[code];
     const weightKg = req.weightGrams / 1000;
     const additionalHalfKg = Math.max(0, Math.ceil((weightKg - 0.5) * 2));
@@ -616,7 +706,8 @@ export class BlueDartAdapter implements CarrierAdapter {
     rate: number,
     fromLiveApi: boolean,
   ): RateQuote {
-    const card = BlueDartAdapter.FALLBACK_RATE_CARD[serviceType === 'Air' ? 'A' : 'D'];
+    const card =
+      BlueDartAdapter.FALLBACK_RATE_CARD[serviceType === 'Air' ? 'A' : 'D'];
     return {
       carrier: 'BlueDart',
       carrierCode: 'bluedart',
@@ -631,7 +722,10 @@ export class BlueDartAdapter implements CarrierAdapter {
     };
   }
 
-  private parseRateFromResponse(data: any, productCode: 'A' | 'D'): number | null {
+  private parseRateFromResponse(
+    data: any,
+    productCode: 'A' | 'D',
+  ): number | null {
     // BlueDart's RateCalculator returns the total in INR (not paise).
     const inr = data?.rate || data?.RateAmount || data?.amount;
     if (typeof inr === 'number' && inr > 0) {
@@ -649,18 +743,21 @@ export class BlueDartAdapter implements CarrierAdapter {
   private parseServiceabilityResponse(data: any): boolean {
     // BlueDart returns "Y" / "N" or true / false depending on the version.
     const flag =
-      data?.serviceable ??
-      data?.Serviceable ??
-      data?.status ??
-      data?.result;
+      data?.serviceable ?? data?.Serviceable ?? data?.status ?? data?.result;
     if (typeof flag === 'boolean') return flag;
     if (typeof flag === 'string') {
-      return flag.toUpperCase() === 'Y' || flag.toUpperCase() === 'YES' || flag.toUpperCase() === 'TRUE';
+      return (
+        flag.toUpperCase() === 'Y' ||
+        flag.toUpperCase() === 'YES' ||
+        flag.toUpperCase() === 'TRUE'
+      );
     }
     return false;
   }
 
-  private mapTimeSlotToBlueDart(slot: 'MORNING' | 'AFTERNOON' | 'EVENING'): string {
+  private mapTimeSlotToBlueDart(
+    slot: 'MORNING' | 'AFTERNOON' | 'EVENING',
+  ): string {
     switch (slot) {
       case 'MORNING':
         return '0900-1200';
@@ -678,6 +775,8 @@ export class BlueDartAdapter implements CarrierAdapter {
    */
   private isMetro(pincode: string): boolean {
     const prefix = pincode?.substring(0, 3);
-    return ['110', '400', '560', '600', '700', '500', '380', '411'].includes(prefix);
+    return ['110', '400', '560', '600', '700', '500', '380', '411'].includes(
+      prefix,
+    );
   }
 }

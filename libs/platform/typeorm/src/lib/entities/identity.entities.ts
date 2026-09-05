@@ -210,6 +210,13 @@ export class RefreshTokenEntity {
 
 // Imports of forward-referenced entities (avoid circular import)
 import { OrderEntity } from './commerce.entities';
-import { PaymentEntity, SubscriptionEntity, InvoiceEntity } from './billing.entities';
-import { WebhookSubscriptionEntity, WooCommerceStoreEntity } from './ecom.entities';
+import {
+  PaymentEntity,
+  SubscriptionEntity,
+  InvoiceEntity,
+} from './billing.entities';
+import {
+  WebhookSubscriptionEntity,
+  WooCommerceStoreEntity,
+} from './ecom.entities';
 import { WarehouseSellerProfileEntity } from './warehouse.entities';

@@ -247,22 +247,21 @@ export class KycService {
    * kyc-verification queue. Call once at module init.
    */
   registerWorker(): void {
-    this.queues.createWorker(
-      KYC_QUEUE_NAME,
-      async (job: any) => {
-        return this.processVerifyJob({
-          kycRecordId: job.data.kycRecordId,
-          tenantId: job.data.tenantId,
-          attempt: job.attemptsMade ?? 0,
-        } as KycVerifyJobData);
-      },
-    );
+    this.queues.createWorker(KYC_QUEUE_NAME, async (job: any) => {
+      return this.processVerifyJob({
+        kycRecordId: job.data.kycRecordId,
+        tenantId: job.data.tenantId,
+        attempt: job.attemptsMade ?? 0,
+      } as KycVerifyJobData);
+    });
   }
 
   private requireTenantId(): number {
     const tid = this.tenantContext.getTenantId();
     if (tid === null || tid === undefined) {
-      throw new BadRequestException('Tenant context required for KYC operation');
+      throw new BadRequestException(
+        'Tenant context required for KYC operation',
+      );
     }
     return Number(tid);
   }

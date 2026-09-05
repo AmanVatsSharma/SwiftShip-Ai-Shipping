@@ -65,7 +65,7 @@ export class AuditLogService {
       return await this.repo.save(row);
     } catch (err) {
       // Never let an audit failure break a request. Log and move on.
-      // eslint-disable-next-line no-console
+
       console.warn(
         '[audit] record() failed; dropping event:',
         (err as Error).message,
@@ -82,7 +82,9 @@ export class AuditLogService {
   async query(filter: AuditLogFilter): Promise<AuditLogEntity[]> {
     const qb = this.repo.createQueryBuilder('a');
     if (filter.tenantId !== undefined) {
-      qb.andWhere('a.tenantId = :tenantId', { tenantId: this.toInt(filter.tenantId) });
+      qb.andWhere('a.tenantId = :tenantId', {
+        tenantId: this.toInt(filter.tenantId),
+      });
     }
     if (filter.actorUserId !== undefined) {
       qb.andWhere('a.actorUserId = :actorUserId', {

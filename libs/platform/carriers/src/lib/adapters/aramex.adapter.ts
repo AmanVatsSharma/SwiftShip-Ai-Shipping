@@ -53,7 +53,9 @@ export class AramexAdapter implements CarrierAdapter {
     const pin = this.config.get<string>('ARAMEX_PIN');
 
     if (!accountNumber || !username || !password || !pin) {
-      throw new Error('Aramex account number, username, password, and PIN are required');
+      throw new Error(
+        'Aramex account number, username, password, and PIN are required',
+      );
     }
 
     console.log('[AramexAdapter] Initialized', {
@@ -94,7 +96,9 @@ export class AramexAdapter implements CarrierAdapter {
     });
 
     if (!req.deliveryAddress) {
-      throw new Error('Delivery address is required for Aramex label generation');
+      throw new Error(
+        'Delivery address is required for Aramex label generation',
+      );
     }
 
     if (!req.packageDetails?.weight) {
@@ -105,7 +109,11 @@ export class AramexAdapter implements CarrierAdapter {
       // In production mode, we would call Aramex's SOAP/REST API
       if (process.env.NODE_ENV === 'production') {
         const payload = this.buildLabelPayload(req);
-        const response = await this.makeRequestWithRetry('POST', '/api/shipments', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/api/shipments',
+          payload,
+        );
         const labelData = this.parseLabelResponse(response.data, req);
 
         console.log('[AramexAdapter] generateLabel success', {
@@ -120,19 +128,25 @@ export class AramexAdapter implements CarrierAdapter {
         return this.generateSandboxLabel(req);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[AramexAdapter] generateLabel failed', {
         shipmentId: req.shipmentId,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+              }
+            : undefined,
       });
 
       // Return deterministic label number for graceful degradation
-      console.warn('[AramexAdapter] Falling back to deterministic label generation');
+      console.warn(
+        '[AramexAdapter] Falling back to deterministic label generation',
+      );
       return this.generateFallbackLabel(req);
     }
   }
@@ -155,9 +169,12 @@ export class AramexAdapter implements CarrierAdapter {
       if (process.env.NODE_ENV === 'production') {
         const response = await this.makeRequestWithRetry(
           'GET',
-          `/api/tracking/${encodeURIComponent(trackingNumber)}`
+          `/api/tracking/${encodeURIComponent(trackingNumber)}`,
         );
-        const trackingData = this.parseTrackingResponse(response.data, trackingNumber);
+        const trackingData = this.parseTrackingResponse(
+          response.data,
+          trackingNumber,
+        );
 
         console.log('[AramexAdapter] trackShipment success', {
           trackingNumber,
@@ -171,14 +188,18 @@ export class AramexAdapter implements CarrierAdapter {
         return this.generateMockTracking(trackingNumber);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[AramexAdapter] trackShipment failed', {
         trackingNumber,
         error: errorMessage,
-        errorDetails: error instanceof AxiosError ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-        } : undefined,
+        errorDetails:
+          error instanceof AxiosError
+            ? {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+              }
+            : undefined,
       });
 
       // Return mock tracking response on error
@@ -207,7 +228,10 @@ export class AramexAdapter implements CarrierAdapter {
       // Live: POST /ShippingAPI.V2/RateCalculator (SOAP method, JSON-wrapped at HTTP layer)
       const payload = {
         OriginAddress: { PostCode: req.originPincode, CountryCode: 'IN' },
-        DestinationAddress: { PostCode: req.destinationPincode, CountryCode: 'IN' },
+        DestinationAddress: {
+          PostCode: req.destinationPincode,
+          CountryCode: 'IN',
+        },
         ShipmentDetails: {
           PaymentType: req.paymentMethod === 'COD' ? 'C' : 'P',
           ProductGroup: 'EXP',
@@ -219,14 +243,21 @@ export class AramexAdapter implements CarrierAdapter {
       };
 
       if (process.env.NODE_ENV === 'production') {
-        const response = await this.makeRequestWithRetry('POST', '/RateCalculator', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/RateCalculator',
+          payload,
+        );
         return this.parseRateResponse(response.data, req);
       }
       return this.getFallbackRates(req);
     } catch (error) {
-      console.error('[AramexAdapter] getRates failed, falling back to static rate card', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[AramexAdapter] getRates failed, falling back to static rate card',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getFallbackRates(req);
     }
   }
@@ -239,7 +270,9 @@ export class AramexAdapter implements CarrierAdapter {
    * @param input - Serviceability request
    * @returns Serviceability result
    */
-  async getServiceability(input: ServiceabilityRequest): Promise<ServiceabilityResult> {
+  async getServiceability(
+    input: ServiceabilityRequest,
+  ): Promise<ServiceabilityResult> {
     console.log('[AramexAdapter] getServiceability request', {
       originPincode: input.originPincode,
       destinationPincode: input.destinationPincode,
@@ -251,7 +284,10 @@ export class AramexAdapter implements CarrierAdapter {
       if (process.env.NODE_ENV === 'production') {
         const payload = {
           OriginAddress: { PostCode: input.originPincode, CountryCode: 'IN' },
-          DestinationAddress: { PostCode: input.destinationPincode, CountryCode: 'IN' },
+          DestinationAddress: {
+            PostCode: input.destinationPincode,
+            CountryCode: 'IN',
+          },
           ShipmentDetails: {
             PaymentType: input.paymentMethod === 'COD' ? 'C' : 'P',
             ProductGroup: 'EXP',
@@ -259,9 +295,17 @@ export class AramexAdapter implements CarrierAdapter {
             ActualWeight: { Value: input.weightGrams / 1000, Unit: 'KG' },
           },
         };
-        const response = await this.makeRequestWithRetry('POST', '/ServiceAvailability', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/ServiceAvailability',
+          payload,
+        );
         const data = response.data || {};
-        const isServiceable = !!(data.IsServiceable ?? data.isServiceable ?? true);
+        const isServiceable = !!(
+          data.IsServiceable ??
+          data.isServiceable ??
+          true
+        );
         return {
           serviceable: isServiceable,
           codAvailable: input.paymentMethod === 'COD' && isServiceable,
@@ -312,13 +356,25 @@ export class AramexAdapter implements CarrierAdapter {
           Pickup: {
             PickupAddress: { PostCode: input.pickupPincode, CountryCode: 'IN' },
             PickupDate: new Date(input.pickupDate).toISOString(),
-            ReadyTime: input.pickupTimeSlot === 'MORNING' ? '09:00' : input.pickupTimeSlot === 'AFTERNOON' ? '13:00' : '17:00',
+            ReadyTime:
+              input.pickupTimeSlot === 'MORNING'
+                ? '09:00'
+                : input.pickupTimeSlot === 'AFTERNOON'
+                  ? '13:00'
+                  : '17:00',
             ClosingTime: '18:00',
-            Contact: { PersonName: input.contactName, PhoneNumber1: input.contactPhone },
+            Contact: {
+              PersonName: input.contactName,
+              PhoneNumber1: input.contactPhone,
+            },
             Shipments: input.shipmentIds.map((id) => ({ Reference1: id })),
           },
         };
-        const response = await this.makeRequestWithRetry('POST', '/CreatePickup', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/CreatePickup',
+          payload,
+        );
         const data = response.data?.ProcessedPickup || response.data || {};
         const pickupId = data.ID || data.PickupID || `ARX-PU-${Date.now()}`;
         return {
@@ -357,7 +413,10 @@ export class AramexAdapter implements CarrierAdapter {
    * @param input - Cancel pickup request
    */
   async cancelPickup(input: CancelPickupRequest): Promise<void> {
-    console.log('[AramexAdapter] cancelPickup request', { pickupId: input.pickupId, reason: input.reason });
+    console.log('[AramexAdapter] cancelPickup request', {
+      pickupId: input.pickupId,
+      reason: input.reason,
+    });
 
     try {
       // Live: POST /ShippingAPI.V2/CancelPickup
@@ -436,19 +495,29 @@ export class AramexAdapter implements CarrierAdapter {
           Shipments: [{ ID: shipmentId }],
           GetLastTrackingUpdateOnly: false,
         };
-        const response = await this.makeRequestWithRetry('POST', '/TrackShipments', payload);
+        const response = await this.makeRequestWithRetry(
+          'POST',
+          '/TrackShipments',
+          payload,
+        );
         const data = response.data?.Shipments?.[0] || response.data || {};
-        const update = data.LastTrackingUpdate || data.TrackingUpdates?.slice(-1)?.[0] || {};
-        const code = String(update.ExceptionCode || update.ReasonCode || update.UpdateCode || '').toUpperCase();
+        const update =
+          data.LastTrackingUpdate || data.TrackingUpdates?.slice(-1)?.[0] || {};
+        const code = String(
+          update.ExceptionCode || update.ReasonCode || update.UpdateCode || '',
+        ).toUpperCase();
         const mapped = this.mapAramexNdrCode(code);
         return mapped ? [mapped] : this.getDefaultNdrActions();
       }
       return this.getDefaultNdrActions();
     } catch (error) {
-      console.error('[AramexAdapter] getNdrActions failed, returning default actions', {
-        shipmentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      console.error(
+        '[AramexAdapter] getNdrActions failed, returning default actions',
+        {
+          shipmentId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      );
       return this.getDefaultNdrActions();
     }
   }
@@ -461,21 +530,24 @@ export class AramexAdapter implements CarrierAdapter {
           code: 'REATTEMPT',
           label: 'Reattempt delivery',
           requiresCustomerInput: false,
-          description: 'Aramex: Customer was not available at the time of the delivery attempt.',
+          description:
+            'Aramex: Customer was not available at the time of the delivery attempt.',
         };
       case '12':
         return {
           code: 'CHANGE_ADDRESS',
           label: 'Change delivery address',
           requiresCustomerInput: true,
-          description: 'Aramex: Wrong address. Please provide a corrected address.',
+          description:
+            'Aramex: Wrong address. Please provide a corrected address.',
         };
       case '14':
         return {
           code: 'CANCEL',
           label: 'Cancel shipment',
           requiresCustomerInput: false,
-          description: 'Aramex: Customer refused the shipment. Initiate cancellation / RTO.',
+          description:
+            'Aramex: Customer refused the shipment. Initiate cancellation / RTO.',
         };
       default:
         return {
@@ -489,14 +561,33 @@ export class AramexAdapter implements CarrierAdapter {
 
   private getDefaultNdrActions(): NdrActionOption[] {
     return [
-      { code: 'REATTEMPT', label: 'Reattempt delivery', requiresCustomerInput: false, description: 'Schedule another delivery attempt.' },
-      { code: 'CHANGE_ADDRESS', label: 'Change delivery address', requiresCustomerInput: true, description: 'Provide a corrected address for reattempt.' },
-      { code: 'CANCEL', label: 'Cancel shipment', requiresCustomerInput: false, description: 'Cancel the shipment and initiate RTO.' },
+      {
+        code: 'REATTEMPT',
+        label: 'Reattempt delivery',
+        requiresCustomerInput: false,
+        description: 'Schedule another delivery attempt.',
+      },
+      {
+        code: 'CHANGE_ADDRESS',
+        label: 'Change delivery address',
+        requiresCustomerInput: true,
+        description: 'Provide a corrected address for reattempt.',
+      },
+      {
+        code: 'CANCEL',
+        label: 'Cancel shipment',
+        requiresCustomerInput: false,
+        description: 'Cancel the shipment and initiate RTO.',
+      },
     ];
   }
 
   private parseRateResponse(data: any, req: RateQuoteRequest): RateQuote[] {
-    const rawQuotes: any[] = data?.TotalAmount ? [data] : (Array.isArray(data) ? data : []);
+    const rawQuotes: any[] = data?.TotalAmount
+      ? [data]
+      : Array.isArray(data)
+        ? data
+        : [];
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     if (rawQuotes.length === 0) {
@@ -504,9 +595,16 @@ export class AramexAdapter implements CarrierAdapter {
     }
 
     return rawQuotes.map((q) => {
-      const serviceRaw = String(q.ProductType || q.Service || 'OND').toUpperCase();
-      const allowed: ReadonlyArray<RateQuote['serviceType']> = ['STANDARD', 'EXPRESS', 'SAME_DAY', 'OVERNIGHT'];
-      const serviceType = (allowed.find((s) => s === serviceRaw) || 'EXPRESS') as RateQuote['serviceType'];
+      const serviceRaw = String(
+        q.ProductType || q.Service || 'OND',
+      ).toUpperCase();
+      const allowed: ReadonlyArray<RateQuote['serviceType']> = [
+        'STANDARD',
+        'EXPRESS',
+        'SAME_DAY',
+        'OVERNIGHT',
+      ];
+      const serviceType = allowed.find((s) => s === serviceRaw) || 'EXPRESS';
 
       const amount = Number(q.TotalAmount?.Value ?? q.total ?? q.rate ?? 0);
 
@@ -528,7 +626,9 @@ export class AramexAdapter implements CarrierAdapter {
   private getFallbackRates(req: RateQuoteRequest): RateQuote[] {
     const weightKg = req.weightGrams / 1000;
     // Deterministic pricing: base ₹120 + ₹70/kg (COD surcharge +₹50)
-    const baseRate = Math.round(120 + weightKg * 70 + (req.paymentMethod === 'COD' ? 50 : 0));
+    const baseRate = Math.round(
+      120 + weightKg * 70 + (req.paymentMethod === 'COD' ? 50 : 0),
+    );
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     return [
@@ -542,7 +642,11 @@ export class AramexAdapter implements CarrierAdapter {
         codAvailable: req.paymentMethod === 'COD',
         pickupAvailable: true,
         expiresAt,
-        rawResponse: { fallback: true, weightKg, paymentMethod: req.paymentMethod },
+        rawResponse: {
+          fallback: true,
+          weightKg,
+          paymentMethod: req.paymentMethod,
+        },
       },
     ];
   }
@@ -566,7 +670,9 @@ export class AramexAdapter implements CarrierAdapter {
       consignee: {
         name: delivery.name,
         phone: delivery.phone,
-        address: [delivery.addressLine1, delivery.addressLine2].filter(Boolean).join(', '),
+        address: [delivery.addressLine1, delivery.addressLine2]
+          .filter(Boolean)
+          .join(', '),
         city: delivery.city,
         state: delivery.state,
         pincode: delivery.pincode,
@@ -577,7 +683,9 @@ export class AramexAdapter implements CarrierAdapter {
         shipper: {
           name: pickup.name,
           phone: pickup.phone,
-          address: [pickup.addressLine1, pickup.addressLine2].filter(Boolean).join(', '),
+          address: [pickup.addressLine1, pickup.addressLine2]
+            .filter(Boolean)
+            .join(', '),
           city: pickup.city,
           state: pickup.state,
           pincode: pickup.pincode,
@@ -591,7 +699,9 @@ export class AramexAdapter implements CarrierAdapter {
         ...(pkg.width && { width: pkg.width.toString() }),
         ...(pkg.height && { height: pkg.height.toString() }),
         ...(pkg.codAmount && { codAmount: pkg.codAmount.toString() }),
-        ...(pkg.declaredValue && { declaredValue: pkg.declaredValue.toString() }),
+        ...(pkg.declaredValue && {
+          declaredValue: pkg.declaredValue.toString(),
+        }),
       },
       service: 'EXPRESS',
       labelFormat: req.format || 'PDF',
@@ -602,7 +712,10 @@ export class AramexAdapter implements CarrierAdapter {
   /**
    * Parse Aramex label generation response
    */
-  private parseLabelResponse(data: any, req: CarrierLabelRequest): CarrierLabelResponse {
+  private parseLabelResponse(
+    data: any,
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const waybill = data?.awb || data?.waybill || data?.trackingNumber;
     const labelUrl = data?.labelUrl || data?.labelPdf;
 
@@ -615,20 +728,29 @@ export class AramexAdapter implements CarrierAdapter {
       carrierCode: this.code,
       serviceName: data?.serviceType || 'Aramex Express',
       awbNumber: waybill || labelNumber,
-      trackingUrl: waybill ? `https://www.aramex.com/track/${waybill}` : undefined,
-      estimatedDelivery: data?.estimatedDelivery ? new Date(data.estimatedDelivery) : undefined,
+      trackingUrl: waybill
+        ? `https://www.aramex.com/track/${waybill}`
+        : undefined,
+      estimatedDelivery: data?.estimatedDelivery
+        ? new Date(data.estimatedDelivery)
+        : undefined,
     };
   }
 
   /**
    * Parse Aramex tracking response
    */
-  private parseTrackingResponse(data: any, trackingNumber: string): TrackingResponse {
+  private parseTrackingResponse(
+    data: any,
+    trackingNumber: string,
+  ): TrackingResponse {
     const shipment = data?.shipment || data;
     const events = shipment?.events || shipment?.trackingHistory || [];
 
     const latestEvent = events[events.length - 1] || {};
-    const status = this.mapAramexStatus(latestEvent?.status || shipment?.status || 'Unknown');
+    const status = this.mapAramexStatus(
+      latestEvent?.status || shipment?.status || 'Unknown',
+    );
 
     const trackingEvents = events.map((event: any) => ({
       status: this.mapAramexStatus(event.status || event.eventType),
@@ -645,7 +767,9 @@ export class AramexAdapter implements CarrierAdapter {
       subStatus: latestEvent?.subStatus,
       description: latestEvent?.description || latestEvent?.status,
       location: latestEvent?.location || latestEvent?.city,
-      occurredAt: latestEvent?.timestamp ? new Date(latestEvent.timestamp) : new Date(),
+      occurredAt: latestEvent?.timestamp
+        ? new Date(latestEvent.timestamp)
+        : new Date(),
       events: trackingEvents,
     };
   }
@@ -656,9 +780,11 @@ export class AramexAdapter implements CarrierAdapter {
   private mapAramexStatus(status: string): string {
     const s = (status || '').toLowerCase();
     if (s.includes('delivered') || s.includes('dl')) return 'DELIVERED';
-    if (s.includes('transit') || s.includes('in_transit') || s.includes('it')) return 'IN_TRANSIT';
+    if (s.includes('transit') || s.includes('in_transit') || s.includes('it'))
+      return 'IN_TRANSIT';
     if (s.includes('picked_up') || s.includes('pu')) return 'SHIPPED';
-    if (s.includes('pending') || s.includes('created') || s.includes('cr')) return 'PENDING';
+    if (s.includes('pending') || s.includes('created') || s.includes('cr'))
+      return 'PENDING';
     if (s.includes('cancel') || s.includes('void')) return 'CANCELLED';
     return 'UNKNOWN';
   }
@@ -669,7 +795,7 @@ export class AramexAdapter implements CarrierAdapter {
   private async makeRequestWithRetry(
     method: 'GET' | 'POST',
     endpoint: string,
-    data?: any
+    data?: any,
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const username = this.config.get<string>('ARAMEX_USERNAME');
@@ -678,19 +804,22 @@ export class AramexAdapter implements CarrierAdapter {
 
     const headers: any = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Basic ${auth}`,
+      Accept: 'application/json',
+      Authorization: `Basic ${auth}`,
     };
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[AramexAdapter] API request (attempt ${attempt}/${this.maxRetries})`, {
-          method,
-          url,
-          hasData: !!data,
-        });
+        console.log(
+          `[AramexAdapter] API request (attempt ${attempt}/${this.maxRetries})`,
+          {
+            method,
+            url,
+            hasData: !!data,
+          },
+        );
 
         const config: any = {
           method,
@@ -707,7 +836,9 @@ export class AramexAdapter implements CarrierAdapter {
 
         // Check for API-level errors in response
         if (response.data?.error || response.data?.errors) {
-          throw new Error(`API Error: ${JSON.stringify(response.data.error || response.data.errors)}`);
+          throw new Error(
+            `API Error: ${JSON.stringify(response.data.error || response.data.errors)}`,
+          );
         }
 
         return response;
@@ -715,7 +846,12 @@ export class AramexAdapter implements CarrierAdapter {
         lastError = error instanceof Error ? error : new Error('Unknown error');
 
         // Don't retry on 4xx errors (client errors)
-        if (error instanceof AxiosError && error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+        if (
+          error instanceof AxiosError &&
+          error.response?.status &&
+          error.response.status >= 400 &&
+          error.response.status < 500
+        ) {
           console.error('[AramexAdapter] Client error, not retrying', {
             status: error.response.status,
             data: error.response.data,
@@ -727,10 +863,13 @@ export class AramexAdapter implements CarrierAdapter {
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
 
         if (attempt < this.maxRetries) {
-          console.warn(`[AramexAdapter] Request failed, retrying in ${delay}ms`, {
-            attempt,
-            error: lastError.message,
-          });
+          console.warn(
+            `[AramexAdapter] Request failed, retrying in ${delay}ms`,
+            {
+              attempt,
+              error: lastError.message,
+            },
+          );
           await this.sleep(delay);
         } else {
           console.error('[AramexAdapter] Request failed after all retries', {
@@ -759,7 +898,10 @@ export class AramexAdapter implements CarrierAdapter {
       awbNumber: awb,
       trackingUrl: `https://www.aramex.com/track/${awb}`,
       estimatedDelivery: req.packageDetails?.weight
-        ? new Date(Date.now() + (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000)
+        ? new Date(
+            Date.now() +
+              (req.packageDetails.weight > 1000 ? 5 : 3) * 24 * 60 * 60 * 1000,
+          )
         : undefined,
     };
   }
@@ -798,7 +940,9 @@ export class AramexAdapter implements CarrierAdapter {
   /**
    * Generate fallback label when API fails
    */
-  private generateFallbackLabel(req: CarrierLabelRequest): CarrierLabelResponse {
+  private generateFallbackLabel(
+    req: CarrierLabelRequest,
+  ): CarrierLabelResponse {
     const labelNumber = `ARX-${req.shipmentId}-${Date.now()}`;
 
     console.warn('[AramexAdapter] Using fallback label generation', {
@@ -821,6 +965,6 @@ export class AramexAdapter implements CarrierAdapter {
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
