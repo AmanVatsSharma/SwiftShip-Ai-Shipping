@@ -1,4 +1,4 @@
-import { getTrackingByAwb } from '../../../../lib/tracking';
+import { getTrackingByAwb } from '../../../lib/tracking';
 import { TrackHeader } from './TrackHeader';
 import { TrackTimeline } from './TrackTimeline';
 import { NotFound } from './NotFound';

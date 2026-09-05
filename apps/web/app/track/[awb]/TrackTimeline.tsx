@@ -2,7 +2,7 @@
 
 import { Check, Circle, MapPin } from 'lucide-react';
 import { formatDateTime } from '@swiftship/shared-ui';
-import type { TrackingEvent } from '../../../../lib/tracking';
+import type { TrackingEvent } from '../../../lib/tracking';
 
 interface TrackTimelineProps {
   events: TrackingEvent[];

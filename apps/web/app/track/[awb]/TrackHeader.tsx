@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDateTime } from '@swiftship/shared-ui';
-import type { TenantBranding } from '../../../../lib/tracking';
+import type { TenantBranding } from '../../../lib/tracking';
 
 interface TrackHeaderProps {
   awb: string;

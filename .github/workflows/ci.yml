@@ -158,6 +158,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: 'npm' }
       - run: npm ci
+      # The Next.js apps keep their own dependency trees (tailwindcss,
+      # next-pwa, ...) which the root install does not provide.
+      - run: npm install --no-audit --no-fund --prefix apps/web
+      - run: npm install --no-audit --no-fund --prefix apps/admin-portal
       - run: npx nx run-many --target=build --all --parallel=3
       - uses: actions/upload-artifact@v4
         with:
