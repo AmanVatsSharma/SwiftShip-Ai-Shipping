@@ -24,7 +24,7 @@
  */
 import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { KycService, KycStatus } from '@swiftship/domains-onboarding';
+import { KycService, KycStatus, KycRecordEntity } from '@swiftship/domains-onboarding';
 import {
   InvoiceService,
 } from '../../../libs/domains/billing/src/lib/services/invoice.service';
@@ -122,6 +122,16 @@ describe('KYC → COD gate → invoice → GST breakdown (e2e)', () => {
   it('the async verify job (driven directly) flips KYC to VERIFIED', async () => {
     const resolve = scopedTenantResolver(app, stack.tenantId);
     const kyc = await resolve(KycService);
+    // submitKyc deliberately never persists the full account number; the
+    // verify job expects it via record metadata (production passes it in
+    // the job payload). Seed it the way the worker contract describes.
+    const ds = app.get(DataSource);
+    await ds
+      .createQueryBuilder()
+      .update(KycRecordEntity)
+      .set({ metadata: { bankAccountNumber: '1111111111' } as any })
+      .where('id = :id', { id: kycRecordId })
+      .execute();
     const status = await kyc.processVerifyJob({
       kycRecordId,
       tenantId: stack.tenantId,

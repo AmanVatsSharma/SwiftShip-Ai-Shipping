@@ -38,7 +38,7 @@ const RANKED_RATE_SHOP = /* GraphQL */ `
         etaDaysMin
         etaDaysMax
         codAvailable
-        ranking { position score }
+        ranking { position score effectiveCostPaise }
       }
     }
   }
@@ -108,13 +108,13 @@ describe('Rate-shop ranking: rankedRateShop via sandbox carriers (e2e)', () => {
     const byPosition = [...data.rankedRateShop.quotes].sort(
       (a: any, b: any) => a.ranking.position - b.ranking.position,
     );
-    const rates: number[] = byPosition.map((q: any) => q.rate);
+    // Cheapest strategy ranks by EFFECTIVE cost (surcharges + RTO penalty),
+    // which can reorder vs the raw `rate` — assert on effectiveCostPaise.
+    const costs: number[] = byPosition.map((q: any) => q.ranking.effectiveCostPaise);
     const positions: number[] = byPosition.map((q: any) => q.ranking.position);
     expect(data.rankedRateShop.appliedStrategy).toBe('cheapest');
-    // Cheapest strategy: rates must be non-decreasing along ASSIGNED positions
-    // (the returned array order itself is not guaranteed).
-    expect([...rates].sort((a, b) => a - b)).toEqual(rates);
-    expect(positions).toEqual(rates.map((_, i) => i + 1));
+    expect([...costs].sort((a, b) => a - b)).toEqual(costs);
+    expect(positions).toEqual(costs.map((_, i) => i + 1));
   });
 
   it('rejects unauthenticated rate-shopping (TenantGuard)', async () => {
