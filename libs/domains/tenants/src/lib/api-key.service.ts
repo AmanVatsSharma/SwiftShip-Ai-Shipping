@@ -79,9 +79,12 @@ export class ApiKeyService {
     if (!old) throw new NotFoundException(`ApiKey ${oldKeyId} not found`);
 
     // Re-generate a random secret but keep the same public prefix so callers
-    // that hard-coded the prefix can still discover the key.
-    const random = this.randomBase62(PLAINTEXT_RANDOM_BYTES);
-    const plainText = `${API_KEY_PREFIX_LIVE}${random}`;
+    // that hard-coded the prefix can still discover the key. The secret is
+    // prefix + fresh random for the REMAINING chars — deriving it from a
+    // wholly-new random would change the first-8 chars and no longer match
+    // the stored (kept) prefix on verify() (found by the e2e rotate suite).
+    const random = this.randomBase62(PLAINTEXT_RANDOM_BYTES - 8);
+    const plainText = `${old.prefix}${random}`;
     const hashedKey = await bcrypt.hash(plainText, BCRYPT_ROUNDS);
 
     // idx_tenant_api_keys_prefix is UNIQUE across active AND inactive rows,

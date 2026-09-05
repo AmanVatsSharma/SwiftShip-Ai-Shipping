@@ -50,7 +50,7 @@ async function tryCreateCodOrder(
   stack: TenantStack,
 ): Promise<{ errors?: any[]; data?: any }> {
   return rawGql(app, {
-    query: `mutation($input: CreateOrderInput!) { createOrder(input: $input) { id paymentMethod } }`,
+    query: `mutation($input: CreateOrderInput!) { createOrder(input: $input) { id paymentStatus } }`,
     variables: {
       input: {
         orderNumber: `E2E-COD-${Date.now()}`,

@@ -105,11 +105,14 @@ describe('Rate-shop ranking: rankedRateShop via sandbox carriers (e2e)', () => {
       },
       apiKey,
     });
-    const rates: number[] = data.rankedRateShop.quotes.map((q: any) => q.rate);
-    const positions: number[] = data.rankedRateShop.quotes
-      .map((q: any) => q.ranking.position)
-      .sort();
+    const byPosition = [...data.rankedRateShop.quotes].sort(
+      (a: any, b: any) => a.ranking.position - b.ranking.position,
+    );
+    const rates: number[] = byPosition.map((q: any) => q.rate);
+    const positions: number[] = byPosition.map((q: any) => q.ranking.position);
     expect(data.rankedRateShop.appliedStrategy).toBe('cheapest');
+    // Cheapest strategy: rates must be non-decreasing along ASSIGNED positions
+    // (the returned array order itself is not guaranteed).
     expect([...rates].sort((a, b) => a - b)).toEqual(rates);
     expect(positions).toEqual(rates.map((_, i) => i + 1));
   });
