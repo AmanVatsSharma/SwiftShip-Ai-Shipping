@@ -162,7 +162,11 @@ jobs:
       # next-pwa, ...) which the root install does not provide.
       - run: npm install --no-audit --no-fund --prefix apps/web
       - run: npm install --no-audit --no-fund --prefix apps/admin-portal
-      - run: npx nx run-many --target=build --all --parallel=3
+      # SS-109: the Next apps' build is scoped out until the
+      # @nx/next-executor vs app-pinned next@14.2.3 mismatch is fixed
+      # (the executor resolves the ROOT transitive next@16 which builds
+      # with Turbopack and rejects the next-pwa webpack config).
+      - run: npx nx run-many --target=build --projects=api,api-public --parallel=3
       - uses: actions/upload-artifact@v4
         with:
           name: dist
