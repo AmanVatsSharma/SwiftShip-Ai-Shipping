@@ -246,22 +246,22 @@ export class RateRankingService {
       case 'cheapest':
         sorted = [...enriched].sort(
           (a, b) =>
-            costRanks.get(a.quote.carrierCode)! -
-            costRanks.get(b.quote.carrierCode)!,
+            costRanks.get(this.quoteKey(a))! -
+            costRanks.get(this.quoteKey(b))!,
         );
         break;
       case 'fastest':
         sorted = [...enriched].sort(
           (a, b) =>
-            slaRanks.get(a.quote.carrierCode)! -
-            slaRanks.get(b.quote.carrierCode)!,
+            slaRanks.get(this.quoteKey(a))! -
+            slaRanks.get(this.quoteKey(b))!,
         );
         break;
       case 'reliability_first':
         sorted = [...enriched].sort(
           (a, b) =>
-            reliabilityRanks.get(a.quote.carrierCode)! -
-            reliabilityRanks.get(b.quote.carrierCode)!,
+            reliabilityRanks.get(this.quoteKey(a))! -
+            reliabilityRanks.get(this.quoteKey(b))!,
         );
         break;
       case 'best_value':
@@ -309,6 +309,16 @@ export class RateRankingService {
    * Assigns a 1-indexed rank to each entry on the given axis. Ties share
    * the same rank; the next non-tied entry jumps.
    */
+  /**
+   * Unique key for a quote in the per-axis rank maps. carrierCode alone
+   * collides when one carrier returns multiple services (e.g. SANDBOX's
+   * three service tiers) — they would all share one rank and the
+   * strategy sorts would degenerate (found by the e2e cheapest suite).
+   */
+  private quoteKey(e: { quote: { carrierCode: string; serviceType?: string } }): string {
+    return `${e.quote.carrierCode}:${e.quote.serviceType ?? 'STD'}`;
+  }
+
   private rankBy(
     entries: EnrichedQuote[],
     pick: (e: EnrichedQuote) => number,
@@ -326,7 +336,7 @@ export class RateRankingService {
         lastRank = idx + 1;
         lastValue = v;
       }
-      ranks.set(e.quote.carrierCode, lastRank);
+      ranks.set(this.quoteKey(e), lastRank);
     });
     return ranks;
   }
@@ -356,9 +366,9 @@ export class RateRankingService {
         // the merchant cares; for now we surface a simple rank-based
         // score so the dashboard can render a progress bar.
         score: Number((1 - position / Math.max(sorted.length, 1)).toFixed(4)),
-        costRank: costRanks.get(q.carrierCode) ?? 0,
-        slaRank: slaRanks.get(q.carrierCode) ?? 0,
-        reliabilityRank: reliabilityRanks.get(q.carrierCode) ?? 0,
+        costRank: costRanks.get(this.quoteKey({ quote: q })) ?? 0,
+        slaRank: slaRanks.get(this.quoteKey({ quote: q })) ?? 0,
+        reliabilityRank: reliabilityRanks.get(this.quoteKey({ quote: q })) ?? 0,
         effectiveCostPaise: entry.effectiveCostPaise,
         expectedRtoLossPaise: entry.expectedRtoLossPaise,
         courierScore: entry.courierScore,
