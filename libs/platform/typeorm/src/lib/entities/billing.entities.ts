@@ -338,9 +338,9 @@ export class InvoiceEntity {
   @OneToMany(() => PaymentEntity, (p) => p.invoice)
   payments?: PaymentEntity[];
 
-  // Unidirectional OneToOne (no inverse lambda): EwayBillEntity exposes
-  // `invoiceId` directly and has no `invoice` relation property.
-  @OneToOne(() => EwayBillEntity)
+  // Inverse side — EwayBillEntity owns the invoiceId FK (see
+  // shipping.entities.ts EwayBillEntity.invoice).
+  @OneToOne(() => EwayBillEntity, (e) => e.invoice)
   ewayBill?: EwayBillEntity | null;
 }
 

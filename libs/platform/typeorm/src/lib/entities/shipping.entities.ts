@@ -542,6 +542,15 @@ export class EwayBillEntity {
 
   @Column({ type: 'varchar', length: 64, nullable: true })
   invoiceId?: string | null;
+  // Owning side of the Invoice↔EwayBill OneToOne (this table holds the FK).
+  // billing.entities imports THIS file, so the target class is resolved
+  // lazily to avoid a circular import.
+  @OneToOne(
+    () => (require('./billing.entities') as typeof import('./billing.entities')).InvoiceEntity,
+    (i: import('./billing.entities').InvoiceEntity) => i.ewayBill,
+  )
+  @JoinColumn({ name: 'invoiceId' })
+  invoice?: import('./billing.entities').InvoiceEntity | null;
 
   @Column({ type: 'varchar', length: 32 })
   ewayBillNumber!: string;
